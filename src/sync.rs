@@ -45,7 +45,7 @@ pub fn sync(rustique_opts: RustiqueOptions) -> Result<(),Box<dyn Error>> {
     // if so, parse the file for updating
     // if not, do all the sync process and then write a new file
 
-    let file_path = rustique_opts.mod_dir.join(SYNC_FILE_NAME);
+    let file_path = rustique_opts.mod_dir.unwrap().join(SYNC_FILE_NAME);
     let sync_data = if file_path.exists() {
         parse_sync_file(file_path)?
     } else {

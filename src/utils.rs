@@ -5,7 +5,7 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use dirs::home_dir;
-use rayon::prelude::IntoParallelRefIterator;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 use crate::api_structs::ModInfo;
@@ -30,7 +30,8 @@ pub mod api {
 
 
 pub struct RustiqueOptions {
-    pub mod_dir: PathBuf,
+    pub mod_dir: Option<PathBuf>,
+    pub mod_id: Option<String>,
 }
 
 impl RustiqueOptions {
@@ -45,7 +46,8 @@ impl RustiqueOptions {
     pub fn windows() -> Self {
         if let Some(path) = std::env::var_os("APPDATA") {
             return RustiqueOptions {
-                mod_dir: PathBuf::from(path).join("Vintagestory").join("Mods"),
+                mod_dir: Some(PathBuf::from(path).join("Vintagestory").join("Mods")),
+                mod_id: None,
             }
         }
         panic!("Unable to determine default mods directory");
@@ -54,7 +56,8 @@ impl RustiqueOptions {
     pub fn linux() -> Self {
         if let Some(home) = home_dir() {
             return RustiqueOptions {
-                mod_dir: home.join(".config").join("VintagestoryData").join("Mods"),
+                mod_dir: Some(home.join(".config").join("VintagestoryData").join("Mods")),
+                mod_id: None,
             };
         }
         panic!("Unable to determine user's home directory, do you have permissions??");
@@ -119,9 +122,9 @@ pub fn extract_zip_metadata(entry: PathBuf) -> Result<ModInfo, Box<dyn Error>> {
     Ok(mod_info)
 }
 
-pub fn extract_all_mods_metadata(mod_dir: RustiqueOptions) -> Result<ModInfo, Box<dyn Error>> {
+pub fn extract_all_mods_metadata(rustique_options: RustiqueOptions) -> Result<Vec<ModInfo>, Box<dyn Error>> {
     // TODO: check which platform we are on
-    let dir = fs::read_dir(mod_dir.mod_dir)?;
+    let dir = fs::read_dir(rustique_options.mod_dir.unwrap())?;
     let mut entries_vec: Vec<DirEntry> = dir.filter_map(|e| e.ok()).collect();
 
     entries_vec.sort_by(|a, b| {

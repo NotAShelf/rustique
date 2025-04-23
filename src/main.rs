@@ -158,7 +158,8 @@ fn main() {
         RustiqueOptions::default()
     } else {
         RustiqueOptions {
-            mod_dir: get_expanded_path(PathBuf::from(cli.mods_dir.unwrap())),
+            mod_dir: Some(get_expanded_path(PathBuf::from(cli.mods_dir.unwrap()))),
+            mod_id: None
         }
     };
 
@@ -182,31 +183,7 @@ fn main() {
             }
         }
         Commands::List(_name) => {
-
-            match list_installed(mod_opts) {
-                Ok(mut _mods) => {
-                    _mods.sort_by(|a,b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-                    for info in _mods {
-                        eprintln!("{}:, \n\tModtype: \t\t{},  \n\tModID: \t\t\t{}, \n\tVersion: \t\t{},\
-                               \n\tNetwork_version: \t\t{}, \n\tTexture_size: \t\t{},  \n\tDescription: \t\t{}:, \
-                               \n\tWebsite: \t\t{}, \n\tAuthors: \t\t{}, \n\tContributors: \t\t{}, \n\tSide: \t\t\t{}, \
-                               \n\tRequired_on_client: \t{}, \n\tRequired_on_server: \t{}, \
-                               \n\tDependencies: \t\t{:?}\
-                               ",
-                                  info.name.blue().bold(), info.mod_type.to_string().bold(), info.mod_id.yellow(), info.version.unwrap_or_default(),
-                                  info.network_version.unwrap_or_default(), info.texture_size.unwrap_or_default(),
-                                  info.description.unwrap_or_default().green(),
-                                  info.website.unwrap_or_default(), info.authors.unwrap_or_default().join(","), info.contributors.unwrap_or_default().join(","), info.side.unwrap_or_default(),
-                                  info.required_on_client.unwrap_or_default(), info.required_on_server.unwrap_or_default(),
-                                  info.dependencies.unwrap_or_default()
-                        );
-                    }
-
-
-                },
-                _ => println!("No mods available to list"),
-            }
-
+            list_installed(mod_opts).unwrap();
         }
         Commands::Update(name) => {
             if name.all {
