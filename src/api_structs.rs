@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 use serde::{Deserialize, Serialize};
+use ureq::http::StatusCode;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(untagged)]
@@ -64,13 +65,23 @@ pub struct ModInfo {
 }
 
 
+// Used for endpoint /api/mods
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Mods {
+    pub mods: Vec<ApiModJson>,
+    #[serde(default, rename = "statuscode")]
+    pub status_code: String
+}
+
+
+// Used for endpoint /api/mod/mod_id
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Mod {
     #[serde(rename="mod")]
     pub mod_json: ApiModJson,
 
     #[serde(default, rename="statuscode")]
-    pub status_code: Option<String>
+    pub status_code: String
 }
 
 

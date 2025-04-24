@@ -4,31 +4,15 @@ use std::fs::{DirEntry, File};
 use std::io::Read;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
+use chrono::{DateTime, Utc};
 use dirs::home_dir;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use zip::ZipArchive;
 use crate::api_structs::ModInfo;
 
-pub const API_BASE: &str = "https://mods.vintagestory.at/api";
-
-pub mod api {
-    use super::API_BASE;
-
-    pub fn uri(endpoint: &str) -> String {
-        format!("{}/{}", API_BASE, endpoint)
-    }
-
-    pub fn mods() -> String {
-        uri("mods")
-    }
-
-    pub fn get_mod(mod_id: &str) -> String {
-        uri(&format!("mods/{}", mod_id))
-    }
-}
-
-
+#[derive(Clone, Debug)]
 pub struct RustiqueOptions {
     pub mod_dir: Option<PathBuf>,
     pub mod_id: Option<String>,
@@ -64,6 +48,12 @@ impl RustiqueOptions {
     }
 }
 
+
+pub fn get_current_time() -> String {
+    let now = SystemTime::now();
+    let datetime: DateTime<Utc> = now.into();
+    datetime.format("%Y-%m-%d %H:%M").to_string()
+}
 
 // if the path contains ~/, which is short for /home/<user>, then expand it, otherwise just return
 // the path,
@@ -124,6 +114,7 @@ pub fn extract_zip_metadata(entry: PathBuf) -> Result<ModInfo, Box<dyn Error>> {
 
 pub fn extract_all_mods_metadata(rustique_options: RustiqueOptions) -> Result<Vec<ModInfo>, Box<dyn Error>> {
     // TODO: check which platform we are on
+    println!("mod_dir: {:?}", rustique_options.mod_dir);
     let dir = fs::read_dir(rustique_options.mod_dir.unwrap())?;
     let mut entries_vec: Vec<DirEntry> = dir.filter_map(|e| e.ok()).collect();
 

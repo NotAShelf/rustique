@@ -7,6 +7,7 @@ mod changelog;
 mod install;
 mod utils;
 mod api_structs;
+mod api;
 
 use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand, ColorChoice, CommandFactory, FromArgMatches, crate_authors};
@@ -175,12 +176,7 @@ fn main() {
 
         Commands::Sync(_name) => {
             // Sync will add a rustique-sync.json to a valid mod_dir
-            match sync(mod_opts) {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("{}", e);
-                }
-            }
+            sync(mod_opts).unwrap()
         }
         Commands::List(_name) => {
             list_installed(mod_opts).unwrap();
