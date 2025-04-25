@@ -40,7 +40,7 @@ pub struct ModInfo {
 
     #[serde(default, rename = "modid", alias = "modId", alias = "ModId", alias = "ModID", alias = "modID")]
     pub mod_id: String,
-    #[serde(default, alias = "Author")]
+    #[serde(default, alias = "Version")]
     pub version: Option<String>,
     #[serde(default, rename = "networkVersion", alias = "NetworkVersion", alias = "Networkversion", alias = "networkversion")]
     pub network_version: Option<String>,

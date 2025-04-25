@@ -16,7 +16,8 @@ use crate::utils::{extract_all_mods_metadata, extract_zip_metadata, RustiqueOpti
 pub fn list_installed(rustique_options: RustiqueOptions) -> Result<(), Box<dyn Error>> {
     // TODO: check which platform we are on
 
-    let mods = extract_all_mods_metadata(rustique_options)?;
+    // remove this call as we dont need to access the values more than once
+    // let mods = extract_all_mods_metadata(rustique_options)?.values().collect::<Vec<&ModInfo>>();
     let mut table = Table::new();
     // table.set_header(vec!["Name", "ModID", "Version", "Description", "Website"]);
     table.set_content_arrangement(ContentArrangement::Dynamic);
@@ -31,7 +32,7 @@ pub fn list_installed(rustique_options: RustiqueOptions) -> Result<(), Box<dyn E
 
     table.add_row(header);
 
-    mods.iter().for_each(|mod_info| {
+    extract_all_mods_metadata(rustique_options)?.values().for_each(|mod_info| {
         table.add_row(vec![
             &mod_info.name,
             &mod_info.mod_id,

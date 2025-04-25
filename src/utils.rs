@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::fs::{DirEntry, File};
@@ -112,7 +113,7 @@ pub fn extract_zip_metadata(entry: PathBuf) -> Result<ModInfo, Box<dyn Error>> {
     Ok(mod_info)
 }
 
-pub fn extract_all_mods_metadata(rustique_options: RustiqueOptions) -> Result<Vec<ModInfo>, Box<dyn Error>> {
+pub fn extract_all_mods_metadata(rustique_options: RustiqueOptions) -> Result<HashMap<String, ModInfo>, Box<dyn Error>> {
     // TODO: check which platform we are on
     println!("mod_dir: {:?}", rustique_options.mod_dir);
     let dir = fs::read_dir(rustique_options.mod_dir.unwrap())?;
@@ -124,20 +125,22 @@ pub fn extract_all_mods_metadata(rustique_options: RustiqueOptions) -> Result<Ve
         a_name.cmp(&b_name)
     });
 
-    let mods = Arc::new(Mutex::new(Vec::<ModInfo>::new()));
+    let mods = Arc::new(Mutex::new(HashMap::<String, ModInfo>::new()));
 
     entries_vec.par_iter().for_each(|entry| {
         // println!("{:?}", entry.path());
         // we use a closure here to manage the
+        let filename = entry.file_name().to_string_lossy().to_string();
         match (|| -> Result<ModInfo, Box<dyn Error>> {
 
             extract_zip_metadata(entry.path())
 
         })() {
-            Ok(mod_info) => mods.lock().unwrap().push(mod_info),
+            Ok(mod_info) => {mods.lock().unwrap().insert(filename, mod_info);}
             Err(e) => println!("Error processing mod: {}", e),
         }
     });
 
     Ok(mods.lock().unwrap().clone())
 }
+

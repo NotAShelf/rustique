@@ -1,7 +1,8 @@
 
 
 pub mod api {
-    use std::sync::Arc;
+    use std::collections::HashMap;
+    use std::sync::{Arc, Mutex};
     use std::time::Duration;
     use ureq::{Agent, Error};
     use rayon::prelude::*;
@@ -45,19 +46,34 @@ pub mod api {
             self.agent.get(&self.uri(&format!("mod/{}", mod_id))).call()?.body_mut().read_json::<Mod>()
         }
 
-        pub fn fetch_mods_parallel(&self, mod_list: Vec<ModInfo>) -> Vec<Result<Mod, String>> {
+        // pub fn fetch_mods_parallels(&self, mod_list: Vec<ModInfo>) -> Vec<Result<Mod, String>> {
+        //     let client = Arc::new(self);
+        //
+        //     mod_list.par_iter()
+        //         .map(|mod_info| {
+        //             let agent = client.clone();
+        //             // print!("Attempting api call for {}", mod_info.mod_id);
+        //             agent.fetch_mod(mod_info.mod_id.as_ref())
+        //                 .map_err(|err| {
+        //                     // println!("error: {:?}", err);
+        //                     err.to_string()
+        //                 })
+        //         }).collect()
+        // }
+
+         pub fn fetch_mods_parallel(&self, mod_list: Vec<ModInfo>) -> Result<HashMap<String, Mod>, String> {
             let client = Arc::new(self);
 
-            mod_list.par_iter()
-                .map(|mod_info| {
-                    let agent = client.clone();
-                    // print!("Attempting api call for {}", mod_info.mod_id);
-                    agent.fetch_mod(mod_info.mod_id.as_ref())
-                        .map_err(|err| {
-                            // println!("error: {:?}", err);
-                            err.to_string()
-                        })
-                }).collect()
+             mod_list.par_iter()
+
+                 .map(|mod_info| {
+                     let agent = client.clone();
+                     // print!("Attempting api call for {}", mod_info.mod_id);
+                     match agent.fetch_mod(mod_info.mod_id.as_ref()) {
+                         Ok(the_mod) => Ok((mod_info.mod_id.clone(), the_mod)),
+                         Err(err) => Err(err.to_string())
+                     }
+                 }).collect()
         }
     }
 }

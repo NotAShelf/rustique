@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
-use std::io::Write;
+use std::hash::Hash;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
@@ -42,8 +43,9 @@ pub const SYNC_FILE_NAME: &str = "rustique-sync.json";
 
 
 fn parse_sync_file(dir: PathBuf) -> Result<RustiqueSyncJson, Box<dyn Error>> {
-    let file = File::open(dir.join(SYNC_FILE_NAME))?;
+    let mut file = File::open(dir.join(SYNC_FILE_NAME))?;
     let mut file_contents = String::new();
+    file.read_to_string(&mut file_contents)?;
     let json = serde_json::from_str::<RustiqueSyncJson>(&file_contents)?;
 
     Ok(json)
@@ -59,71 +61,58 @@ pub fn sync(rustique_opts: RustiqueOptions) -> Result<(),Box<dyn Error>> {
 
     println!("rustique-sync.json: {}", file_path.display());
 
-    let sync_data = if file_path.exists() {
-       parse_sync_file(file_path.clone())?
-    } else {
+    let sync_data =
         RustiqueSyncJson {
             rustique_sync: HashMap::new(),
             last_sync: get_current_time(),
-        }
-    };
+        };
 
     // wrap the sync_data in an arc/mutex for our threads
     // mut isn't required as Mutex defines that internally
     let sync_data = Arc::new(Mutex::new(sync_data));
 
-
-    let agent = Arc::new(
-        Agent::config_builder()
-            .timeout_global(Some(Duration::from_secs(15)))
-            .build()
-    );
-
-
-
-    // the filtermap lets us grab the valid results from the extract function without having to use match
     let installed_mods= extract_all_mods_metadata(rustique_opts)
         .map_err(|e| e.to_string())?;
 
-    // installed_mods.par_iter().map(|mod_info| {
-    //     let agent = agent.clone();
-    //
-    // }).collect();
+    installed_mods.iter().for_each(|(k,v)| {
+       sync_data.lock().unwrap()
+           .rustique_sync
+           .entry(v.mod_id.clone())
+           .or_insert_with(|| ModSyncInfo {
+               installed_version: v.version.clone().unwrap_or(String::new()),
+               file_name: k.clone(),
+               latest_download_url: String::new(),
+               latest_known_version: String::new(),
+           });
+    });
 
-    let result: Vec<Mod> = ApiClient::new()
-        .fetch_mods_parallel(installed_mods)
-        .into_iter()
-        .filter_map(Result::ok).collect();
+    let result: HashMap<String, Mod> = ApiClient::new()
+        .fetch_mods_parallel(installed_mods.into_values().collect::<Vec<ModInfo>>())?;
 
-    result.iter().for_each(|mod_info| {
+    result.iter().for_each(|(mod_id, mod_info)| {
 
-        let installed_version = "Needs fixed";
-        let file_name = "Needs fixed";
         let latest_known_version = &mod_info.mod_json.releases[0].mod_version;
         let latest_download_url = &mod_info.mod_json.releases[0].main_file;
 
         sync_data.lock().unwrap()
             .rustique_sync
-            .entry(mod_info.mod_json.name.as_ref().unwrap_or(&String::new()).clone())
+            .entry(mod_id.clone())
+            .and_modify(|sync_info| {
+                sync_info.latest_known_version = latest_known_version.clone().unwrap_or(String::new());
+                sync_info.latest_download_url = latest_download_url.clone().unwrap_or(String::new());
+            })
             .or_insert_with(|| ModSyncInfo {
-                installed_version: installed_version.to_string(),
-                file_name: file_name.to_string(),
-                latest_known_version: latest_known_version.as_ref().unwrap().to_string(),
-                latest_download_url: latest_download_url.as_ref().unwrap().to_string(),
+                latest_known_version: latest_known_version.clone().unwrap_or(String::new()),
+                latest_download_url: latest_download_url.clone().unwrap_or(String::new()),
+                file_name: "None".to_string(),
+                installed_version: "None".to_string(),
             });
-    });
-
-    println!("Sync complete at {}", sync_data.lock().unwrap().last_sync);
-    sync_data.lock().unwrap().rustique_sync.iter().for_each(|(mod_id, mod_json)| {
-        println!("{}: ", mod_id);
-        println!("\t{:#?}", mod_json);
     });
 
     let data = sync_data.lock().unwrap();
     let json = to_string_pretty(&*data)?;
     let mut file = File::create(file_path)?;
     file.write_all(json.as_bytes())?;
-
 
     Ok(())
 }
