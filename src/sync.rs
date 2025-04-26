@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 use serde::{Deserialize, Serialize};
 use crate::utils::{RustiqueOptions, get_current_time, extract_all_mods_metadata};
-use crate::api::api::ApiClient;
+use crate::api::ApiClient;
 use chrono::{DateTime, Utc};
 use rayon::prelude::*;
 use serde_json::to_string_pretty;
