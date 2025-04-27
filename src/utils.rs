@@ -2,15 +2,19 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::fs::{DirEntry, File};
-use std::io::Read;
-use std::path::PathBuf;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
+use std::process::exit;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use chrono::{DateTime, Utc};
+use colored::Colorize;
 use dirs::home_dir;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
+use url::Url;
 use zip::ZipArchive;
+use crate::api::ApiClient;
 use crate::api_structs::ModInfo;
 
 #[derive(Clone, Debug)]
@@ -80,7 +84,7 @@ pub fn _get_case_insensitive<'a>(obj: &'a serde_json::Value, key: &str) -> Optio
     }
 }
 
-fn box_error(error: String) -> Box<dyn Error> {
+pub fn box_error(error: String) -> Box<dyn Error> {
     Box::new(std::io::Error::new(std::io::ErrorKind::Other, error))
 }
 
@@ -93,7 +97,6 @@ pub fn dlog(msg: &str) {
 pub fn dlog(_msg: &str) {}
 
 pub fn extract_zip_metadata(entry: PathBuf) -> Result<ModInfo, Box<dyn Error>> {
-
     if entry.is_dir() {
         return Err(box_error(format!("Skipping mods that are not zip archives: {}", entry.display())));
     }
@@ -121,22 +124,16 @@ pub fn extract_zip_metadata(entry: PathBuf) -> Result<ModInfo, Box<dyn Error>> {
     Ok(mod_info)
 }
 
-pub fn extract_all_mods_metadata(rustique_options: RustiqueOptions) -> Result<HashMap<String, ModInfo>, Box<dyn Error>> {
+pub fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<String, ModInfo>, Box<dyn Error>> {
 
-    let dir = fs::read_dir(rustique_options.mod_dir.unwrap())?;
-    let mut entries_vec: Vec<DirEntry> = dir.filter_map(|e| e.ok()).collect();
+    let dir = fs::read_dir(mod_dir)
+        .map_err(|e| box_error(format!("Can't read mod_dir: {}: {}", mod_dir.to_string_lossy(), e.to_string().red())))?;
 
-    entries_vec.sort_by(|a, b| {
-        let a_name = a.file_name().to_string_lossy().to_lowercase();
-        let b_name = b.file_name().to_string_lossy().to_lowercase();
-        a_name.cmp(&b_name)
-    });
+    let entries_vec: Vec<DirEntry> = dir.filter_map(|e| e.ok()).collect();
 
     let mods = Arc::new(Mutex::new(HashMap::<String, ModInfo>::new()));
 
     entries_vec.par_iter().for_each(|entry| {
-        // println!("{:?}", entry.path());
-        // we use a closure here to manage the
         let filename = entry.file_name().to_string_lossy().to_string();
         match (|| -> Result<ModInfo, Box<dyn Error>> {
 
@@ -144,12 +141,47 @@ pub fn extract_all_mods_metadata(rustique_options: RustiqueOptions) -> Result<Ha
 
         })() {
             Ok(mod_info) => {mods.lock().unwrap().insert(filename, mod_info);}
-            Err(e) =>  {
-                    dlog(&format!("{}", e))
-            },
+            Err(e) =>  dlog(&format!("{}", e))
         }
     });
 
     Ok(mods.lock().unwrap().clone())
 }
 
+pub fn delete_file(file: &Path) -> Result<(), Box<dyn Error>> {
+    dlog(format!("Trying to delete {}", file.display()).as_str());
+    if file.exists() {
+        Ok(fs::remove_file(&file)
+            .map_err(|e| box_error(format!("Can't delete {}: {}", file.display(), e.to_string())))?)
+    } else {
+        Ok(dlog(format!("File {} no longer exists..", file.display()).as_str()))
+    }
+}
+
+pub fn download_mod(mod_dir: &PathBuf, latest_download_url: &String) -> Result<(), Box<dyn std::error::Error>> {
+
+    let url = Url::parse(latest_download_url.as_str()).unwrap();
+    dlog(format!("Trying to download url: {}", url.clone().to_string()).as_str());
+    let response = ApiClient::new().get_request(&url.to_string())
+        .map_err(|e| format!("Unable to download mod from api: {}", e.to_string().red()))?;
+
+    let mut bytes: Vec<u8> = Vec::new();
+
+    response.into_body().into_reader().read_to_end(&mut bytes)
+        .map_err(|e| format!("Error reading downloaded mod data to byte vector: {}", e.to_string().red()))?;
+
+    let file_path = mod_dir.clone().join(&latest_download_url.split('=').last().unwrap());
+    // create the file and write the bytes to it
+    let filename_fix = file_path.to_string_lossy().replace(" ", "_");
+    let path = Path::new(&filename_fix);
+
+    let mut file = File::create(path)
+        .map_err(|e |  format!("Unable to create file {}: {}", path.to_string_lossy(), e.to_string().red()))?;
+
+    file.write_all(&bytes)
+        .map_err(|e| format!("Unable to write to file {}: {}", path.to_string_lossy(), e.to_string().red()))?;
+
+    dlog(format!("File downloaded to {}", file_path.display()).as_str());
+
+    Ok(())
+}

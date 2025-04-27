@@ -59,7 +59,7 @@ impl ApiClient {
              }).collect()
     }
 
-    pub fn download_mod(&self, mod_uri: &str) -> Result<Response<Body>, Error> {
+    pub fn get_request(&self, mod_uri: &str) -> Result<Response<Body>, Error> {
         self.agent.get(mod_uri).call()
     }
 }

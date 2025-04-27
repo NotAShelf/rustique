@@ -1,46 +1,64 @@
+use std::collections::HashMap;
 use std::fmt::format;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use crate::api::ApiClient;
-use crate::sync::parse_sync_file;
-use crate::utils::{dlog, RustiqueOptions};
+use crate::sync::{parse_sync_file, ModSyncInfo};
+use crate::utils::{delete_file, dlog, RustiqueOptions, box_error, download_mod};
 use rayon::prelude::*;
 use std::process::exit;
+use colored::Colorize;
 use url::{form_urlencoded, Url};
 
-pub fn update(rustique_options: RustiqueOptions) -> Result<(), Box<dyn std::error::Error>> {
-    let sync_data  = parse_sync_file(rustique_options.mod_dir.clone().unwrap());
+pub fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<String>, keep_old_files: bool) -> Result<(), Box<dyn std::error::Error>> {
+    eprintln!("{}", "Updating mods...".green().bold());
+
+    let sync_data  = parse_sync_file(mod_dir);
     if sync_data.is_ok() {
         let sync_data = sync_data?;
 
-        sync_data.rustique_sync.par_iter().for_each(|(mod_id, mod_sync_info)| {
+        let mut mods_to_update: Vec<ModSyncInfo> = Vec::new();
+        let mut updates_exist = false;
 
-            if mod_sync_info.latest_known_version != mod_sync_info.installed_version {
-                let url = Url::parse(mod_sync_info.latest_download_url.as_str()).unwrap();
-                dlog(format!("Trying to download url: {}", url.clone().to_string()).as_str());
-                let response = ApiClient::new().download_mod(&url.to_string());
-
-                match response {
-                    Ok(result) => {
-                        let mut bytes: Vec<u8> = Vec::new();
-                        if let Ok(_) = result.into_body().into_reader().read_to_end(&mut bytes) {
-                            let file_path = rustique_options.mod_dir.clone().unwrap().join(&mod_sync_info.latest_download_url.split('=').last().unwrap());
-                            // create the file and write the bytes to it
-                            let filename_fix = file_path.to_string_lossy().replace(" ", "_");
-                            let path = Path::new(&filename_fix);
-                            if let Ok(mut file) = File::create(path) {
-                                if let Ok(_) = file.write_all(&bytes) {
-                                    dlog(format!("File downloaded to {}", file_path.display()).as_str());
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        dlog(format!("Something went wrong while downloading mod {}", mod_id.to_string()).as_str());
-                        dlog(format!("{:?}", e).as_str());
-                    }
+        if !update_mod_ids.is_empty() {
+            update_mod_ids.iter().for_each(|typed_mod_id| {
+                let mod_sync_data = &sync_data.rustique_sync;
+                // user typed in a valid typed_mod_id so violet is happy now
+                let typed_mod_id = typed_mod_id.to_lowercase();
+                if mod_sync_data.contains_key(&typed_mod_id) {
+                    mods_to_update.push(mod_sync_data[&typed_mod_id].clone());
+                    updates_exist = true;
+                } else {
+                    eprintln!("{} is not a valid mod_id!", &typed_mod_id.red());
                 }
+            });
+        } else {
+            mods_to_update = sync_data.rustique_sync.values().cloned().collect();
+            updates_exist = true;
+        }
+
+        if !updates_exist {
+            return Err(box_error(String::from("No valid update ids..\n\r")))
+        }
+
+        mods_to_update.par_iter().for_each(|mod_sync_info| {
+            match (|| {
+                if mod_sync_info.latest_known_version != mod_sync_info.installed_version {
+                    let old_filename = if keep_old_files == false {
+                        Some(mod_sync_info.file_name.to_string())
+                    } else {
+                        None
+                    };
+
+                    update_mod(mod_dir, &mod_sync_info.latest_download_url, old_filename)
+
+                } else {
+                    Ok(())
+                }
+            })() {
+                Ok(_res) => {}
+                Err(e) => println!("{}", e.to_string()),
             }
         });
 
@@ -49,6 +67,17 @@ pub fn update(rustique_options: RustiqueOptions) -> Result<(), Box<dyn std::erro
         exit(1);
     }
 
+    Ok(())
+}
+
+pub fn update_mod(mod_dir: &PathBuf, latest_download_url: &String, old_filename: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+
+    download_mod(mod_dir, latest_download_url)?;
+
+    if let Some(old_filename) = old_filename {
+        let old_filepath = &mod_dir.clone().join(old_filename.to_string());
+        delete_file(old_filepath)?
+    }
 
     Ok(())
 }

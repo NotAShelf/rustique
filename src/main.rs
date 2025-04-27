@@ -9,13 +9,15 @@ mod utils;
 mod api_structs;
 mod api;
 
+use std::error::Error;
 use std::path::PathBuf;
+use std::process::exit;
 use clap::{Args, Parser, Subcommand, ColorChoice, CommandFactory, FromArgMatches, crate_authors};
 use colored::Colorize;
-use crate::utils::{get_expanded_path, RustiqueOptions};
+use crate::utils::{dlog, get_expanded_path, RustiqueOptions};
 use crate::list::list_installed;
 use crate::sync::sync;
-use crate::update::update;
+use crate::update::{update_mods};
 /*
 
 ./vsupdate
@@ -89,12 +91,25 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    #[command(about = "Checks with the VintageStory mods website for any updates to mods you have installed. Run update after this command to update your mods")]
     Sync(SyncArgs),
+
+    #[command(about = "List installed mods and their versions. Run sync first to show latest version of the mod.")]
     List(ListArgs),
+
+    #[command(about = "Updates a specific mod OR all mods installed. Runs sync after completion")]
     Update(UpdateArgs),
+
+    #[command(about = "View the changelogs for a installed mod")]
     Changelog(ChangeLogArgs),
+
+    #[command(about = "Install a specific mod. Must use the mod_id, Example: ./Rustique install alchemy")]
     Install(InstallArgs),
+
+    #[command(about = "Shows values from the modinfo.json file inside the mod zip")]
     Info(ModInfoArgs),
+
+    #[command(about = "Search the mob website for mobs.")]
     Search(SearchMods),
 }
 
@@ -105,13 +120,21 @@ struct SyncArgs {
 
 #[derive(Args)]
 struct ListArgs {
+    /// List only mods that need updating
+    #[arg(short, long, default_value = "false")]
+    updates: bool
 }
 
 #[derive(Args)]
 struct UpdateArgs {
-    name: Vec<String>,
+    /// Update specific mod, must be mod_id. Example: ./Rustique update alchemy
+    mod_ids: Vec<String>,
+    /// Update all mods, don't set a <name>. Example: ./Rustique update --all
     #[arg(short, long)]
     all: bool,
+    /// Update mods but keep old version.
+    #[arg(short, long)]
+    keep_old_files: bool
 }
 
 #[derive(Args)]
@@ -176,20 +199,37 @@ fn main() {
 
         Commands::Sync(_name) => {
             // Sync will add a rustique-sync.json to a valid mod_dir
-            sync(mod_opts).unwrap()
-        }
-        Commands::List(_name) => {
-            list_installed(mod_opts).unwrap();
-        }
-        Commands::Update(name) => {
-            if name.all {
-                update(mod_opts).unwrap();
+            match sync(mod_opts.mod_dir.as_ref().unwrap()) {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("{}", e.to_string());
+                    exit(1);
+                }
             }
-            else if name.name.is_empty() {
-                println!("Must specify at least one package to update!");
+        }
+        Commands::List(args) => {
+            match list_installed(mod_opts.mod_dir.as_ref().unwrap(), args.updates) {
+                Ok(_) => {}
+                Err(e) => {
+                    print!("{}", e.to_string());
+                    exit(1);
+                }
             }
-            else {
-                println!("updating the following packages: {:?}", name.name);
+        }
+        Commands::Update(args) => {
+            match update_mods(mod_opts.mod_dir.as_ref().unwrap(), args.mod_ids.clone(), args.keep_old_files) {
+                Ok(_) => {
+                    match sync(mod_opts.mod_dir.as_ref().unwrap()) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            println!("{}", e.to_string());
+                        }
+                    }
+                }
+                Err(e) => {
+                    print!("{}", e.to_string());
+                    exit(1);
+                }
             }
         }
         Commands::Changelog(name) => {

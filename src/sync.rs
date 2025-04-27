@@ -7,9 +7,10 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 use serde::{Deserialize, Serialize};
-use crate::utils::{RustiqueOptions, get_current_time, extract_all_mods_metadata};
+use crate::utils::{RustiqueOptions, get_current_time, extract_all_mods_metadata, dlog};
 use crate::api::ApiClient;
 use chrono::{DateTime, Utc};
+use colored::Colorize;
 use rayon::prelude::*;
 use serde_json::to_string_pretty;
 use crate::api_structs::{Mod, ModInfo};
@@ -31,7 +32,7 @@ impl RustiqueSyncJson {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ModSyncInfo {
     pub file_name: String,
     pub installed_version: String,
@@ -42,8 +43,8 @@ pub struct ModSyncInfo {
 pub const SYNC_FILE_NAME: &str = "rustique-sync.json";
 
 
-pub fn parse_sync_file(dir: PathBuf) -> Result<RustiqueSyncJson, Box<dyn Error>> {
-    let mut file = File::open(dir.join(SYNC_FILE_NAME))?;
+pub fn parse_sync_file(mod_dir: &PathBuf) -> Result<RustiqueSyncJson, Box<dyn Error>> {
+    let mut file = File::open(mod_dir.join(SYNC_FILE_NAME))?;
     let mut file_contents = String::new();
     file.read_to_string(&mut file_contents)?;
     let json = serde_json::from_str::<RustiqueSyncJson>(&file_contents)?;
@@ -51,15 +52,15 @@ pub fn parse_sync_file(dir: PathBuf) -> Result<RustiqueSyncJson, Box<dyn Error>>
     Ok(json)
 }
 
-pub fn sync(rustique_opts: RustiqueOptions) -> Result<(),Box<dyn Error>> {
-
+pub fn sync(mod_dir: &PathBuf) -> Result<(),Box<dyn Error>> {
+    eprintln!("{}", "Syncing...".green().bold());
     // check if rustique-sync.json exists
     // if so, parse the file for updating
     // if not, do all the sync process and then write a new file
 
-    let file_path = rustique_opts.mod_dir.as_ref().unwrap().join(SYNC_FILE_NAME);
+    let file_path = mod_dir.join(SYNC_FILE_NAME);
 
-    println!("rustique-sync.json: {}", file_path.display());
+    dlog(&format!("rustique-sync.json: {}", file_path.display()));
 
     let sync_data =
         RustiqueSyncJson {
@@ -71,7 +72,7 @@ pub fn sync(rustique_opts: RustiqueOptions) -> Result<(),Box<dyn Error>> {
     // mut isn't required as Mutex defines that internally
     let sync_data = Arc::new(Mutex::new(sync_data));
 
-    let installed_mods= extract_all_mods_metadata(rustique_opts)
+    let installed_mods= extract_all_mods_metadata(mod_dir)
         .map_err(|e| e.to_string())?;
 
     installed_mods.iter().for_each(|(k,v)| {
@@ -111,7 +112,9 @@ pub fn sync(rustique_opts: RustiqueOptions) -> Result<(),Box<dyn Error>> {
 
     let data = sync_data.lock().unwrap();
     let json = to_string_pretty(&*data)?;
-    let mut file = File::create(file_path)?;
+    let mut file = File::create(file_path)
+        .map_err(|e| format!("Error writing sync file to mod_dir: {}: {}", mod_dir.to_string_lossy(), e.to_string().red()))?;
+
     file.write_all(json.as_bytes())?;
 
     Ok(())
