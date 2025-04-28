@@ -25,11 +25,7 @@ use crate::modpack_commands::ModpackCommands;
 use crate::sync::sync;
 use crate::update::{update_mods};
 
-
-
 // TODO: Add feature to notify user when the modinfo.json file is malformed
-
-
 fn main() {
 
     let cli = Cli::parse();

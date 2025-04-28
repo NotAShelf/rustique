@@ -106,7 +106,7 @@ pub fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(), Rusti
         }
 
         let missing_dependencies: Vec<String> = mod_info.dependencies.clone()
-            .unwrap().keys()
+            .unwrap_or_default().keys()
             .filter(|e|e.to_lowercase().ne("game") && !mod_id_list.contains(e))
             .cloned().collect();
 
