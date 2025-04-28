@@ -5,13 +5,14 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use crate::api::ApiClient;
 use crate::sync::{parse_sync_file, ModSyncInfo};
-use crate::utils::{delete_file, dlog, RustiqueOptions, box_error, download_mod};
+use crate::utils::{delete_file, dlog, RustiqueOptions, download_mod};
 use rayon::prelude::*;
 use std::process::exit;
 use colored::Colorize;
 use url::{form_urlencoded, Url};
+use crate::rustique_errors::RustiqueError;
 
-pub fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<String>, keep_old_files: bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<String>, keep_old_files: bool) -> Result<(), RustiqueError> {
     eprintln!("{}", "Updating mods...".green().bold());
 
     let sync_data  = parse_sync_file(mod_dir);
@@ -39,7 +40,7 @@ pub fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<String>, keep_old_file
         }
 
         if !updates_exist {
-            return Err(box_error(String::from("No valid update ids..\n\r")))
+            return Err(RustiqueError::SimpleError(String::from("No valid update ids..\n\r")))
         }
 
         mods_to_update.par_iter().for_each(|mod_sync_info| {
@@ -70,7 +71,7 @@ pub fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<String>, keep_old_file
     Ok(())
 }
 
-pub fn update_mod(mod_dir: &PathBuf, latest_download_url: &String, old_filename: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn update_mod(mod_dir: &PathBuf, latest_download_url: &String, old_filename: Option<String>) -> Result<(), RustiqueError> {
 
     download_mod(mod_dir, latest_download_url)?;
 

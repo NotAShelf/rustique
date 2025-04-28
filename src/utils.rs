@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
-use std::fs;
+use std::{fs, io};
 use std::fs::{DirEntry, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -13,9 +13,11 @@ use dirs::home_dir;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use url::Url;
+use zip::result::ZipError;
 use zip::ZipArchive;
 use crate::api::ApiClient;
 use crate::api_structs::ModInfo;
+use crate::rustique_errors::RustiqueError;
 
 #[derive(Clone, Debug)]
 pub struct RustiqueOptions {
@@ -84,10 +86,6 @@ pub fn _get_case_insensitive<'a>(obj: &'a serde_json::Value, key: &str) -> Optio
     }
 }
 
-pub fn box_error(error: String) -> Box<dyn Error> {
-    Box::new(std::io::Error::new(std::io::ErrorKind::Other, error))
-}
-
 #[cfg(feature = "debug")]
 pub fn dlog(msg: &str) {
     println!("DEBUG: {}", msg);
@@ -96,38 +94,57 @@ pub fn dlog(msg: &str) {
 #[cfg(not(feature = "debug"))]
 pub fn dlog(_msg: &str) {}
 
-pub fn extract_zip_metadata(entry: PathBuf) -> Result<ModInfo, Box<dyn Error>> {
+pub fn extract_zip_metadata(entry: PathBuf) -> Result<ModInfo, RustiqueError> {
     if entry.is_dir() {
-        return Err(box_error(format!("Skipping mods that are not zip archives: {}", entry.display())));
+        return Err(RustiqueError::SimpleError(format!("Skipping mods that are not zip archives: {}", entry.display())));
     }
 
     if entry.extension().map_or(false, |x| x.to_ascii_lowercase() != "zip") {
-        return Err(box_error(format!("Skipping non-zip file: {}", entry.display())));
+        return Err(RustiqueError::SimpleError(format!("Skipping non-zip file: {}", entry.display())));
     }
 
     let file  = File::open(&entry)
-        .map_err(|e| format!("Failed to open {:?}: {}", entry.file_name(), e))?;
+        .map_err(|e| RustiqueError::IoError {
+            context: format!("Failed to open {:?}: {}", entry.file_name(), e),
+            source: e,
+        })?;
+
 
     let mut archive = ZipArchive::new(file)
-        .map_err(|e| format!("Failed to open zip archive {:?}: {}", entry.file_name(),e))?;
+        .map_err(|e| RustiqueError::ZipError {
+            context: format!("Failed to open zip archive {:?}: {}", entry.file_name(),e),
+            source: e
+        })?;
 
     let mut mod_info_file = archive.by_name("modinfo.json")
-        .map_err(|e| format!("Failed to find modinfo.json in {:?}: {}", entry.file_name(),e))?;
+        .map_err(|e| RustiqueError::ZipError {
+            context: format!("Failed to find modinfo.json in {:?}: {}", entry.file_name(),e),
+            source: e
+        })?;
 
     let mut mod_info_contents = String::new();
     mod_info_file.read_to_string(&mut mod_info_contents)
-        .map_err(|e| format!("Failed to read modinfo.json in {:?}: {}", entry.file_name(),e))?;
+        .map_err(|e| RustiqueError::IoError {
+            context: format!("Failed to read modinfo.json in {:?}", entry.file_name()),
+            source: e,
+        })?;
 
     let mod_info = serde_json5::from_str::<ModInfo>(&mod_info_contents)
-        .map_err(|e|format!("Failed to parse json in {:?}: {}", entry.file_name(),e))?;
+        .map_err(|e: serde_json5::Error| RustiqueError::JsonError {
+            context: format!("Failed to parse json in {}", entry.file_name().unwrap().to_string_lossy()),
+            source: e
+        })?;
 
     Ok(mod_info)
 }
 
-pub fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<String, ModInfo>, Box<dyn Error>> {
+pub fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<String, ModInfo>, RustiqueError> {
 
     let dir = fs::read_dir(mod_dir)
-        .map_err(|e| box_error(format!("Can't read mod_dir: {}: {}", mod_dir.to_string_lossy(), e.to_string().red())))?;
+        .map_err(|e| RustiqueError::IoError {
+            context: format!("Can't read mod_dir: {}", mod_dir.to_string_lossy()),
+            source: e,
+        })?;
 
     let entries_vec: Vec<DirEntry> = dir.filter_map(|e| e.ok()).collect();
 
@@ -135,10 +152,8 @@ pub fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<String, Mo
 
     entries_vec.par_iter().for_each(|entry| {
         let filename = entry.file_name().to_string_lossy().to_string();
-        match (|| -> Result<ModInfo, Box<dyn Error>> {
-
+        match (|| -> Result<ModInfo, RustiqueError> {
             extract_zip_metadata(entry.path())
-
         })() {
             Ok(mod_info) => {mods.lock().unwrap().insert(filename, mod_info);}
             Err(e) =>  dlog(&format!("{}", e))
@@ -148,27 +163,37 @@ pub fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<String, Mo
     Ok(mods.lock().unwrap().clone())
 }
 
-pub fn delete_file(file: &Path) -> Result<(), Box<dyn Error>> {
+pub fn delete_file(file: &Path) -> Result<(), RustiqueError> {
     dlog(format!("Trying to delete {}", file.display()).as_str());
     if file.exists() {
         Ok(fs::remove_file(&file)
-            .map_err(|e| box_error(format!("Can't delete {}: {}", file.display(), e.to_string())))?)
+            .map_err(|e| RustiqueError::IoError {
+                context: format!("Failed attempting to delete {}", file.file_name().unwrap().to_string_lossy()),
+                source: e,
+            })?)
     } else {
         Ok(dlog(format!("File {} no longer exists..", file.display()).as_str()))
     }
 }
 
-pub fn download_mod(mod_dir: &PathBuf, latest_download_url: &String) -> Result<(), Box<dyn std::error::Error>> {
+pub fn download_mod(mod_dir: &PathBuf, latest_download_url: &String) -> Result<PathBuf, RustiqueError> {
 
-    let url = Url::parse(latest_download_url.as_str()).unwrap();
+    let url = Url::parse(latest_download_url.as_str()).map_err(|e| RustiqueError::ParseError(e))?;
+
     dlog(format!("Trying to download url: {}", url.clone().to_string()).as_str());
     let response = ApiClient::new().get_request(&url.to_string())
-        .map_err(|e| format!("Unable to download mod from api: {}", e.to_string().red()))?;
+        .map_err(|e| RustiqueError::ApiError {
+            context: format!("Error occurred during GET request of {}", latest_download_url.red()),
+            source: e
+        })?;
 
     let mut bytes: Vec<u8> = Vec::new();
 
     response.into_body().into_reader().read_to_end(&mut bytes)
-        .map_err(|e| format!("Error reading downloaded mod data to byte vector: {}", e.to_string().red()))?;
+        .map_err(|e| RustiqueError::IoError {
+            context: format!("Failure reading response from API {}", latest_download_url.red()),
+            source: e,
+        })?;
 
     let file_path = mod_dir.clone().join(&latest_download_url.split('=').last().unwrap());
     // create the file and write the bytes to it
@@ -176,12 +201,18 @@ pub fn download_mod(mod_dir: &PathBuf, latest_download_url: &String) -> Result<(
     let path = Path::new(&filename_fix);
 
     let mut file = File::create(path)
-        .map_err(|e |  format!("Unable to create file {}: {}", path.to_string_lossy(), e.to_string().red()))?;
+        .map_err(|e |  RustiqueError::IoError{
+            context: format!("Unable to create file {}", path.to_string_lossy()),
+            source: e
+        })?;
 
     file.write_all(&bytes)
-        .map_err(|e| format!("Unable to write to file {}: {}", path.to_string_lossy(), e.to_string().red()))?;
+        .map_err(|e| RustiqueError::IoError {
+            context: format!("Failure while writing to byte array for {}", path.to_string_lossy()),
+            source: e
+        })?;
 
     dlog(format!("File downloaded to {}", file_path.display()).as_str());
 
-    Ok(())
+    Ok(file_path)
 }

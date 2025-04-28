@@ -6,13 +6,16 @@ use rayon::prelude::*;
 use ureq::config::Config;
 use ureq::http::Response;
 use crate::api_structs::{Mod, ModInfo, Mods};
+use crate::rustique_errors::RustiqueError;
 
 const API_BASE_URL: &str = "http://mods.vintagestory.at/api";
 const RUSTIQUE_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"), "  (github: Tekunogosu/Rustique)");
 
+#[derive(Debug, Clone)]
 pub struct ApiClient {
     agent: Arc<Agent>,
 }
+
 
 impl ApiClient {
     pub fn new() -> Self {
@@ -44,7 +47,7 @@ impl ApiClient {
         self.agent.get(&self.uri(&format!("mod/{}", mod_id))).call()?.body_mut().read_json::<Mod>()
     }
 
-    pub fn fetch_mods_parallel(&self, mod_list: Vec<ModInfo>) -> Result<HashMap<String, Mod>, String> {
+    pub fn fetch_mods_parallel(&self, mod_list: Vec<ModInfo>) -> Result<HashMap<String, Mod>, RustiqueError> {
         let client = Arc::new(self);
 
          mod_list.par_iter()
@@ -54,7 +57,10 @@ impl ApiClient {
                  // print!("Attempting api call for {}", mod_info.mod_id);
                  match agent.fetch_mod(mod_info.mod_id.as_ref()) {
                      Ok(the_mod) => Ok((mod_info.mod_id.clone(), the_mod)),
-                     Err(err) => Err(err.to_string())
+                     Err(e) => Err(RustiqueError::ApiError {
+                         context: format!("Failed fetching mod {}", mod_info.name),
+                         source: e,
+                     }),
                  }
              }).collect()
     }

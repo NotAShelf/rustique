@@ -8,14 +8,20 @@ mod install;
 mod utils;
 mod api_structs;
 mod api;
+mod cli_commands;
+mod modpack_commands;
+mod rustique_errors;
 
 use std::error::Error;
 use std::path::PathBuf;
 use std::process::exit;
 use clap::{Args, Parser, Subcommand, ColorChoice, CommandFactory, FromArgMatches, crate_authors};
 use colored::Colorize;
+use crate::cli_commands::{Cli, Commands};
+use crate::install::{install_mod, install_mods};
 use crate::utils::{dlog, get_expanded_path, RustiqueOptions};
 use crate::list::list_installed;
+use crate::modpack_commands::ModpackCommands;
 use crate::sync::sync;
 use crate::update::{update_mods};
 /*
@@ -79,95 +85,6 @@ Locations:
 
  */
 
-#[derive(Parser)]
-#[command(version, about, long_about = None)]
-#[command(propagate_version = true)]
-struct Cli {
-    #[arg(short, long)]
-    mods_dir: Option<String>,
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    #[command(about = "Checks with the VintageStory mods website for any updates to mods you have installed. Run update after this command to update your mods")]
-    Sync(SyncArgs),
-
-    #[command(about = "List installed mods and their versions. Run sync first to show latest version of the mod.")]
-    List(ListArgs),
-
-    #[command(about = "Updates a specific mod OR all mods installed. Runs sync after completion")]
-    Update(UpdateArgs),
-
-    #[command(about = "View the changelogs for a installed mod")]
-    Changelog(ChangeLogArgs),
-
-    #[command(about = "Install a specific mod. Must use the mod_id, Example: ./Rustique install alchemy")]
-    Install(InstallArgs),
-
-    #[command(about = "Shows values from the modinfo.json file inside the mod zip")]
-    Info(ModInfoArgs),
-
-    #[command(about = "Search the mob website for mobs.")]
-    Search(SearchMods),
-}
-
-
-#[derive(Args)]
-struct SyncArgs {
-}
-
-#[derive(Args)]
-struct ListArgs {
-    /// List only mods that need updating
-    #[arg(short, long, default_value = "false")]
-    updates: bool
-}
-
-#[derive(Args)]
-struct UpdateArgs {
-    /// Update specific mod, must be mod_id. Example: ./Rustique update alchemy
-    mod_ids: Vec<String>,
-    /// Update all mods, don't set a <name>. Example: ./Rustique update --all
-    #[arg(short, long)]
-    all: bool,
-    /// Update mods but keep old version.
-    #[arg(short, long)]
-    keep_old_files: bool
-}
-
-#[derive(Args)]
-struct ChangeLogArgs {
-    name: Option<String>,
-}
-
-#[derive(Args)]
-struct InstallArgs {
-    mod_id: Vec<String>,
-}
-
-#[derive(Args)]
-struct ModInfoArgs {
-    mod_id: String,
-}
-
-#[derive(Args)]
-struct SearchMods {
-
-}
-
-
-
-fn list() {
-    println!("+-------------------+-------+---------+\n\
-| Mod               | Yours | Current |\n\
-+===================+=======+=========+\n\
-| primitivesurvival | 3.7.4 | 3.7.5   |\n\
-| goblinears        | 2.1.0 | 2.1.1   |\n\
-+-------------------+-------+---------+");
-}
-
 // TODO: Add feature to notify user when the modinfo.json file is malformed
 
 
@@ -197,15 +114,9 @@ fn main() {
         // last sync time
         // url to latest known version
 
-        Commands::Sync(_name) => {
+        Commands::Sync(_sync_args) => {
             // Sync will add a rustique-sync.json to a valid mod_dir
-            match sync(mod_opts.mod_dir.as_ref().unwrap()) {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("{}", e.to_string());
-                    exit(1);
-                }
-            }
+            handle_sync_call(mod_opts.mod_dir.as_ref().unwrap());
         }
         Commands::List(args) => {
             match list_installed(mod_opts.mod_dir.as_ref().unwrap(), args.updates) {
@@ -219,12 +130,7 @@ fn main() {
         Commands::Update(args) => {
             match update_mods(mod_opts.mod_dir.as_ref().unwrap(), args.mod_ids.clone(), args.keep_old_files) {
                 Ok(_) => {
-                    match sync(mod_opts.mod_dir.as_ref().unwrap()) {
-                        Ok(_) => {}
-                        Err(e) => {
-                            println!("{}", e.to_string());
-                        }
-                    }
+                    handle_sync_call(mod_opts.mod_dir.as_ref().unwrap());
                 }
                 Err(e) => {
                     print!("{}", e.to_string());
@@ -236,13 +142,62 @@ fn main() {
             println!("list {:?}", name.name);
         }
         Commands::Install(args) => {
-            println!("install {:?}", args.mod_id);
+            if args.mod_ids.len() > 1 {
+                match install_mods(mod_opts.mod_dir.as_ref().unwrap(), args.mod_ids.clone(), args.ignore_dependencies) {
+                    Ok(_) => {
+                        eprintln!("{}", "Mods successfully installed!".bold().green());
+
+                        handle_sync_call(mod_opts.mod_dir.as_ref().unwrap());
+                    }
+                    Err(e) => {
+                        println!("Error attempting to install {:?} : {}", args.mod_ids, e.to_string());
+                        exit(1);
+                    }
+                }
+            } else if args.mod_ids.len() == 1 {
+                match install_mod(mod_opts.mod_dir.as_ref().unwrap(), &args.mod_ids[0].clone(), args.ignore_dependencies, None) {
+                    Ok(_) => {
+                        eprintln!("{}", "Mod successfully installed!".bold().green());
+                        handle_sync_call(mod_opts.mod_dir.as_ref().unwrap());
+                    }
+                    Err(e) => {
+                        println!("{}", e.to_string());
+                        // eprintln!("Error installing mod {}: {}", args.mod_ids[0], e.to_string());
+                        exit(1);
+                    }
+                }
+            } else {
+                eprintln!("{}", "No mods specified..".bold().red());
+                exit(1);
+            }
         }
         Commands::Info(args) => {
             println!("displaying stuff about the mod {:?}", args.mod_id);
         }
         Commands::Search(_args )=> {
             print!("Searching stuff");
+        }
+        Commands::ModPack{command} => {
+            match command {
+                ModpackCommands::Create(args) => {
+                    if args.mod_dir.is_some() {
+                        println!("Creating mod pack from {}", &args.mod_dir.as_ref().unwrap().to_string());
+                    }
+
+                    println!("creating modpack with name: {}", &args.name);
+                }
+            }
+        }
+    }
+}
+
+
+fn handle_sync_call(mod_dir: &PathBuf) {
+    match sync(mod_dir) {
+        Ok(_) => {}
+        Err(e) => {
+           println!("{}", e.to_string());
+            exit(1);
         }
     }
 }

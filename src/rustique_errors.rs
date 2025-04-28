@@ -1,0 +1,57 @@
+
+use std::fmt;
+use colored::Colorize;
+
+#[derive(Debug)]
+pub enum RustiqueError {
+    ApiError {
+        context: String,
+        source: ureq::Error,
+    },
+    DownloadError(String),
+    IoError{
+        context: String,
+        source: std::io::Error
+    },
+    ParseError(url::ParseError),
+    JsonError {
+        context: String,
+        source: serde_json5::Error
+    },
+    SimpleError(String),
+    ZipError {
+        context: String,
+        source: zip::result::ZipError
+    }
+}
+
+impl fmt::Display for RustiqueError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RustiqueError::ApiError {context, source} => write!(f, "Api Error: {}: {}", context, source.to_string().red().bold()),
+            RustiqueError::DownloadError(e) => write!(f, "Download Error: {}", e.to_string().red().bold()),
+            RustiqueError::IoError { context, source } => write!(f, "{}: {}", context, source.to_string().red().bold()),
+            RustiqueError::ParseError(e) => write!(f, "Parse Error: {}", e.to_string().red().bold()),
+            RustiqueError::SimpleError(e) => write!(f, "{}", e.to_string().red().bold()),
+            RustiqueError::ZipError{context, source} => write!(f, "ZipError: {}, {}", context, source.to_string().red().bold()),
+            RustiqueError::JsonError{context, source} => write!(f, "JsonParseError: {}, {}", context, source.to_string().red().bold()),
+        }
+    }
+}
+
+impl std::error::Error for RustiqueError {}
+
+impl From<std::io::Error> for RustiqueError {
+    fn from(e: std::io::Error) -> Self {
+        RustiqueError::IoError {
+            source: e,
+            context: "".to_string(),
+        }
+    }
+}
+
+impl From<url::ParseError> for RustiqueError {
+    fn from(e: url::ParseError) -> Self {
+        RustiqueError::ParseError(e)
+    }
+}

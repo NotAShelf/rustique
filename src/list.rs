@@ -10,10 +10,12 @@ use std::fs::{DirEntry, File};
 use std::io::{Read, stdin};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use colored::Colorize;
 use ureq::get;
 use zip::ZipArchive;
+use crate::rustique_errors::RustiqueError;
 
-fn setup_table_from_sync(sync_data: &Result<RustiqueSyncJson, Box<dyn Error>>) -> Table {
+fn setup_table_from_sync(sync_data: &Result<RustiqueSyncJson, RustiqueError>) -> Table {
     let mut table = Table::new();
 
     table.set_content_arrangement(ContentArrangement::Dynamic);
@@ -38,7 +40,7 @@ fn setup_table_from_sync(sync_data: &Result<RustiqueSyncJson, Box<dyn Error>>) -
 }
 
 // TODO:: Should we handle mods that are in directories and not .zip files
-pub fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(), Box<dyn Error>> {
+pub fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(), RustiqueError> {
     // TODO: check which platform we are on
 
     // check for sync data so we can show latest version
@@ -68,10 +70,15 @@ pub fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(), Box<d
         metadata
     };
 
+    if metadata.is_empty() {
+        eprintln!("{}","All mods are up to date!".green().bold());
+        return Ok(());
+    }
+
 
     metadata.into_iter().for_each(|mod_info| {
         let mut row = Row::new();
-        row.add_cell(Cell::new(&mod_info.name))
+        row.add_cell(Cell::new(&mod_info.name).add_attribute(Attribute::Bold).fg(Color::Blue))
             .add_cell(Cell::new(&mod_info.mod_id))
             .add_cell(Cell::new(
                 mod_info.version.as_ref().unwrap_or(&"".to_string()),
