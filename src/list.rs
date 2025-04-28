@@ -8,6 +8,7 @@ use std::fmt::format;
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::{Read, stdin};
+use std::ops::Add;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use colored::Colorize;
@@ -31,6 +32,7 @@ fn setup_table_from_sync(sync_data: &Result<RustiqueSyncJson, RustiqueError>) ->
     }
 
     header
+        .add_cell(Cell::new("Missing Dependencies").add_attribute(Attribute::Bold).fg(Color::Blue))
         .add_cell(Cell::new("Description").add_attribute(Attribute::Bold).fg(Color::Blue))
         .add_cell(Cell::new("Website").add_attribute(Attribute::Bold).fg(Color::Blue));
 
@@ -75,6 +77,7 @@ pub fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(), Rusti
         return Ok(());
     }
 
+    let mod_id_list: Vec<String> = metadata.clone().into_iter().map(|mod_info| mod_info.mod_id.clone()).collect();
 
     metadata.into_iter().for_each(|mod_info| {
         let mut row = Row::new();
@@ -102,10 +105,17 @@ pub fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(), Rusti
             }
         }
 
+        let missing_dependencies: Vec<String> = mod_info.dependencies.clone()
+            .unwrap().keys()
+            .filter(|e|e.to_lowercase().ne("game") && !mod_id_list.contains(e))
+            .cloned().collect();
+        
         row.add_cell(Cell::new(
+            missing_dependencies.join(", ").as_str()
+        ).fg(Color::Red).add_attribute(Attribute::SlowBlink).add_attribute(Attribute::Bold))
+            .add_cell(Cell::new(
             mod_info.description.as_ref().unwrap_or(&"".to_string()),
-        ))
-        .add_cell(Cell::new(
+        )).add_cell(Cell::new(
             mod_info.website.as_ref().unwrap_or(&"".to_string()),
         ));
 
