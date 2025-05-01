@@ -6,6 +6,7 @@ authors = ["tekunogosu", "Violet4"]
 
 [features]
 debug = []
+dev = []
 
 [dependencies]
 clap = { version = "4.5.37", features = ["cargo", "color", "suggestions", "derive" ] }

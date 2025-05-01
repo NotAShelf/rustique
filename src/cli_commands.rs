@@ -40,6 +40,19 @@ pub enum Commands {
         #[clap(subcommand)]
         command: ModpackCommands,
     },
+
+    #[cfg(feature = "dev")]
+    #[command(about = "Bulk downloader")]
+    BulkDownloader(BulkDownloadCommands),
+
+}
+
+#[cfg(feature = "dev")]
+#[derive(Args)]
+pub struct BulkDownloadCommands {
+    /// Number of mods to download
+    #[arg(short, long, default_value = "100")]
+    num_to_download: usize,
 }
 
 // #[derive(Args)]

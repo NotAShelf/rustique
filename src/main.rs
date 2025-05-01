@@ -23,7 +23,7 @@ use colored::Colorize;
 use crate::aliases::ModID;
 use crate::cli_commands::{Cli, Commands};
 use crate::install::{install_missing_dependencies, install_mod, install_mods, InstallOrUpdate};
-use crate::utils::{dlog, get_expanded_path, ModDownload, RustiqueOptions};
+use crate::utils::{dlog, get_expanded_path, RustiqueOptions};
 use crate::list::list_installed;
 use crate::modpack_commands::ModpackCommands;
 use crate::sync::sync;
@@ -131,6 +131,10 @@ fn main() {
                     println!("creating modpack with name: {}", &args.name);
                 }
             }
+        }
+        #[cfg(feature = "dev")]
+        Commands::BulkDownloader(args) => {
+            println!("bulk downloader");
         }
     }
 }

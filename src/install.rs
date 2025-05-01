@@ -2,7 +2,7 @@ use crate::aliases::{ModFileName, ModID, ModVersion};
 use crate::api::ApiClient;
 use crate::rustique_errors::RustiqueError;
 use crate::utils::{
-    ModDownload, dlog, download_mod, extract_all_mods_metadata, find_missing_dependencies,
+    dlog, download_mod, extract_all_mods_metadata, find_missing_dependencies,
     extract_zip_metadata,
 };
 use colored::Colorize;
@@ -20,33 +20,44 @@ pub enum InstallOrUpdate {
     Update(HashMap<ModID, ModSyncInfo>),
 }
 
+#[derive(Clone, Debug)]
+pub enum ModDownloadURI {
+    ModID(String),
+    DownloadURL(String),
+}
+
+impl ModDownloadURI {
+    pub fn get_download_url(self, api: &ApiClient) -> Result<String, RustiqueError> {
+
+        match self {
+            ModDownloadURI::ModID(mod_id) => {
+                let mod_info = api
+                    .fetch_mod(&mod_id)
+                    .map_err(|e| RustiqueError::ApiError {
+                        context: format!("Failed to fetch mod_id: {}", mod_id),
+                        source: e,
+                    })?;
+
+                mod_info.mod_json.releases[0].main_file
+                    .clone()
+                    .ok_or_else(|| RustiqueError::SimpleError(format!("Download URL not found! {}", mod_id)))
+            }
+            ModDownloadURI::DownloadURL(download_url) => Ok(download_url)
+        }
+    }
+}
+
+
+
 pub fn install_mod(
     mod_dir: &PathBuf,
-    mod_to_download: ModDownload,
-    api: Option<ApiClient>,
+    download_url: &String,
+    api: &ApiClient,
 ) -> Result<(), RustiqueError> {
-    // get mod_id from api so we have the latest download_url
-    let api = api.unwrap_or_else(ApiClient::new);
-
-    // println!("ModDownload: {:?}", mod_to_download);
-
-    let download_url = match mod_to_download.clone() {
-        ModDownload::ModID(mod_id) => {
-            let mod_info = api
-                .fetch_mod(&mod_id)
-                .map_err(|e| RustiqueError::ApiError {
-                    context: format!("Failed to fetch mod_id: {}", mod_id),
-                    source: e,
-                })?;
-            &mod_info.mod_json.releases[0].main_file.clone().unwrap()
-        }
-        ModDownload::DownloadURL(download_url) => &download_url.clone(),
-    };
-
     // we have the download_url, download the mod into the mods dir
     dlog(&format!("Downloading mod_file: {}", download_url));
-    match download_mod(mod_dir, &download_url) {
-        Ok(mod_info) => eprintln!("{} successfully installed", mod_info.mod_id.green()),
+    match download_mod(mod_dir, &download_url, api) {
+        Ok(mod_info) => eprintln!("{}: {} successfully installed", mod_info.mod_id.green(), mod_info.version.unwrap().yellow()),
         Err(e) => eprintln!("Failed to download mod: {}", e.to_string()),
     }
 
@@ -54,34 +65,35 @@ pub fn install_mod(
 }
 
 
-pub fn install_mods(mod_dir: &PathBuf, mods: InstallOrUpdate) -> Result<(), RustiqueError> {
+pub fn install_mods(mod_dir: &PathBuf, install_or_update: InstallOrUpdate) -> Result<(), RustiqueError> {
     let api = ApiClient::new();
 
     // this vec is to tell the install_missing_dependencies which mods it update deps for
     let mut dep_filter_list: HashSet<ModID> = HashSet::new();
     // this is the actual update list of the mods that will be sent to install_mod(..)
-    let mod_update_list: Vec<ModDownload>;
-
-    // Prepare the two lists we need to proceed
-    match mods {
+    let mod_download_urls: Vec<String> = match install_or_update {
         InstallOrUpdate::Update(mod_ids) => {
             dep_filter_list = mod_ids.keys().cloned().collect();
-            mod_update_list = mod_ids
+            mod_ids
                 .values()
                 .cloned()
-                .map(|mod_sync_info: ModSyncInfo| ModDownload::DownloadURL(mod_sync_info.latest_download_url.clone()))
-                .collect();
+                .map(|mod_sync_info: ModSyncInfo| mod_sync_info.latest_download_url.clone())
+                .collect()
         },
         InstallOrUpdate::Install(mod_ids) => {
             dep_filter_list.extend(mod_ids.clone());
-            mod_update_list = mod_ids.iter()
-                .map(|mod_id| ModDownload::ModID(mod_id.clone()))
-                .collect();
+            let mut urls = Vec::new();
+            for mod_id in mod_ids {
+                if let Ok(url) = ModDownloadURI::ModID(mod_id.clone()).get_download_url(&api) {
+                    urls.push(url);
+                }
+            }
+            urls
         }
-    }
+    };
 
-    mod_update_list.par_iter().for_each(|mod_download| {
-       match install_mod(mod_dir, mod_download.clone(), Some(api.clone())) {
+    mod_download_urls.par_iter().for_each(|mod_download| {
+       match install_mod(mod_dir, mod_download, &api) {
            Ok(_) => {}
            Err(e) => {
                eprintln!("{}", e);

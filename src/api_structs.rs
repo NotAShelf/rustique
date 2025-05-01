@@ -66,15 +66,40 @@ pub struct ModInfo {
     pub dependencies: Option<HashMap<ModID, ModVersion>>,
 }
 
-
 // Used for endpoint /api/mods
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Mods {
-    pub mods: Vec<ApiModJson>,
+    pub mods: Vec<ModsApi>,
     #[serde(default, rename = "statuscode")]
     pub status_code: String
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ModsApi {
+    #[serde(default, rename = "modid")]
+    mod_id: u32,
+    #[serde(default, rename = "assetid")]
+    asset_id: u32,
+    downloads: u32,
+    follows: u32,
+    #[serde(default, rename = "trendingpoints")]
+    trending_points: u32,
+    comments: u32,
+    name: String,
+    summary: String,
+    #[serde(default, rename = "modidstrs")]
+    mod_id_strs: Vec<String>,
+    author: String,
+    #[serde(default, rename = "urlalias")]
+    url_alias: Option<String>,
+    side: String,
+    #[serde(default, rename = "type")]
+    mod_type: String,
+    logo: Option<String>,
+    tags: Vec<String>,
+    #[serde(default, rename = "lastreleased")]
+    last_released: String
+}
 
 // Used for endpoint /api/mod/mod_id
 #[derive(Serialize, Deserialize, Debug)]

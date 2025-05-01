@@ -56,11 +56,8 @@ impl RustiqueOptions {
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum ModDownload {
-    ModID(String),
-    DownloadURL(String),
-}
+
+
 
 pub fn get_current_time() -> String {
     let now = SystemTime::now();
@@ -198,9 +195,8 @@ pub fn delete_file(file: &Path) -> Result<(), RustiqueError> {
     }
 }
 
-pub fn download_mod(mod_dir: &PathBuf, download_url: &String) -> Result<ModInfo, RustiqueError> {
+pub fn download_mod(mod_dir: &PathBuf, download_url: &String, api_client: &ApiClient) -> Result<ModInfo, RustiqueError> {
 
-    // This is a bit ugly.. but for now it works
     let filename_before = &download_url.split('=').last().unwrap();
     let file_path_before = PathBuf::from(mod_dir.clone().join(filename_before));
 
@@ -216,7 +212,7 @@ pub fn download_mod(mod_dir: &PathBuf, download_url: &String) -> Result<ModInfo,
         .map_err(|e| RustiqueError::ParseError(e))?;
 
     dlog(format!("Trying to download url: {}", url.clone().to_string()).as_str());
-    let response = ApiClient::new().get_request(&url.to_string())
+    let response = api_client.get_request(&url.to_string())
         .map_err(|e| RustiqueError::ApiError {
             context: format!("Error occurred during GET request of {}", download_url.red()),
             source: e

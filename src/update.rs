@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use crate::api::ApiClient;
 use crate::sync::{parse_sync_file, ModSyncInfo};
-use crate::utils::{delete_file, dlog, RustiqueOptions, download_mod, ModDownload};
+use crate::utils::{delete_file, dlog, RustiqueOptions, download_mod};
 use rayon::prelude::*;
 use std::process::exit;
 use colored::Colorize;
