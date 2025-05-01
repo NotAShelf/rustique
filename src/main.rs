@@ -85,7 +85,7 @@ fn main() {
             println!("list {:?}", name.name);
         }
         Commands::Install(args) => {
-            if args.mod_ids.len() > 1 {
+            if args.mod_ids.len() > 0 {
                 let mod_ids: HashSet<ModID> = args.mod_ids.iter().cloned().collect();
                 match install_mods(mod_opts.mod_dir.as_ref().unwrap(), InstallOrUpdate::Install(mod_ids)) {
                     Ok(_) => {
