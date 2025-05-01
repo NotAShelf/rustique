@@ -77,28 +77,28 @@ pub struct Mods {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ModsApi {
     #[serde(default, rename = "modid")]
-    mod_id: u32,
+    pub mod_id: u32,
     #[serde(default, rename = "assetid")]
-    asset_id: u32,
-    downloads: u32,
-    follows: u32,
+    pub asset_id: u32,
+    pub downloads: u32,
+    pub follows: u32,
     #[serde(default, rename = "trendingpoints")]
-    trending_points: u32,
-    comments: u32,
-    name: String,
-    summary: String,
+    pub trending_points: u32,
+    pub comments: u32,
+    pub name: Option<String>,
+    pub summary: Option<String>,
     #[serde(default, rename = "modidstrs")]
-    mod_id_strs: Vec<String>,
-    author: String,
+    pub mod_id_strs: Vec<String>,
+    pub author: Option<String>,
     #[serde(default, rename = "urlalias")]
-    url_alias: Option<String>,
-    side: String,
+    pub url_alias: Option<String>,
+    pub side: Option<String>,
     #[serde(default, rename = "type")]
-    mod_type: String,
-    logo: Option<String>,
-    tags: Vec<String>,
+    pub mod_type: Option<String>,
+    pub logo: Option<String>,
+    pub tags: Vec<String>,
     #[serde(default, rename = "lastreleased")]
-    last_released: String
+    pub last_released: Option<String>
 }
 
 // Used for endpoint /api/mod/mod_id

@@ -51,10 +51,8 @@ impl ApiClient {
         let client = Arc::new(self);
 
          mod_list.par_iter()
-
              .map(|mod_info| {
                  let agent = client.clone();
-                 // print!("Attempting api call for {}", mod_info.mod_id);
                  match agent.fetch_mod(mod_info.mod_id.as_ref()) {
                      Ok(the_mod) => Ok((mod_info.mod_id.clone(), the_mod)),
                      Err(e) => Err(RustiqueError::ApiError {

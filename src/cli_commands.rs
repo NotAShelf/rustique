@@ -23,19 +23,19 @@ pub enum Commands {
     #[command(about = "Updates a specific mod OR all mods installed. Runs sync after completion")]
     Update(UpdateArgs),
 
-    #[command(about = "View the changelogs for a installed mod (Not Implemented)")]
-    Changelog(ChangeLogArgs),
-
     #[command(about = "Install a specific mod. Must use the mod_id, Example: ./Rustique install alchemy")]
     Install(InstallArgs),
 
-    #[command(about = "Shows values from the modinfo.json file inside the mod zip")]
+    #[command(about = "View the changelogs for a installed mod (Not Implemented)")]
+    Changelog(ChangeLogArgs),
+
+    #[command(about = "Shows values from the modinfo.json file inside the mod zip (Not Implemented)")]
     Info(ModInfoArgs),
 
     #[command(about = "Search the mob website for mobs. (Not implemented)")]
     Search(SearchMods),
 
-    #[command(about = "Work in progress")]
+    #[command(about = "Create, download, update modpacks for VintageStory (Not Implemented)")]
     ModPack {
         #[clap(subcommand)]
         command: ModpackCommands,
@@ -52,12 +52,8 @@ pub enum Commands {
 pub struct BulkDownloadCommands {
     /// Number of mods to download
     #[arg(short, long, default_value = "100")]
-    num_to_download: usize,
+    pub(crate) num_to_download: usize,
 }
-
-// #[derive(Args)]
-// pub struct SyncArgs {
-// }
 
 #[derive(Args)]
 pub struct ListArgs {
@@ -86,8 +82,6 @@ pub struct UpdateArgs {
 pub struct ChangeLogArgs {
     pub(crate) name: Option<String>,
 }
-
-
 
 #[derive(Args)]
 #[command(group(

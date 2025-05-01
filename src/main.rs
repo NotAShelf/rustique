@@ -13,6 +13,7 @@ mod modpack_commands;
 mod rustique_errors;
 
 mod aliases;
+mod bulk_downloader;
 
 use std::collections::HashSet;
 use std::error::Error;
@@ -21,6 +22,7 @@ use std::process::exit;
 use clap::{Args, Parser, Subcommand, ColorChoice, CommandFactory, FromArgMatches, crate_authors};
 use colored::Colorize;
 use crate::aliases::ModID;
+use crate::bulk_downloader::bulk_download;
 use crate::cli_commands::{Cli, Commands};
 use crate::install::{install_missing_dependencies, install_mod, install_mods, InstallOrUpdate};
 use crate::utils::{dlog, get_expanded_path, RustiqueOptions};
@@ -134,7 +136,14 @@ fn main() {
         }
         #[cfg(feature = "dev")]
         Commands::BulkDownloader(args) => {
-            println!("bulk downloader");
+            match bulk_download(mod_opts.mod_dir.as_ref().unwrap(), args.num_to_download) {
+                Ok(_) => {
+                    println!("All mods downloaded.. hopefully..");
+                }
+                Err(e) => {
+                    eprintln!("{}", e.to_string());
+                }
+            }
         }
     }
 }

@@ -56,9 +56,6 @@ impl RustiqueOptions {
     }
 }
 
-
-
-
 pub fn get_current_time() -> String {
     let now = SystemTime::now();
     let datetime: DateTime<Utc> = now.into();
@@ -76,16 +73,6 @@ pub fn get_expanded_path(dir: PathBuf) -> PathBuf {
     }
 
     dir
-}
-
-pub fn _get_case_insensitive<'a>(obj: &'a serde_json::Value, key: &str) -> Option<&'a serde_json::Value> {
-    if let Some(obj) = obj.as_object() {
-        obj.iter()
-            .find(|(k, _)|k.to_lowercase() == key.to_lowercase())
-            .map(|(_, v)| v)
-    } else {
-        None
-    }
 }
 
 // this function filters out any unwanted dependencies
@@ -150,7 +137,7 @@ pub fn extract_zip_metadata(entry: PathBuf) -> Result<ModInfo, RustiqueError> {
 
     let mod_info = serde_json5::from_str::<ModInfo>(&mod_info_contents)
         .map_err(|e: serde_json5::Error| RustiqueError::JsonError {
-            context: format!("Failed to parse json in {}", entry.file_name().unwrap().to_string_lossy()),
+            context: format!("Failed to parse json in {}", entry.file_name().unwrap_or_default().to_string_lossy()),
             source: e
         })?;
 
