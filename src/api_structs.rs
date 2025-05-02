@@ -181,10 +181,14 @@ pub struct Releases {
     pub release_id: u32,
     #[serde(default, rename = "mainfile")]
     pub main_file: Option<String>,
+
+    // mod awearablelight has an int for a filename..
     #[serde(default)]
-    pub filename: Option<String>,
+    pub filename: Option<StringOrInt>,
+    // mod awearablelight has null for a fileid on a release
     #[serde(default, rename = "fileid")]
-    pub file_id: u32,
+    pub file_id: Option<u32>,
+
     #[serde(default)]
     pub downloads: u32,
     #[serde(default)]

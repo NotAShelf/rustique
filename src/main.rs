@@ -35,8 +35,6 @@ use crate::update::{update_mods};
 fn main() {
 
     let cli = Cli::parse();
-    // You can check for the existence of subcommands, and if found use their
-    // matches just as you would the top level cmd
 
     let mod_opts = if cli.mods_dir.is_none() {
         RustiqueOptions::default()
@@ -49,14 +47,6 @@ fn main() {
 
     // TODO: check for windows equiv
     match &cli.command {
-
-        // Database fields
-        // modid
-        // installed version
-        // latest version
-        // last sync time
-        // url to latest known version
-
         Commands::Sync => {
             // Sync will add a rustique-sync.json to a valid mod_dir
             handle_sync_call(mod_opts.mod_dir.as_ref().unwrap());
