@@ -201,10 +201,7 @@ pub fn download_mod(mod_dir: &PathBuf, download_url: &String, api_client: &ApiCl
 
     dlog(format!("Trying to download url: {}", url.clone().to_string()).as_str());
     let response = api_client.get_request(&url.to_string())
-        .map_err(|e| RustiqueError::ApiError {
-            context: format!("Error occurred during GET request of {}", download_url.red()),
-            source: e
-        })?;
+        .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
 
     let mut bytes: Vec<u8> = Vec::new();
 
@@ -230,5 +227,4 @@ pub fn download_mod(mod_dir: &PathBuf, download_url: &String, api_client: &ApiCl
 
     Ok(extract_zip_metadata(file_path)?)
 }
-
 

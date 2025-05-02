@@ -33,11 +33,7 @@ impl ModDownloadURI {
         match self {
             ModDownloadURI::ModID(mod_id) => {
                 let mod_info = api
-                    .fetch_mod(&mod_id)
-                    .map_err(|e| RustiqueError::ApiError {
-                        context: format!("Failed to fetch mod_id: {}", mod_id),
-                        source: e,
-                    })?;
+                    .fetch_mod(&mod_id)?;
 
                 let (_, download_url) = parse_latest_version(&mod_info.mod_json.releases);
 
@@ -95,7 +91,7 @@ pub fn install_mods(mod_dir: &PathBuf, install_or_update: InstallOrUpdate) -> Re
     };
 
     if mod_download_urls.len() < 1 {
-        Err(RustiqueError::SimpleError(format!("{}", "No valid mod ids found")))?
+        Err(RustiqueError::SimpleError(format!("{}", "No mods to download\n\r")))?
     }
 
     mod_download_urls.par_iter().for_each(|mod_download| {
