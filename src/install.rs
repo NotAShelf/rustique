@@ -47,8 +47,6 @@ impl ModDownloadURI {
     }
 }
 
-
-
 pub fn install_mod(
     mod_dir: &PathBuf,
     download_url: &String,
@@ -63,7 +61,6 @@ pub fn install_mod(
 
     Ok(())
 }
-
 
 pub fn install_mods(mod_dir: &PathBuf, install_or_update: InstallOrUpdate) -> Result<(), RustiqueError> {
     let api = ApiClient::new();
@@ -92,6 +89,10 @@ pub fn install_mods(mod_dir: &PathBuf, install_or_update: InstallOrUpdate) -> Re
         }
     };
 
+    if mod_download_urls.len() < 1 {
+        Err(RustiqueError::SimpleError(format!("{}", "No valid mod ids found")))?
+    }
+
     mod_download_urls.par_iter().for_each(|mod_download| {
        match install_mod(mod_dir, mod_download, &api) {
            Ok(_) => {}
@@ -107,7 +108,7 @@ pub fn install_mods(mod_dir: &PathBuf, install_or_update: InstallOrUpdate) -> Re
 }
 
 pub fn install_missing_dependencies(mod_dir: &PathBuf, mods_to_update_deps: Option<HashSet<ModID>>) -> Result<(), RustiqueError> {
-    eprintln!("{}","Installing missing dependencies...".green().bold());
+    eprintln!("{}","Checking for dependencies...".green().bold());
 
     let mut metadata: Vec<ModInfo> = extract_all_mods_metadata(mod_dir)?
         .into_values()
