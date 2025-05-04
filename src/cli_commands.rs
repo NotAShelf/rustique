@@ -1,9 +1,28 @@
 use clap::{Args, Parser, Subcommand, ArgGroup};
-use crate::modpack_commands::*;
+use crate::commands::arg_structs::changelog_args::ChangeLogArgs;
+use crate::commands::arg_structs::config_args::ConfigCommand;
+use crate::commands::arg_structs::info_args::ModInfoArgs;
+use crate::commands::arg_structs::install_args::InstallArgs;
+use crate::commands::arg_structs::list_args::ListArgs;
+use crate::commands::arg_structs::modpack_args::ModpackCommands;
+use crate::commands::arg_structs::search_args::SearchMods;
+use crate::commands::arg_structs::update_args::UpdateArgs;
+
 #[derive(Parser)]
+#[command(name = "Rustique")]
+#[command(author = "Theysa")]
+#[command(about = "An extremely fast mod manager for Vintage Story, written in Rust.")]
 #[command(version, about, long_about = None)]
 #[command(propagate_version = true)]
 pub struct Cli {
+
+    /// Shows info level logging messages. This is very noisy, used for debugging.
+    #[arg(short, long, default_value = "false")]
+    pub verbose: bool,
+
+    /// Shows all logging messages. This is EXTREMELY noisy. Only run this if you have to.
+    #[arg(short, long, default_value = "false")]
+    pub debug: bool,
 
     #[arg(short, long)]
     pub(crate) mods_dir: Option<String>,
@@ -26,13 +45,16 @@ pub enum Commands {
     #[command(about = "Install a specific mod. Must use the mod_id, Example: ./Rustique install alchemy")]
     Install(InstallArgs),
 
+    #[command(about = "Manage config options for Rustique")]
+    Config(ConfigCommand),
+
     #[command(about = "View the changelogs for a installed mod (Not Implemented)")]
     Changelog(ChangeLogArgs),
 
     #[command(about = "Shows values from the modinfo.json file inside the mod zip (Not Implemented)")]
     Info(ModInfoArgs),
 
-    #[command(about = "Search the mob website for mobs. (Not implemented)")]
+    #[command(about = "Search the mod website for mods. (Not implemented)")]
     Search(SearchMods),
 
     #[command(about = "Create, download, update modpacks for VintageStory (Not Implemented)")]
@@ -77,60 +99,4 @@ pub struct BulkDownloadCommands {
     pub(crate) num_to_download: usize,
 }
 
-#[derive(Args)]
-pub struct ListArgs {
-    /// List only mods that need updating
-    #[arg(short, long, default_value = "false")]
-    pub(crate) updates: bool
-}
 
-#[derive(Args)]
-pub struct UpdateArgs {
-
-    /// Update specific mod, must be mod_id. Example: ./Rustique update alchemy
-    #[arg(num_args = 1..)]
-    pub(crate) mod_ids: Vec<String>,
-
-    /// Update all mods, don't set a <name>. Example: ./Rustique update --all
-    #[arg(short, long)]
-    pub(crate) all: bool,
-
-    /// Update mods but keep old version.
-    #[arg(short, long, default_value = "false")]
-    pub(crate) keep_old_files: bool
-}
-
-#[derive(Args)]
-pub struct ChangeLogArgs {
-    pub(crate) name: Option<String>,
-}
-
-#[derive(Args)]
-#[command(group(
-    ArgGroup::new("dependency_flags")
-        .args(["missing_dependencies", "ignore_dependencies"])
-        .required(false)
-))]
-pub struct InstallArgs {
-    /// List all the mods you want to install with a space between each mod. Example ./Rustique install alchemy combatoverhaul
-    #[arg(num_args = 1..)]
-    pub(crate) mod_ids: Vec<String>,
-
-    /// Setting this flag will prevent Rustique from installing dependencies discovered during installation
-    #[arg(short, long, default_value = "false")]
-    pub(crate) ignore_dependencies: bool,
-
-    /// This flag will install all missing dependencies found within your mod directory
-    #[arg(short, long, default_value = "false")]
-    pub(crate) missing_dependencies: bool,
-}
-
-#[derive(Args)]
-pub struct ModInfoArgs {
-    pub(crate) mod_id: String,
-}
-
-#[derive(Args)]
-pub struct SearchMods {
-
-}

@@ -63,7 +63,7 @@ pub struct ModInfo {
     #[serde(default, rename = "type", alias = "Type")]
     pub mod_type: StringOrInt,
 
-    #[serde(default, rename = "modid", alias = "modId", alias = "ModId", alias = "ModID", alias = "modID")]
+    #[serde(default, rename = "modid", alias = "modId", alias = "ModId", alias = "ModID", alias = "modID", alias = "mod_id", alias = "Mod_id", alias = "Mod_ID", alias = "Mod_Id", alias = "MOD_ID")]
     pub mod_id: ModID,
     #[serde(default, alias = "Version")]
     pub version: Option<ModVersion>,
@@ -99,7 +99,7 @@ pub struct Mods {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ModsApi {
-    #[serde(default, rename = "modid")]
+    #[serde(default, rename = "modid", alias = "mod_id")]
     pub mod_id: u32,
     #[serde(default, rename = "assetid")]
     pub asset_id: u32,
@@ -127,7 +127,7 @@ pub struct ModsApi {
 // Used for endpoint /api/mod/mod_id
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Mod {
-    #[serde(rename="mod")]
+    #[serde(rename="mod", alias = "Mod")]
     pub mod_json: ApiModJson,
 
     #[serde(default, rename="statuscode")]
@@ -137,7 +137,7 @@ pub struct Mod {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct ApiModJson {
-    #[serde(default, rename="modid")]
+    #[serde(default, rename="modid", alias = "ModID", alias = "mod_id")]
     pub mod_id: u32,
     #[serde(default, rename="assetid")]
     pub asset_id: u32,

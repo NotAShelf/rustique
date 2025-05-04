@@ -25,6 +25,9 @@ lenient_semver = "0.4.2"
 regex = "1.11.1"
 semver = "1.0.26"
 toml = "0.8.22"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing-appender = "0.2.3"
 
 [profile.dev]
 opt-level = 1

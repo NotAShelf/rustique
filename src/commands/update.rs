@@ -4,21 +4,23 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use crate::api::ApiClient;
-use crate::sync::{parse_sync_file, ModSyncInfo};
+use crate::commands::sync::{parse_sync_file, ModSyncInfo};
 use crate::utils::{delete_file, dlog, RustiqueOptions, download_mod};
 use rayon::prelude::*;
 use std::process::exit;
 use colored::Colorize;
+use tracing::{error, info};
 use url::{form_urlencoded, Url};
 use crate::aliases::ModID;
-use crate::install::{install_mod, install_mods, InstallOrUpdate};
+use crate::commands::install::{install_mod, install_mods, InstallOrUpdate};
 use crate::rustique_errors::RustiqueError;
 
 pub fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<ModID>, _keep_old_files: bool) -> Result<(), RustiqueError> {
-    eprintln!("{}", "Updating mods...".green().bold());
 
     let sync_data  = parse_sync_file(mod_dir);
     if sync_data.is_ok() {
+        eprintln!("{}", "Updating mods...".green().bold());
+
         let sync_data = sync_data?;
 
         let mut mods_to_check_update: HashMap<ModID, ModSyncInfo> = HashMap::new();
@@ -57,16 +59,18 @@ pub fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<ModID>, _keep_old_file
             final_mod_update_list.iter().for_each(|(_, mod_sync_info)| {
                 let file_path = &mod_dir.clone().join(mod_sync_info.file_name.to_string());
                 match delete_file(file_path) {
-                    Ok(_) => (),
+                    Ok(_) => {
+                        info!("{} {}", &mod_sync_info.file_name.bright_yellow(), "deleted successfully!".green() );
+                    },
                     Err(e) => {
-                        println!("Error deleting file {}: {}", file_path.display(), e);
+                        error!("{} {}: {}", "Error deleting file".red(), file_path.display().to_string().bright_yellow(), e);
                     }
                 }
             })
         }
 
     } else {
-        println!("Looks like you need to run './Rustique sync' first");
+        eprintln!("{} {} {}", "Looks like you need to run".bright_yellow(), "'Rustique sync'".bright_blue().bold(), "first".yellow());
         exit(1);
     }
 

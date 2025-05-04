@@ -30,6 +30,7 @@ pub enum RustiqueError {
         source: zip::result::ZipError
     },
     ConfigFileError(String),
+    MalformedModInfoJson(String),
 }
 
 impl fmt::Display for RustiqueError {
@@ -46,6 +47,7 @@ impl fmt::Display for RustiqueError {
             RustiqueError::NoVersionFound(e) => write!(f, "No Version Found: {}", e.to_string().red().bold()),
             RustiqueError::ModNotZipped(e) => write!(f, "Expected .zip, found folder. Did you forget to zip your mod? {}", e.to_string().yellow().bold()),
             RustiqueError::ConfigFileError(e) => write!(f, "Config File Error: {}", e.to_string().red().bold()),
+            RustiqueError::MalformedModInfoJson(e) => write!(f, "Malformed modinfo.json discovered for {}: Please contact the mod author. Rustique cannot process this mod.", e.to_string().red().bold()),
         }
     }
 }

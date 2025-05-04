@@ -13,7 +13,7 @@ use rayon::prelude::*;
 use serde_json::to_string_pretty;
 use ureq::Agent;
 use semver::Version;
-
+use tracing::{debug, error, info};
 use crate::aliases::{ModFileName, ModID, ModVersion};
 use crate::rustique_errors::RustiqueError;
 use crate::api_structs::{Mod, ModInfo, Releases};
@@ -44,6 +44,17 @@ pub struct ModSyncInfo {
     pub installed_version: ModVersion,
     pub latest_known_version: ModVersion,
     pub latest_download_url: String,
+}
+
+
+pub fn handle_sync_call(mod_dir: &PathBuf) {
+    match sync(mod_dir) {
+        Ok(_) => {}
+        Err(e) => {
+           error!("{}", e.to_string());
+            exit(1);
+        }
+    }
 }
 
 pub const SYNC_FILE_NAME: &str = "rustique-sync.json";
@@ -77,7 +88,7 @@ pub fn sync(mod_dir: &PathBuf) -> Result<(), RustiqueError> {
 
     let file_path = mod_dir.join(SYNC_FILE_NAME);
 
-    dlog(&format!("rustique-sync.json: {}", file_path.display()));
+    debug!("sync file: {}", file_path.display());
 
     let sync_data =
         RustiqueSyncJson {

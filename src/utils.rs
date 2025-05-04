@@ -14,12 +14,14 @@ use rayon::prelude::*;
 use regex::Regex;
 use semver::Version;
 use serde::{Deserialize, Serialize};
+use tracing::{debug, error};
 use url::Url;
 use zip::result::ZipError;
 use zip::ZipArchive;
 use crate::aliases::{ModFileName, ModID, ModVersion};
 use crate::api::ApiClient;
 use crate::api_structs::ModInfo;
+use crate::config_manager::get_config;
 use crate::rustique_errors::RustiqueError;
 
 #[derive(Clone, Debug)]
@@ -94,7 +96,6 @@ pub fn find_missing_dependencies(
         ).cloned().collect()
 }
 
-
 #[cfg(feature = "debug")]
 pub fn dlog(msg: &str) {
     println!("DEBUG: {}", msg);
@@ -156,8 +157,15 @@ pub fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<ModFileNam
         })?;
 
     let entries_vec: Vec<DirEntry> = dir.filter_map(|e| e.ok()).collect();
-
     let mods = Arc::new(Mutex::new(HashMap::<ModFileName, ModInfo>::new()));
+
+    let notify_of_unzipped_mods = match get_config().read() {
+        Ok(config) => config.notify_of_unzipped_mods,
+        Err(e) => {
+            error!("Config error: {}", e.to_string());
+            false
+        }
+    };
 
     entries_vec.par_iter().for_each(|entry| {
         let filename = entry.file_name().to_string_lossy().to_string();
@@ -166,10 +174,12 @@ pub fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<ModFileNam
         })() {
             Ok(mod_info) => {mods.lock().unwrap().insert(filename, mod_info);}
             Err(e) =>  {
-                if matches!(e, RustiqueError::ModNotZipped(_)) {
-                    eprintln!("{}",e.to_string().red().bold());
+
+                // verify_dir_is_mod(entry.path()) if true then display message
+                if matches!(e, RustiqueError::ModNotZipped(_)) && notify_of_unzipped_mods {
+                    eprintln!("{}",e.to_string().yellow());
                 } else {
-                    dlog(&format!("{}", e.to_string()));
+                    debug!("{}", e.to_string().yellow());
                 }
             }
         }
@@ -179,7 +189,7 @@ pub fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<ModFileNam
 }
 
 pub fn delete_file(file: &Path) -> Result<(), RustiqueError> {
-    dlog(format!("Trying to delete {}", file.display()).as_str());
+    debug!("Trying to delete {}", file.display());
     if file.exists() {
         Ok(fs::remove_file(&file)
             .map_err(|e| RustiqueError::IoError {
@@ -207,7 +217,7 @@ pub fn download_mod(mod_dir: &PathBuf, download_url: &String, api_client: &ApiCl
     let url = Url::parse(download_url.as_str())
         .map_err(|e| RustiqueError::UrlParseError(e))?;
 
-    dlog(format!("Trying to download url: {}", url.clone().to_string()).as_str());
+    debug!("Trying to download url: {}", url.clone().to_string());
     let response = api_client.get_request(&url.to_string())
         .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
 
@@ -231,7 +241,7 @@ pub fn download_mod(mod_dir: &PathBuf, download_url: &String, api_client: &ApiCl
             source: e
         })?;
 
-    dlog(format!("File downloaded to {}", file_path.display()).as_str());
+    debug!("File downloaded to {}", file_path.display());
 
     Ok(extract_zip_metadata(file_path)?)
 }

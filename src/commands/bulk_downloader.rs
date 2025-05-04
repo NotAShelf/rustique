@@ -4,7 +4,7 @@ use rayon::prelude::*;
 use crate::api::ApiClient;
 use crate::api_structs::{ModsApi, Mod};
 use crate::utils::*;
-use crate::install::*;
+use crate::commands::install::*;
 use crate::rustique_errors::RustiqueError;
 
 pub fn bulk_download(mod_dir: &PathBuf, num_mods_to_download: usize) -> Result<(), RustiqueError> {

@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::exit;
+use colored::Colorize;
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 use crate::rustique_errors::RustiqueError;
@@ -21,6 +22,8 @@ pub struct Config {
     pub zip_mod_files: bool,
     // create a backup of each mod before its updated.
     pub backup_mods: bool,
+
+    pub notify_of_unzipped_mods: bool,
 
     pub mod_pack: ModPack,
     pub alias: Vec<AliasConfig>,
@@ -54,6 +57,7 @@ impl Default for Config {
             zip_mod_files: false,
             backup_mods: false,
             mod_pack: ModPack {},
+            notify_of_unzipped_mods: false,
             alias: vec![],
             table: TableConfig {
                 headers: HashMap::new(),
@@ -90,7 +94,7 @@ impl Config {
                 RustiqueError::ConfigFileError(format!("Failed writing config file: {}", err.to_string()))
             })?;
 
-            eprintln!("Successfully created config file: {}", config_file_path.display());
+            eprintln!("{} {}","Successfully created config file: ".green(), config_file_path.display().to_string().bright_yellow());
             return Ok(default_config);
         };
 

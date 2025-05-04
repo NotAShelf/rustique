@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use crate::api_structs::ModInfo;
-use crate::sync::{parse_sync_file, RustiqueSyncJson};
+use crate::commands::sync::{parse_sync_file, RustiqueSyncJson};
 use crate::utils::{RustiqueOptions, extract_all_mods_metadata, extract_zip_metadata, find_missing_dependencies, sanitize_string};
 use comfy_table::{Attribute, Cell, Color, ContentArrangement, Row, Table};
 use rayon::prelude::*;

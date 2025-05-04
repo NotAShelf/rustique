@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use colored::Colorize;
 use ureq::{Agent, Body, Error};
 use rayon::prelude::*;
+use tracing::{debug, error, info};
 use ureq::config::Config;
 use ureq::http::Response;
 use crate::api_structs::{Mod, ModInfo, Mods};
@@ -49,6 +51,13 @@ impl ApiClient {
     }
 
     pub fn fetch_mod(&self, mod_id: &str) -> Result<Mod, RustiqueError> {
+        if mod_id.is_empty() {
+            error!("Mod id is empty {}", mod_id);
+            return Err(RustiqueError::MalformedModInfoJson(format!("{}","The mod id received was empty.. unable to download whatever mod this is.")));
+        }
+
+        info!("{} {}", "Fetching mod: ".bright_green(), mod_id.bright_yellow());
+
         self.agent.get(&self.uri(&format!("mod/{}", mod_id))).call().map_err(|e| RustiqueError::ApiError {
             context: format!("fetch_mod (get) [{}]", mod_id),
             source: e
@@ -64,8 +73,14 @@ impl ApiClient {
          let result = mod_list
              .par_iter()
              .filter_map(|mod_info| {
-                 let agent = client.clone();
-                 match agent.fetch_mod(mod_info.mod_id.as_ref()) {
+                 debug!("{:#?}",mod_info);
+
+                 if mod_info.mod_id.is_empty() {
+                     error!("\n\r\tMod {}: Has an empty or missing mod_id. Please contact the author to correct their malformed modinfo.json.", mod_info.name.red().bold());
+                     return None;
+                 }
+
+                 match client.fetch_mod(mod_info.mod_id.as_ref()) {
                      Ok(the_mod) => {
                          Some((mod_info.mod_id.clone(), the_mod))
                      },

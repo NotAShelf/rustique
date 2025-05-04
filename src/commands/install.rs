@@ -12,8 +12,9 @@ use std::hash::Hash;
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::{Arc, Mutex};
+use tracing::{debug, error, info, warn};
 use crate::api_structs::ModInfo;
-use crate::sync::ModSyncInfo;
+use crate::commands::sync::ModSyncInfo;
 use crate::version_management::parse_latest_version;
 
 pub enum InstallOrUpdate {
@@ -32,8 +33,12 @@ impl ModDownloadURI {
 
         match self {
             ModDownloadURI::ModID(mod_id) => {
+                debug!("ModDownloadURI.get_download_url - ModID: {}", mod_id);
+
                 let mod_info = api
                     .fetch_mod(&mod_id)?;
+
+                debug!("ModDownloadURI.get_download_url - mod_info {:?}", mod_info);
 
                 let (_, download_url) = parse_latest_version(&mod_info.mod_json.releases);
 
@@ -57,7 +62,7 @@ pub fn install_mod(
     dlog(&format!("Downloading mod_file: {}", download_url));
     match download_mod(mod_dir, &download_url, api) {
         Ok(mod_info) => eprintln!("{}: {} successfully installed", mod_info.mod_id.green(), mod_info.version.unwrap().yellow()),
-        Err(e) => eprintln!("Failed to download mod: {}", e.to_string()),
+        Err(e) => warn!("Failed to download mod: {}", e.to_string()),
     }
 
     Ok(())
@@ -90,6 +95,8 @@ pub fn install_mods(mod_dir: &PathBuf, install_or_update: InstallOrUpdate) -> Re
         }
     };
 
+    debug!("mod_download_urls: {:?}", mod_download_urls);
+
     if mod_download_urls.len() < 1 {
         Err(RustiqueError::SimpleError(format!("{}", "No mods to download\n\r")))?
     }
@@ -98,7 +105,7 @@ pub fn install_mods(mod_dir: &PathBuf, install_or_update: InstallOrUpdate) -> Re
        match install_mod(mod_dir, mod_download, &api) {
            Ok(_) => { }
            Err(e) => {
-               eprintln!("{}", e);
+               error!("{}", e);
            }
        }
     });
@@ -126,7 +133,8 @@ pub fn install_missing_dependencies(mod_dir: &PathBuf, mods_to_update_deps: Opti
        seen_ids.insert(mod_info.mod_id.clone())
     });
 
-    let missing_dependencies: Arc<Mutex<HashSet<ModID>>> = Arc::new(Mutex::new(HashSet::new()));
+    // let missing_dependencies: Arc<Mutex<HashSet<ModID>>> = Arc::new(Mutex::new(HashSet::new()));
+    let mut missing_dependencies: HashSet<ModID> = HashSet::new();
     let mut exclude_updated_mods = mods_to_update_deps.unwrap_or_else(|| HashSet::new());
 
     // here we combine the seen_ids (which are all the unique mod_ids in our download dir
@@ -135,24 +143,25 @@ pub fn install_missing_dependencies(mod_dir: &PathBuf, mods_to_update_deps: Opti
     // then later use it to exclude mods. it just feels weird..
     exclude_updated_mods.extend(seen_ids);
 
-    metadata.par_iter().for_each(|mod_info| {
+    metadata.iter().for_each(|mod_info| {
         let missing = find_missing_dependencies(mod_info.dependencies.clone(), Option::from(&exclude_updated_mods));
 
         missing_dependencies
-            .lock()
-            .unwrap()
+            // .lock()
+            // .unwrap()
             .extend(missing.into_iter());
     });
 
-    let final_list: HashSet<ModID> = Arc::try_unwrap(missing_dependencies)
-        .map_err(|_| RustiqueError::SimpleError("Failed to unwrap Arc".to_string()))?
-            .into_inner()
-        .map_err(|_| RustiqueError::SimpleError("Failed to unlock mutex".to_string()))?
-            .into_iter()
-        .collect();
+    // let final_list: HashSet<ModID> = Arc::try_unwrap(missing_dependencies)
+    //     .map_err(|_| RustiqueError::SimpleError("Failed to unwrap Arc".to_string()))?
+    //         .into_inner()
+    //     .map_err(|_| RustiqueError::SimpleError("Failed to unlock mutex".to_string()))?
+    //         .into_iter()
+    //     .collect();
 
-    if !final_list.is_empty() {
-        install_mods(mod_dir, InstallOrUpdate::Install(final_list))?;
+    if !missing_dependencies.is_empty() {
+        info!("More dependencies found to be missing: {:?}", missing_dependencies);
+        install_mods(mod_dir, InstallOrUpdate::Install(missing_dependencies))?;
     }
 
     Ok(())
