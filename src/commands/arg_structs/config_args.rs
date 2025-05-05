@@ -19,20 +19,16 @@ pub enum ConfigSubCommand {
     Show(ShowArgs),
 
     /// Deletes an option, returning it to the default value
-    Del(DelArgs),
+    Del(BoolArgs),
 }
 
-#[derive(Args, Debug)]
+
+
+
+#[derive(Args, Debug, Clone)]
 #[command(group(
     ArgGroup::new("common_args_flags")
-    .args([
-        "mods_dir",
-        "pin_game_version",
-        "backup_mods",
-        "backup_mods_dir",
-        "zip_mod_dirs",
-        "show_mod_dir_warning"
-    ]).required(false)
+    .required(false)
 ))]
 pub struct CommonArgs {
 
@@ -50,14 +46,14 @@ pub struct CommonArgs {
     pub mods_dir: Option<String>,
 
     #[arg(short, long)]
-    pub show_mod_dir_warning: Option<bool>,
+    pub notify_of_unzipped_mods: Option<bool>,
 
     /// The highest game version Rustique will use to download mods
     #[arg(short, long, value_name = "GAME_VERSION")]
     pub pin_game_version: Option<String>,
 
     /// Backup your mods before updating, preserves older versions
-    #[arg(short, long, default_value = "false")]
+    #[arg(short, long)]
     pub backup_mods: Option<bool>,
 
     /// Directory for mod backups
@@ -65,26 +61,30 @@ pub struct CommonArgs {
     pub backup_mods_dir: Option<String>,
 
     /// Rustique will attempt to identify mods that are not zipped and zip them for you.
-    #[arg(short, long, default_value = "false")]
+    #[arg(short, long)]
     pub zip_mod_dirs: Option<bool>,
+
+    /// Displays how long a command takes to complete
+    #[arg(short, long)]
+    pub show_execution_time: Option<bool>,
 }
 
 #[derive(Args, Debug)]
 pub struct SetArgs {
+    // #[command(flatten)]
+
     #[command(flatten)]
     pub common: CommonArgs
 }
 
 #[derive(Args, Debug)]
 pub struct ShowArgs {
-    #[arg(required = true)]
-    pub key: String,
     #[command(flatten)]
-    pub common: CommonArgs
+    pub common: BoolArgs
 }
 
 #[derive(Args, Debug)]
-pub struct DelArgs {
+pub struct BoolArgs {
 
     #[arg(short, long)]
     pub mods_dir: bool,

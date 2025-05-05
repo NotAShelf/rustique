@@ -23,6 +23,13 @@ pub struct Config {
     // create a backup of each mod before its updated.
     pub backup_mods: bool,
 
+    // location for the mod backups
+    // default ~/.config/rustique/backups
+    pub backup_mods_dir: String,
+
+    // Shows the "<operation> completed: " text after a command finishes
+    pub show_execution_time: bool,
+
     pub notify_of_unzipped_mods: bool,
 
     pub mod_pack: ModPack,
@@ -51,11 +58,14 @@ pub const CONFIG_DEFAULT_DIR: &str = "~/.config/rustique";
 
 impl Default for Config {
     fn default() -> Self {
+        let backup_mods_dir = get_expanded_path(PathBuf::from(CONFIG_DEFAULT_DIR).join("mod_backups"));
         Self {
             mod_dir: RustiqueOptions::default().mod_dir.unwrap().to_string_lossy().to_string(),
             pinned_game_version: "".to_string(), // if its empty then get the latest
             zip_mod_files: false,
             backup_mods: false,
+            backup_mods_dir: backup_mods_dir.to_string_lossy().to_string(),
+            show_execution_time: true,
             mod_pack: ModPack {},
             notify_of_unzipped_mods: false,
             alias: vec![],
@@ -94,7 +104,7 @@ impl Config {
                 RustiqueError::ConfigFileError(format!("Failed writing config file: {}", err.to_string()))
             })?;
 
-            eprintln!("{} {}","Successfully created config file: ".green(), config_file_path.display().to_string().bright_yellow());
+            println!("{} {}","Successfully created config file: ".green(), config_file_path.display().to_string().bright_yellow());
             return Ok(default_config);
         };
 

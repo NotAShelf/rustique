@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use colored::Colorize;
@@ -68,7 +68,7 @@ impl ApiClient {
     }
 
     pub fn fetch_mods_parallel(&self, mod_list: Vec<ModInfo>) -> Result<HashMap<String, Mod>, RustiqueError> {
-        let client = Arc::new(self);
+        // let client = Arc::new(self);
 
          let result = mod_list
              .par_iter()
@@ -80,7 +80,7 @@ impl ApiClient {
                      return None;
                  }
 
-                 match client.fetch_mod(mod_info.mod_id.as_ref()) {
+                 match self.fetch_mod(mod_info.mod_id.as_ref()) {
                      Ok(the_mod) => {
                          Some((mod_info.mod_id.clone(), the_mod))
                      },
@@ -92,6 +92,11 @@ impl ApiClient {
              }).collect();
 
         Ok(result)
+    }
+
+    pub fn fetch_game_versions(&self) -> Result<HashSet<String>, RustiqueError> {
+
+        Ok(HashSet::new())
     }
 
     pub fn get_request(&self, mod_uri: &str) -> Result<Response<Body>, RustiqueError> {

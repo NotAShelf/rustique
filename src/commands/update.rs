@@ -5,23 +5,28 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use crate::api::ApiClient;
 use crate::commands::sync::{parse_sync_file, ModSyncInfo};
-use crate::utils::{delete_file, dlog, RustiqueOptions, download_mod, footer};
+use crate::utils::{delete_file, dlog, RustiqueOptions, download_mod, elapsed_footer, notice};
 use rayon::prelude::*;
 use std::process::exit;
 use std::time::Instant;
 use colored::Colorize;
+use comfy_table::{Attribute, Color};
 use tracing::{error, info};
 use url::{form_urlencoded, Url};
 use crate::aliases::ModID;
 use crate::commands::install::{install_mod, install_mods, InstallOrUpdate};
+use crate::config_manager::get_config;
 use crate::rustique_errors::RustiqueError;
 
 pub fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<ModID>, _keep_old_files: bool) -> Result<(), RustiqueError> {
 
     let start_time = Instant::now();
+    let config = get_config().read().unwrap();
+
     let sync_data  = parse_sync_file(mod_dir);
     if sync_data.is_ok() {
-        eprintln!("{}", "Updating mods...".green().bold());
+        // println!("{}", "Updating mods...".green().bold());
+        notice("Updating mods...", Option::from(Color::Green), vec![Attribute::Bold]);
 
         let sync_data = sync_data?;
 
@@ -37,7 +42,7 @@ pub fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<ModID>, _keep_old_file
                     mods_to_check_update.entry(typed_mod_id.clone()).or_insert(mod_sync_data[&typed_mod_id].clone());
                     updates_exist = true;
                 } else {
-                    eprintln!("{} is not a valid mod_id!", &typed_mod_id.red());
+                    println!("{} is not a valid mod_id!", &typed_mod_id.red());
                 }
             });
         } else {
@@ -72,11 +77,13 @@ pub fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<ModID>, _keep_old_file
         }
 
     } else {
-        eprintln!("{} {} {}", "Looks like you need to run".bright_yellow(), "'Rustique sync'".bright_blue().bold(), "first".yellow());
+        println!("{} {} {}", "Looks like you need to run".bright_yellow(), "'Rustique sync'".bright_blue().bold(), "first".yellow());
         exit(1);
     }
 
-    footer(start_time, "Update");
+    if config.show_execution_time {
+        elapsed_footer(start_time, "Update");
+    }
 
     Ok(())
 }

@@ -19,6 +19,7 @@ use std::io;
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::exit;
+use std::time::Instant;
 use clap::{Args, CommandFactory, FromArgMatches, Parser, Subcommand};
 use colored::Colorize;
 use tracing::field::debug;
@@ -29,7 +30,7 @@ use commands::bulk_downloader::bulk_download;
 use crate::cli_commands::{Cli, Commands};
 use crate::commands::list::list_installed;
 use commands::install::{install_missing_dependencies, install_mods, InstallOrUpdate};
-use crate::utils::{get_expanded_path, RustiqueOptions};
+use crate::utils::{elapsed_footer, get_expanded_path, RustiqueOptions};
 use commands::sync::sync;
 use commands::update::update_mods;
 use crate::commands::arg_structs::modpack_args::ModpackCommands;
@@ -68,25 +69,25 @@ fn main() {
         debug!("Verbose logging enabled");
     }
 
-    let mod_opts = if cli.mods_dir.is_none() {
-        RustiqueOptions::default()
-    } else {
-        RustiqueOptions {
-            mod_dir: Some(get_expanded_path(PathBuf::from(cli.mods_dir.unwrap()))),
-            mod_id: None
-        }
-    };
+    let mut mod_opts: RustiqueOptions = RustiqueOptions::default();
 
-    let mod_dir = &mod_opts.get_mod_path();
+    let mut mod_dir = mod_opts.get_mod_path();
+
+    // the mods_dir from the cli takes priority from all other means, including the config file
+    if cli.mods_dir.is_some() {
+        mod_dir = get_expanded_path(PathBuf::from(cli.mods_dir.unwrap()));
+    }
+
+    info!("Operating on mods dir: {:?}", mod_opts.mod_dir);
 
     // TODO: check for windows equiv
     match &cli.command {
         Commands::Sync => {
             // Sync will add a rustique-sync.json to a valid mod_dir
-            handle_sync_call(mod_dir);
+            handle_sync_call(&mod_dir);
         }
         Commands::List(args) => {
-            match list_installed(mod_dir, args.updates) {
+            match list_installed(&mod_dir, args.updates) {
                 Ok(_) => {}
                 Err(e) => {
                     error!("{}", e.to_string().red().bold());
@@ -95,12 +96,12 @@ fn main() {
             }
         }
         Commands::Update(args) => {
-            match update_mods(mod_dir, args.mod_ids.clone(), args.keep_old_files) {
+            match update_mods(&mod_dir, args.mod_ids.clone(), args.keep_old_files) {
                 Ok(_) => {
-                    handle_sync_call(mod_dir);
+                    handle_sync_call(&mod_dir);
                 }
                 Err(e) => {
-                    error!("{}", e.to_string().red().bold());
+                    warn!("{}", e.to_string().red().bold());
                     exit(1);
                 }
             }
@@ -109,9 +110,13 @@ fn main() {
             println!("list {:?}", name.name);
         }
         Commands::Install(args) => {
+            let start_time = Instant::now();
+            let config = get_config().read().unwrap();
+
             if args.mod_ids.len() > 0 {
                 let mod_ids: HashSet<ModID> = args.mod_ids.iter().cloned().collect();
-                match install_mods(mod_dir, InstallOrUpdate::Install(mod_ids)) {
+
+                match install_mods(&mod_dir, InstallOrUpdate::Install(mod_ids)) {
                     Ok(_) => {
                         if args.mod_ids.len() > 1 {
                             // eprintln!("{}", "Mods successfully installed!".bold().green());
@@ -128,11 +133,12 @@ fn main() {
                         exit(1);
                     }
                 }
+
             }
 
             if args.missing_dependencies {
 
-                match install_missing_dependencies(mod_dir, None) {
+                match install_missing_dependencies(&mod_dir, None) {
                     Ok(_) => {
                         info!("{}", "All dependencies resolved..".bold().green());
                     }
@@ -141,6 +147,10 @@ fn main() {
                         exit(1);
                     }
                 }
+            }
+
+            if config.show_execution_time {
+                elapsed_footer(start_time, "Install");
             }
         }
 
@@ -167,7 +177,7 @@ fn main() {
         }
         #[cfg(feature = "dev")]
         Commands::BulkDownloader(args) => {
-            match bulk_download(mod_dir, args.num_to_download) {
+            match bulk_download(&mod_dir, args.num_to_download) {
                 Ok(_) => {
                     info!("All mods downloaded.. hopefully..");
                 }
@@ -201,7 +211,7 @@ fn main() {
 
             let set : HashSet<String> = HashSet::from_iter(list);
 
-            install_mods(mod_dir, InstallOrUpdate::Install(set)).unwrap();
+            install_mods(&mod_dir, InstallOrUpdate::Install(set)).unwrap();
         }
 
 

@@ -31,6 +31,7 @@ pub enum RustiqueError {
     },
     ConfigFileError(String),
     MalformedModInfoJson(String),
+
 }
 
 impl fmt::Display for RustiqueError {

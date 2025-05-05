@@ -1,10 +1,7 @@
 use crate::aliases::{ModFileName, ModID, ModVersion};
 use crate::api::ApiClient;
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{
-    dlog, download_mod, extract_all_mods_metadata, find_missing_dependencies,
-    extract_zip_metadata,
-};
+use crate::utils::{dlog, download_mod, extract_all_mods_metadata, find_missing_dependencies, extract_zip_metadata, notice, elapsed_footer};
 use colored::Colorize;
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
@@ -12,9 +9,12 @@ use std::hash::Hash;
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
+use comfy_table::{Attribute, Color};
 use tracing::{debug, error, info, warn};
 use crate::api_structs::ModInfo;
 use crate::commands::sync::ModSyncInfo;
+use crate::config_manager::get_config;
 use crate::version_management::parse_latest_version;
 
 pub enum InstallOrUpdate {
@@ -59,9 +59,9 @@ pub fn install_mod(
     api: &ApiClient,
 ) -> Result<(), RustiqueError> {
     // we have the download_url, download the mod into the mods dir
-    dlog(&format!("Downloading mod_file: {}", download_url));
+    info!("Downloading mod_file: {}", download_url);
     match download_mod(mod_dir, &download_url, api) {
-        Ok(mod_info) => eprintln!("{}: {} successfully installed", mod_info.mod_id.green(), mod_info.version.unwrap().yellow()),
+        Ok(mod_info) => println!("{}: {} successfully installed", mod_info.mod_id.green(), mod_info.version.unwrap().yellow()),
         Err(e) => warn!("Failed to download mod: {}", e.to_string()),
     }
 
@@ -70,6 +70,9 @@ pub fn install_mod(
 
 pub fn install_mods(mod_dir: &PathBuf, install_or_update: InstallOrUpdate) -> Result<(), RustiqueError> {
     let api = ApiClient::new();
+
+    let start_time = Instant::now();
+
 
     // this vec is to tell the install_missing_dependencies which mods it update deps for
     let mut dep_filter_list: HashSet<ModID> = HashSet::new();
@@ -98,14 +101,14 @@ pub fn install_mods(mod_dir: &PathBuf, install_or_update: InstallOrUpdate) -> Re
     debug!("mod_download_urls: {:?}", mod_download_urls);
 
     if mod_download_urls.len() < 1 {
-        Err(RustiqueError::SimpleError(format!("{}", "No mods to download\n\r")))?
+        return Err(RustiqueError::SimpleError(format!("{}", "No mods to download\n\r")))?;
     }
 
     mod_download_urls.par_iter().for_each(|mod_download| {
        match install_mod(mod_dir, mod_download, &api) {
            Ok(_) => { }
            Err(e) => {
-               error!("{}", e);
+               warn!("{}", e);
            }
        }
     });
@@ -116,7 +119,8 @@ pub fn install_mods(mod_dir: &PathBuf, install_or_update: InstallOrUpdate) -> Re
 }
 
 pub fn install_missing_dependencies(mod_dir: &PathBuf, mods_to_update_deps: Option<HashSet<ModID>>) -> Result<(), RustiqueError> {
-    eprintln!("{}","Checking for dependencies...".green().bold());
+    // println!("{}","Checking for dependencies...".green().bold());
+    notice("Checking for dependencies...", Option::from(Color::Green), vec![Attribute::Bold]);
 
     let mut metadata: Vec<ModInfo> = extract_all_mods_metadata(mod_dir)?
         .into_values()
@@ -133,7 +137,6 @@ pub fn install_missing_dependencies(mod_dir: &PathBuf, mods_to_update_deps: Opti
        seen_ids.insert(mod_info.mod_id.clone())
     });
 
-    // let missing_dependencies: Arc<Mutex<HashSet<ModID>>> = Arc::new(Mutex::new(HashSet::new()));
     let mut missing_dependencies: HashSet<ModID> = HashSet::new();
     let mut exclude_updated_mods = mods_to_update_deps.unwrap_or_else(|| HashSet::new());
 
@@ -146,18 +149,8 @@ pub fn install_missing_dependencies(mod_dir: &PathBuf, mods_to_update_deps: Opti
     metadata.iter().for_each(|mod_info| {
         let missing = find_missing_dependencies(mod_info.dependencies.clone(), Option::from(&exclude_updated_mods));
 
-        missing_dependencies
-            // .lock()
-            // .unwrap()
-            .extend(missing.into_iter());
+        missing_dependencies.extend(missing.into_iter());
     });
-
-    // let final_list: HashSet<ModID> = Arc::try_unwrap(missing_dependencies)
-    //     .map_err(|_| RustiqueError::SimpleError("Failed to unwrap Arc".to_string()))?
-    //         .into_inner()
-    //     .map_err(|_| RustiqueError::SimpleError("Failed to unlock mutex".to_string()))?
-    //         .into_iter()
-    //     .collect();
 
     if !missing_dependencies.is_empty() {
         info!("More dependencies found to be missing: {:?}", missing_dependencies);
