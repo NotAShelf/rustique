@@ -59,11 +59,18 @@ pub fn install_mod(
     api: &ApiClient,
 ) -> Result<(), RustiqueError> {
     // we have the download_url, download the mod into the mods dir
-    info!("Downloading mod_file: {}", download_url);
-    match download_mod(mod_dir, &download_url, api) {
-        Ok(mod_info) => println!("{}: {} successfully installed", mod_info.mod_id.green(), mod_info.version.unwrap().yellow()),
-        Err(e) => warn!("Failed to download mod: {}", e.to_string()),
+
+    if !download_url.is_empty() {
+        info!("Downloading mod_file: {}", download_url);
+
+        match download_mod(mod_dir, &download_url, api) {
+            Ok(mod_info) => println!("{}: {} successfully installed", mod_info.mod_id.green(), mod_info.version.unwrap().yellow()),
+            Err(e) => warn!("Failed to download mod: {}", e.to_string()),
+        }
+    } else {
+        return Err(RustiqueError::DownloadError("Unable to download mod, because of missing mod_id".to_string()));
     }
+
 
     Ok(())
 }

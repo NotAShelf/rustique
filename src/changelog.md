@@ -12,6 +12,7 @@
 * Added an operation time footer for `list`, `update`, `sync`, and `install`. This can be turned off in the configs.
 * List also shows total mods installed at the bottom. For now, this only shows the valid mods that Rustique can actually manage. Any non-zip mods are ones that list can't read, will not be counted. 
 * The list table style is slightly more compact now and the dependencies lists no longer wrap in the middle of a long mod_id.
-* The execution time for commands now shows at the end of commands. You can turn this off if it bothers you.
-* Added config option for displaying the execution time for commands.
-* You can set *most* of the config options now through `Rustique`. 
+* You can set *most* of the config options now through `Rustique`.
+* Adjusted the look'n feel of the tables.
+* Information text has a border now.
+* Rustique no longer deletes mods that are malformed during the update command, it reports the problem but leaves it alone.

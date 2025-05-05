@@ -11,7 +11,7 @@ use std::process::exit;
 use std::time::Instant;
 use colored::Colorize;
 use comfy_table::{Attribute, Color};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use url::{form_urlencoded, Url};
 use crate::aliases::ModID;
 use crate::commands::install::{install_mod, install_mods, InstallOrUpdate};
@@ -55,24 +55,29 @@ pub fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<ModID>, _keep_old_file
         }
 
         let final_mod_update_list: HashMap<ModID, ModSyncInfo> = mods_to_check_update
-            .into_iter().filter(|(_, mod_sync_info)| {
-                mod_sync_info.latest_known_version != mod_sync_info.installed_version
+            .into_iter().filter(|(mod_id, mod_sync_info)| {
+                mod_sync_info.latest_known_version != mod_sync_info.installed_version && !mod_id.is_empty()
             }).collect();
 
 
         install_mods(mod_dir, InstallOrUpdate::Update(final_mod_update_list.clone()))?;
 
         if !_keep_old_files {
-            final_mod_update_list.iter().for_each(|(_, mod_sync_info)| {
-                let file_path = &mod_dir.clone().join(mod_sync_info.file_name.to_string());
-                match delete_file(file_path) {
-                    Ok(_) => {
-                        info!("{} {}", &mod_sync_info.file_name.bright_yellow(), "deleted successfully!".green() );
-                    },
-                    Err(e) => {
-                        error!("{} {}: {}", "Error deleting file".red(), file_path.display().to_string().bright_yellow(), e);
+            final_mod_update_list.iter().for_each(|(a, mod_sync_info)| {
+                if !a.is_empty() {
+                    let file_path = &mod_dir.clone().join(mod_sync_info.file_name.to_string());
+                    match delete_file(file_path) {
+                        Ok(_) => {
+                            info!("{} {}", &mod_sync_info.file_name.bright_yellow(), "deleted successfully!".green() );
+                        },
+                        Err(e) => {
+                            error!("{} {}: {}", "Error deleting file".red(), file_path.display().to_string().bright_yellow(), e);
+                        }
                     }
+                } else {
+                    warn!("Mod {} is missing a mod id in the modinfo.json file. Rustique will be unable to update or manage this mod. ", &mod_sync_info.file_name.to_string().red().bold());
                 }
+
             })
         }
 

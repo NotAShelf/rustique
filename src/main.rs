@@ -209,6 +209,9 @@ fn main() {
 
             let list : Vec<String> = contents.split('\n').map(|s| s.to_string()).collect();
 
+            info!("{:?}", list);
+            info!("COUNT: {}", list.len());
+
             let set : HashSet<String> = HashSet::from_iter(list);
 
             install_mods(&mod_dir, InstallOrUpdate::Install(set)).unwrap();

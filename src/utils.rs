@@ -208,14 +208,14 @@ pub fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<ModFileNam
 
 pub fn delete_file(file: &Path) -> Result<(), RustiqueError> {
     debug!("Trying to delete {}", file.display());
-    if file.exists() {
+    if file.exists() && !file.is_dir() {
         Ok(fs::remove_file(&file)
             .map_err(|e| RustiqueError::IoError {
                 context: format!("Failed attempting to delete {}", file.file_name().unwrap().to_string_lossy()),
                 source: e,
             })?)
     } else {
-        Err(RustiqueError::SimpleError(format!("File {} no longer exists..", file.display())))
+        Err(RustiqueError::SimpleError(format!("File {} is no longer there!", file.display())))
     }
 }
 
