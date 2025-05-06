@@ -12,7 +12,7 @@ use chrono::{DateTime, Utc};
 use colored::Colorize;
 use comfy_table::{Cell, Row, Table, Color, Attribute, CellAlignment, TableComponent};
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
-use comfy_table::presets::{UTF8_BORDERS_ONLY, UTF8_FULL, UTF8_HORIZONTAL_ONLY};
+use comfy_table::presets::{UTF8_BORDERS_ONLY, UTF8_FULL, UTF8_FULL_CONDENSED, UTF8_HORIZONTAL_ONLY};
 use dirs::home_dir;
 use rayon::prelude::*;
 use regex::Regex;
@@ -29,6 +29,7 @@ use crate::aliases::{ModFileName, ModID, ModVersion};
 use crate::api::client::ApiClient;
 use crate::api::api_structs::ModInfo;
 use crate::config_manager::get_config;
+use crate::install_manager::Installed;
 use crate::rustique_errors::RustiqueError;
 
 #[derive(Clone, Debug)]
@@ -190,6 +191,28 @@ pub fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<ModFileNam
     Ok(mods.lock().unwrap().clone())
 }
 
+pub fn verify_zip_file(file_path: &PathBuf) -> Result<(), RustiqueError> {
+    // Open and verify the zip file integrity
+    let file = File::open(file_path)
+        .map_err(|e| RustiqueError::IoError {
+            context: format!("Failed to open file for verification: {}", file_path.to_string_lossy()),
+            source: e,
+        })?;
+
+    let mut archive = ZipArchive::new(file)
+        .map_err(|e| RustiqueError::ZipError {
+            context: format!("Invalid zip file: {}", file_path.to_string_lossy()),
+            source: e
+        })?;
+
+    // Check that the archive contains at least one file
+    if archive.len() == 0 {
+        return Err(RustiqueError::SimpleError(format!("Zip file is empty: {}", file_path.to_string_lossy())));
+    }
+
+    Ok(())
+}
+
 pub async fn delete_file(file: &Path) -> Result<(), RustiqueError> {
     debug!("Trying to delete {}", file.display());
     if file.exists() && !file.is_dir() {
@@ -308,5 +331,44 @@ pub fn command_output(option: String, val: String) -> (CellData, CellData) {
         CellData::new(option, Some(Color::Green), vec![Attribute::Bold]),
         CellData::new(val, Some(Color::Magenta), vec![Attribute::Bold]),
     )
+}
+
+pub fn installation_results_table(mods_processed: Vec<Installed>) {
+    let (successful, failed): (Vec<Installed>, Vec<Installed>) = mods_processed.into_iter().partition(|m| m.success);
+
+    let mut s_table = Table::new();
+    s_table.load_preset(UTF8_FULL_CONDENSED).apply_modifier(UTF8_ROUND_CORNERS);
+    let mut f_table = s_table.clone();
+
+
+    if successful.len() > 0 {
+        let mut sh_row = Row::new();
+        sh_row.add_cell(Cell::new("Successfully Installed".to_string()).fg(Color::Green).add_attribute(Attribute::Bold).set_alignment(CellAlignment::Center));
+        s_table.set_header(sh_row);
+
+        successful.iter().for_each(|m|{
+            let mut row = Row::new();
+            row.add_cell(Cell::new(m.mod_name.clone()).fg(Color::Yellow).set_alignment(CellAlignment::Left));
+            s_table.add_row(row);
+        });
+
+        println!("{}", s_table);
+    }
+
+    if failed.len() > 0 {
+        let mut fh_row = Row::new();
+        fh_row.add_cell(Cell::new("Failed to Install".to_string()).fg(Color::Red).add_attribute(Attribute::Bold).set_alignment(CellAlignment::Center));
+        f_table.set_header(fh_row);
+
+        failed.iter().for_each(|m|{
+            let mut row = Row::new();
+            row.add_cell(Cell::new(m.mod_name.clone()).fg(Color::Red).set_alignment(CellAlignment::Left));
+            f_table.add_row(row);
+        });
+
+        println!("{}", f_table);
+    }
+
+
 }
 

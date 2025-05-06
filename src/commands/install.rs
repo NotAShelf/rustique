@@ -13,7 +13,6 @@ use comfy_table::{Attribute, Color};
 use tracing::{debug, error, info, warn};
 use crate::api::api_structs::ModInfo;
 use crate::api::client::ApiClient;
-use crate::api::download::download_mod;
 use crate::commands::sync::ModSyncInfo;
 use crate::config_manager::get_config;
 use crate::version_management::parse_latest_version;

@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::fs::File;
+use colored::Colorize;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error, info, warn};
 use url::Url;
@@ -10,10 +11,7 @@ use crate::api::api_structs::ModInfo;
 use crate::api::client::ApiClient;
 use crate::install_manager::{Install, Installed};
 use crate::rustique_errors::RustiqueError;
-use crate::utils::extract_zip_metadata;
-
-
-
+use crate::utils::{extract_zip_metadata, verify_zip_file};
 
 
 pub async fn download_requested_mods(mod_dir: &PathBuf, mods_requested: &mut Vec<Install>, api_client: &ApiClient) -> Result<Vec<Installed>, RustiqueError> {
@@ -25,7 +23,7 @@ pub async fn download_requested_mods(mod_dir: &PathBuf, mods_requested: &mut Vec
 
     while let Some(mod_request) = mods_requested.pop() {
 
-        info!("Attempting to download mod {:?}", mod_request.mod_id);
+        info!("{} {}", "Attempting to download mod".bright_green(), mod_request.mod_id.to_string().bright_yellow());
 
         let client = api_client.clone();
         let dir = mod_dir.clone();
@@ -35,15 +33,16 @@ pub async fn download_requested_mods(mod_dir: &PathBuf, mods_requested: &mut Vec
             let mut installed = Installed {
                 mod_id: mod_request.mod_id.clone(),
                 mod_name: mod_request.mod_name.clone(),
-                install_path: None,
+                installed_file_path: None,
+                old_file_path: mod_request.current_file_path.clone(),
                 success: false,
             };
 
             match download_mod(&dir, mod_request.download_url.clone(), &client).await {
                 Ok(installed_path) => {
 
-                    info!("Successfully downloaded mod {} to {}", mod_request.mod_id, installed_path.display());
-                    installed.install_path = Some(installed_path);
+                    info!("{} {}: {}", "Successfully downloaded mod".bright_green(), mod_request.mod_id.magenta(), installed_path.display().to_string().bright_yellow());
+                    installed.installed_file_path = Some(installed_path);
                     installed.success = true;
 
                     installed.clone()
@@ -72,16 +71,13 @@ pub async fn download_requested_mods(mod_dir: &PathBuf, mods_requested: &mut Vec
 
 
 
-pub async fn download_mod(mod_dir: &PathBuf, download_url: String, api_client: &ApiClient) -> Result<PathBuf, RustiqueError> {
+async fn download_mod(mod_dir: &PathBuf, download_url: String, api_client: &ApiClient) -> Result<PathBuf, RustiqueError> {
     let filename_from_api = &download_url.split('=').last().unwrap();
     let file_path_before = PathBuf::from(mod_dir.clone().join(filename_from_api));
     // Replace any spaces in the downloaded file with _ . This makes it easier to process later
     let filename_fix = mod_dir.clone().join(filename_from_api).to_string_lossy().replace(" ", "_");
     let requested_file_path = PathBuf::from(filename_fix);
 
-    if requested_file_path.exists() || file_path_before.exists() {
-        return Err(RustiqueError::SimpleError(format!("Mod {} already installed.", requested_file_path.display())))
-    }
 
     let url = Url::parse(download_url.as_str())
         .map_err(|e| RustiqueError::UrlParseError(e))?;
@@ -94,13 +90,13 @@ pub async fn download_mod(mod_dir: &PathBuf, download_url: String, api_client: &
 
     while attempt < max_retries {
         attempt += 1;
-        debug!("Download attempt {} for {}", attempt, url);
+        info!("{}: [{}] {}","Download attempt".bright_blue(), attempt.to_string().magenta(), url.to_string().bright_yellow());
 
         match download_and_verify(&url, &requested_file_path, api_client).await {
 
             // file_path here is the verified path after the file has been downloaded
             Ok(file_path) => {
-                debug!("Successfully downloaded {} on attempt {}", file_path.display(), attempt);
+                info!("{} {} {} {}","Successfully downloaded".bright_green(), file_path.display().to_string().bright_yellow(), "on attempt".bright_green(), attempt.to_string().magenta());
                 return Ok(file_path);
             },
             Err(e) => {
@@ -126,7 +122,7 @@ pub async fn download_mod(mod_dir: &PathBuf, download_url: String, api_client: &
     Err(last_error.unwrap_or_else(|| RustiqueError::SimpleError("Maximum retries exceeded".to_string())))
 }
 
-pub async fn download_and_verify(url: &Url, file_path: &PathBuf, api_client: &ApiClient) -> Result<PathBuf, RustiqueError> {
+async fn download_and_verify(url: &Url, file_path: &PathBuf, api_client: &ApiClient) -> Result<PathBuf, RustiqueError> {
     let response = api_client.get_request(&url.to_string()).await
         .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
 
@@ -174,7 +170,7 @@ pub async fn download_and_verify(url: &Url, file_path: &PathBuf, api_client: &Ap
     // Close the file
     drop(file);
 
-    // Pre-verify the zip file before extracting metadata
+    // Pre-verify the zip file
     verify_zip_file(&temp_file_path)?;
 
     // Rename temp file to final file
@@ -186,36 +182,6 @@ pub async fn download_and_verify(url: &Url, file_path: &PathBuf, api_client: &Ap
 
     debug!("File downloaded to {}", file_path.display());
 
-    // Extract metadata from the downloaded file
-    // extract_zip_metadata(file_path.clone())
     Ok(file_path.clone())
 }
 
-pub fn verify_zip_file(file_path: &PathBuf) -> Result<(), RustiqueError> {
-    // Open and verify the zip file integrity
-    let file = File::open(file_path)
-        .map_err(|e| RustiqueError::IoError {
-            context: format!("Failed to open file for verification: {}", file_path.to_string_lossy()),
-            source: e,
-        })?;
-
-    let mut archive = ZipArchive::new(file)
-        .map_err(|e| RustiqueError::ZipError {
-            context: format!("Invalid zip file: {}", file_path.to_string_lossy()),
-            source: e
-        })?;
-
-    // Check that the archive contains at least one file
-    if archive.len() == 0 {
-        return Err(RustiqueError::SimpleError(format!("Zip file is empty: {}", file_path.to_string_lossy())));
-    }
-
-    // Verify we can access the modinfo.json
-    // archive.by_name("modinfo.json")
-    //     .map_err(|e| RustiqueError::ZipError {
-    //         context: format!("Missing modinfo.json in zip: {}", file_path.to_string_lossy()),
-    //         source: e
-    //     })?;
-
-    Ok(())
-}
