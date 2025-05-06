@@ -1,7 +1,6 @@
 #![allow(unused_imports, dead_code)]
 
 mod utils;
-mod api_structs;
 mod api;
 mod cli_commands;
 mod rustique_errors;
@@ -11,6 +10,7 @@ mod version_management;
 mod commands;
 mod logging;
 mod config_manager;
+mod install_manager;
 
 use std::collections::HashSet;
 use std::error::Error;
@@ -23,10 +23,9 @@ use std::time::Instant;
 use clap::{Args, CommandFactory, FromArgMatches, Parser, Subcommand};
 use colored::Colorize;
 use tracing::field::debug;
-use tracing::{debug, Level, error, info, trace, warn};
-use tracing_subscriber::{fmt, EnvFilter, prelude::*};
+use tracing::{debug, error, info, trace, warn, Level};
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 use crate::aliases::ModID;
-// use commands::bulk_downloader::bulk_download;
 use crate::cli_commands::{Cli, Commands};
 use crate::commands::list::list_installed;
 use commands::install::{install_missing_dependencies, install_mods, InstallOrUpdate};
@@ -34,8 +33,7 @@ use crate::utils::{elapsed_footer, get_expanded_path, RustiqueOptions};
 use commands::sync::sync;
 use commands::update::update_mods;
 use crate::commands::arg_structs::modpack_args::ModpackCommands;
-use crate::commands::config::{parse_config_args};
-// use crate::commands::sync::handle_sync_call;
+use crate::commands::config::parse_config_args;
 use crate::config_manager::{get_config, init_config};
 use crate::logging::{init_logging, VerboseLevel};
 

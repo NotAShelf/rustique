@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use crate::api_structs::ModInfo;
+use crate::api::api_structs::ModInfo;
 use crate::commands::sync::{parse_sync_file, RustiqueSyncJson};
 use crate::utils::{RustiqueOptions, extract_all_mods_metadata, extract_zip_metadata, find_missing_dependencies, sanitize_string, elapsed_footer};
 use comfy_table::{Attribute, Cell, CellAlignment, Color, ContentArrangement, Row, Table, TableComponent};

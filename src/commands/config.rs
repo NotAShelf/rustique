@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use tracing::{error, warn};
 use colored::Colorize;
 use comfy_table::{Attribute, Color};
-use crate::api_structs::StringOrBool::Bool;
+use crate::api::api_structs::StringOrBool::Bool;
 use crate::commands::arg_structs::config_args::{CommonArgs, ConfigCommand, ConfigSubCommand, BoolArgs, SetArgs, ShowArgs};
 use crate::commands::arg_structs::list_args::ListArgs;
 use crate::config_manager::{get_config, Config};

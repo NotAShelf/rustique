@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use rayon::prelude::*;
-use crate::api::ApiClient;
-use crate::api_structs::{ModsApi, Mod};
+use crate::api::client::ApiClient;
+use crate::api::api_structs::{ModsApi, Mod};
 use crate::utils::*;
 use crate::commands::install::*;
 use crate::rustique_errors::RustiqueError;

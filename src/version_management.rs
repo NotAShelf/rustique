@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 use semver::Version;
 use crate::aliases::{DownloadURL, ModVersion};
-use crate::api_structs::Releases;
+use crate::api::api_structs::Releases;
 use crate::rustique_errors::RustiqueError;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
