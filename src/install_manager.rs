@@ -79,7 +79,6 @@ pub async fn install_manager(
     loop {
         // let mut recently_installed: Vec<Installed> = Vec::new();
 
-
         // this function will consume each value out of the mods_requested so we can rebuild it
         // after the dependencies check
        let mut recently_installed: Vec<Installed> =  match download_requested_mods(&mod_dir, &mut mods_requested, &client).await {

@@ -17,7 +17,6 @@ use tracing::{debug, error, info, warn};
 use url::{form_urlencoded, Url};
 use crate::aliases::ModID;
 use crate::api::download::download_requested_mods;
-use crate::commands::install::{install_mod, InstallOrUpdate};
 use crate::config_manager::get_config;
 use crate::install_manager::{install_manager, Install, Installed};
 use crate::rustique_errors::RustiqueError;

@@ -120,13 +120,13 @@ pub fn get_expanded_path(dir: PathBuf) -> PathBuf {
 
 // this function filters out any unwanted dependencies
 pub fn find_missing_dependencies(
-    dependencies: Option<HashMap<ModID, ModVersion>>,
+    dep_list: Option<HashMap<ModID, ModVersion>>,
     excluded_ids: Option<&HashSet<ModID>>,
 ) -> Vec<ModID> {
     let default_exclusions = ["game", "survival", "creative"];
     let empty_set :HashSet<ModID> = HashSet::new();
     let excluded = excluded_ids.unwrap_or(&empty_set);
-    dependencies.unwrap_or_default()
+    dep_list.unwrap_or_default()
         .keys()
         .filter(|mod_id|
             !default_exclusions.contains(&mod_id.to_lowercase().as_str())

@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::error::Error;
-use std::fmt::Error;
 use std::fs::File;
 use std::hash::Hash;
 use std::io::{Read, Write};
@@ -15,7 +14,7 @@ use comfy_table::Attribute;
 use rayon::prelude::*;
 use serde_json::to_string_pretty;
 use ureq::Agent;
-use semver::{Error, Version};
+use semver::{Version};
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error, info, warn};
 use crate::aliases::{ModFileName, ModID, ModIDInt, ModName, ModVersion};
@@ -118,20 +117,14 @@ where
     Ok(json)
 }
 
-pub fn get_sync_data(mod_dir: &PathBuf) -> Result<RustiqueSyncJson, RustiqueError> {
+pub async fn get_sync_data(mod_dir: &PathBuf) -> Result<RustiqueSyncJson, RustiqueError> {
 
     let fp = mod_dir.join(PathBuf::from(SYNC_FILE_NAME));
     if !fp.exists() {
-        sync(mod_dir)?;
+        sync(mod_dir).await?;
     }
 
-
-    Ok(parse_json_file::<RustiqueSyncJson>(&fp).map_err(|e| {
-        RustiqueError::JsonError {
-            context: format!("Failed to parse json file {}", fp.to_string_lossy()),
-            source: serde_json5::Error::from(format!("{}", e.to_string())),
-        }
-    }))?
+    Ok(parse_json_file::<RustiqueSyncJson>(&fp)?)
 }
 
 
@@ -154,9 +147,9 @@ pub async fn sync(mod_dir: &PathBuf) -> Result<(), RustiqueError> {
         match parse_json_file::<RustiqueSyncJson>(&sync_file_path) {
             Ok(json) => json,
             Err(e) => {
+                info!("{}",e);
                 // delete the sync file because the json changed
                 tokio::fs::remove_file(&sync_file_path).await?;
-
                 // return a blank slate to keep going
                 RustiqueSyncJson::new()
             }
@@ -164,12 +157,6 @@ pub async fn sync(mod_dir: &PathBuf) -> Result<(), RustiqueError> {
     } else {
        RustiqueSyncJson::new()
     };
-
-    if timestamp_older_than(24, &sync_data.last_modid_sync) {
-        // update the database
-        mod_id_sync(true).await?;
-        sync_data.last_modid_sync = get_current_time();
-    }
 
     let mod_id_fp = get_expanded_path(PathBuf::from(CONFIG_DEFAULT_DIR).join(MODID_SYNC_FILE_NAME));
     let id_sync_data = match parse_json_file::<ModIDSync>(&mod_id_fp) {
@@ -180,6 +167,12 @@ pub async fn sync(mod_dir: &PathBuf) -> Result<(), RustiqueError> {
             mod_id_sync(true).await?
         }
     };
+
+    if timestamp_older_than(24, &id_sync_data.last_sync) {
+        // update the database
+        mod_id_sync(true).await?;
+        sync_data.last_modid_sync = get_current_time();
+    }
 
     let installed_mods = extract_all_mods_metadata(mod_dir)?;
 
@@ -339,7 +332,7 @@ pub async fn mod_id_sync(force: bool) -> Result<ModIDSync, RustiqueError> {
         let mut open_file = tokio::fs::File::create(file_path).await.map_err(|e| RustiqueError::IoError {
             context: format!("Error writing sync file to config dir: {}", config_dir.to_string_lossy()),
             source: e,
-        })?;;
+        })?;
         AsyncWriteExt::write_all(&mut open_file, json.as_bytes()).await?;
 
         info!("ModID Sync file written successfully");

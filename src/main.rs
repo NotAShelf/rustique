@@ -28,12 +28,12 @@ use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 use crate::aliases::ModID;
 use crate::cli_commands::{Cli, Commands};
 use crate::commands::list::list_installed;
-use commands::install::{install_missing_dependencies, install_mods, InstallOrUpdate};
 use crate::utils::{elapsed_footer, get_expanded_path, RustiqueOptions};
 use commands::sync::sync;
 use commands::update::update_mods;
 use crate::commands::arg_structs::modpack_args::ModpackCommands;
 use crate::commands::config::parse_config_args;
+use crate::commands::install::{install_cmd, install_missing_deps};
 use crate::commands::sync::mod_id_sync;
 use crate::config_manager::{get_config, init_config};
 use crate::logging::{init_logging, VerboseLevel};
@@ -123,34 +123,60 @@ async fn async_main() {
         Commands::Install(args) => {
             let start_time = Instant::now();
             let config = get_config().read().unwrap();
-            if args.mod_ids.len() > 0 {
-                let mod_ids: HashSet<ModID> = args.mod_ids.iter().cloned().collect();
-                match install_mods(&mod_dir, InstallOrUpdate::Install(mod_ids)).await {
-                    Ok(_) => {
-                        if args.mod_ids.len() > 1 {
-                            info!("Mods successfully installed!");
-                        } else {
-                            info!("Mods successfully installed!");
-                        }
-                        handle_sync_call(mod_opts.mod_dir.as_ref().unwrap()).await;
-                    }
-                    Err(e) => {
-                        error!("Error attempting to install {:?} : {}", args.mod_ids, e.to_string());
-                        exit(1);
-                    }
-                }
-            }
+
+
             if args.missing_dependencies {
-                match install_missing_dependencies(&mod_dir, None).await {
+                match install_missing_deps(&mod_dir, args.mod_ids.clone()).await {
                     Ok(_) => {
-                        info!("{}", "All dependencies resolved..".bold().green());
+
                     }
                     Err(e) => {
-                        error!("{}", e.to_string());
-                        exit(1);
+                        error!("{}", e)
                     }
                 }
             }
+
+
+            if args.mod_ids.len() > 0 {
+                match install_cmd(&mod_dir, args.mod_ids.clone(), args.missing_dependencies).await {
+                    Ok(_) => {
+
+                    }
+                    Err(e) => {
+                        error!("{}", e)
+                    }
+                }
+            }
+
+
+            // if args.mod_ids.len() > 0 {
+            //     let mod_ids: HashSet<ModID> = args.mod_ids.iter().cloned().collect();
+            //     match install_mods(&mod_dir, InstallOrUpdate::Install(mod_ids)).await {
+            //         Ok(_) => {
+            //             if args.mod_ids.len() > 1 {
+            //                 info!("Mods successfully installed!");
+            //             } else {
+            //                 info!("Mods successfully installed!");
+            //             }
+            //             handle_sync_call(mod_opts.mod_dir.as_ref().unwrap()).await;
+            //         }
+            //         Err(e) => {
+            //             error!("Error attempting to install {:?} : {}", args.mod_ids, e.to_string());
+            //             exit(1);
+            //         }
+            //     }
+            // }
+            // if args.missing_dependencies {
+            //     match install_missing_dependencies(&mod_dir, None).await {
+            //         Ok(_) => {
+            //             info!("{}", "All dependencies resolved..".bold().green());
+            //         }
+            //         Err(e) => {
+            //             error!("{}", e.to_string());
+            //             exit(1);
+            //         }
+            //     }
+            // }
             if config.show_execution_time {
                 elapsed_footer(start_time, "Install");
             }
