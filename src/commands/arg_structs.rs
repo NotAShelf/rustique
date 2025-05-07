@@ -6,3 +6,4 @@ pub mod config_args;
 pub mod install_args;
 pub mod modpack_args;
 pub mod info_args;
+pub mod sync_args;

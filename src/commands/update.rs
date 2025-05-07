@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use crate::api::client::ApiClient;
-use crate::commands::sync::{parse_sync_file, sync, ModSyncInfo};
+use crate::commands::sync::{parse_json_file, sync, ModSyncInfo, RustiqueSyncJson, SYNC_FILE_NAME};
 use crate::utils::{delete_file, RustiqueOptions, elapsed_footer, notice, installation_results_table};
 use rayon::prelude::*;
 use std::process::exit;
@@ -17,7 +17,7 @@ use tracing::{debug, error, info, warn};
 use url::{form_urlencoded, Url};
 use crate::aliases::ModID;
 use crate::api::download::download_requested_mods;
-use crate::commands::install::{install_mod, install_mods, InstallOrUpdate};
+use crate::commands::install::{install_mod, InstallOrUpdate};
 use crate::config_manager::get_config;
 use crate::install_manager::{install_manager, Install, Installed};
 use crate::rustique_errors::RustiqueError;
@@ -25,10 +25,10 @@ use crate::rustique_errors::RustiqueError;
 pub async fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<ModID>, _keep_old_files: bool) -> Result<(), RustiqueError> {
     let start_time = Instant::now();
     let config = get_config().read().unwrap();
-    let sync_data = parse_sync_file(mod_dir);
+    let sync_data = parse_json_file::<RustiqueSyncJson>(&PathBuf::from(mod_dir).join(SYNC_FILE_NAME));
 
     if sync_data.is_ok() {
-        notice("Updating mods...", Option::from(Color::Green), vec![Attribute::Bold]);
+        notice("Updating mods...", Option::from(Color::Blue), vec![Attribute::Bold]);
         let sync_data = sync_data?;
         let mut mods_to_check_update: HashMap<ModID, ModSyncInfo> = HashMap::new();
         let mut updates_exist = false;

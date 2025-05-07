@@ -34,6 +34,7 @@ use commands::sync::sync;
 use commands::update::update_mods;
 use crate::commands::arg_structs::modpack_args::ModpackCommands;
 use crate::commands::config::parse_config_args;
+use crate::commands::sync::mod_id_sync;
 use crate::config_manager::{get_config, init_config};
 use crate::logging::{init_logging, VerboseLevel};
 
@@ -82,9 +83,19 @@ async fn async_main() {
     info!("Operating on mods dir: {:?}", mod_opts.mod_dir);
     // TODO: check for windows equiv
     match &cli.command {
-        Commands::Sync => {
+        Commands::Sync(args) => {
             // Sync will add a rustique-sync.json to a valid mod_dir
-            handle_sync_call(&mod_dir).await;
+            if args.ids {
+                match mod_id_sync(args.force).await {
+                    Ok(_) => {},
+                    Err(e) => {
+                        error!("{}", e.to_string().red().bold());
+                    }
+                }
+            } else {
+                handle_sync_call(&mod_dir).await;
+            }
+
         }
         Commands::List(args) => {
             match list_installed(&mod_dir, args.updates).await {

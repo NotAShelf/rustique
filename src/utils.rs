@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, NaiveDateTime, Utc, Duration, TimeZone};
 use colored::Colorize;
 use comfy_table::{Cell, Row, Table, Color, Attribute, CellAlignment, TableComponent};
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
@@ -22,6 +22,7 @@ use tokio::io::AsyncWriteExt;
 use toml::value::Time;
 use tracing::{debug, error, warn};
 use tracing::span::Attributes;
+use tracing_subscriber::fmt::time;
 use url::Url;
 use zip::result::ZipError;
 use zip::ZipArchive;
@@ -82,9 +83,26 @@ impl RustiqueOptions {
 }
 
 pub fn get_current_time() -> String {
-    let now = SystemTime::now();
-    let datetime: DateTime<Utc> = now.into();
+    let datetime: DateTime<Utc> = Utc::now();
     datetime.format("%Y-%m-%d %H:%M").to_string()
+}
+
+pub fn is_today(timestamp: &String) -> bool {
+   let now = Utc::now().date_naive();
+    if let Ok(ts) = NaiveDateTime::parse_from_str(&timestamp, "%Y-%m-%d %H:%M") {
+        ts.date() == now
+    } else {
+        false
+    }
+}
+
+pub fn timestamp_older_than(num_hours: i64, timestamp: &String) -> bool {
+
+    let naive_dt = NaiveDateTime::parse_from_str(&timestamp, "%Y-%m-%d %H:%M").map_err(|e| {error!("{}", e)}).unwrap_or_default();
+    let now = Utc::now().naive_utc();
+    let duration = now.signed_duration_since(naive_dt);
+
+    duration > Duration::hours(num_hours)
 }
 
 // if the path contains ~/, which is short for /home/<user>, then expand it, otherwise just return
@@ -162,7 +180,8 @@ pub fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<ModFileNam
             source: e,
         })?;
     let entries_vec: Vec<DirEntry> = dir.filter_map(|e| e.ok()).collect();
-    let mods = Arc::new(Mutex::new(HashMap::<ModFileName, ModInfo>::new()));
+    // let mods = Arc::new(Mutex::new(HashMap::<ModFileName, ModInfo>::new()));
+
     let notify_of_unzipped_mods = match get_config().read() {
         Ok(config) => config.notify_of_unzipped_mods,
         Err(e) => {
@@ -172,23 +191,23 @@ pub fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<ModFileNam
     };
 
     // Use Rayon for CPU-bound tasks (zip processing is CPU-bound)
-    entries_vec.par_iter().for_each(|entry| {
-        let filename = entry.file_name().to_string_lossy().to_string();
-        match (|| -> Result<ModInfo, RustiqueError> {
-            extract_zip_metadata(entry.path())
-        })() {
-            Ok(mod_info) => {mods.lock().unwrap().insert(filename, mod_info);}
-            Err(e) =>  {
-                if matches!(e, RustiqueError::ModNotZipped(_)) && notify_of_unzipped_mods {
-                    println!("{}",e.to_string().yellow());
-                } else {
-                    debug!("{}", e.to_string().yellow());
+    let results:Vec<(ModFileName, ModInfo)> = entries_vec.par_iter()
+        .filter_map(|entry| {
+            let filename = entry.file_name().to_string_lossy().to_string();
+            match extract_zip_metadata(entry.path()) {
+                Ok(mod_info) => Some((filename, mod_info)),
+                Err(e) => {
+                     if matches!(e, RustiqueError::ModNotZipped(_)) && notify_of_unzipped_mods {
+                        println!("{}",e.to_string().yellow());
+                    } else {
+                        debug!("{}", e.to_string().yellow());
+                    }
+                    None
                 }
             }
-        }
-    });
+        }).collect();
 
-    Ok(mods.lock().unwrap().clone())
+      Ok(results.into_iter().collect())
 }
 
 pub fn verify_zip_file(file_path: &PathBuf) -> Result<(), RustiqueError> {
@@ -328,7 +347,7 @@ pub fn construct_cell(dt: CellData) -> Cell {
 }
 pub fn command_output(option: String, val: String) -> (CellData, CellData) {
     (
-        CellData::new(option, Some(Color::Green), vec![Attribute::Bold]),
+        CellData::new(option, Some(Color::Blue), vec![Attribute::Bold]),
         CellData::new(val, Some(Color::Magenta), vec![Attribute::Bold]),
     )
 }

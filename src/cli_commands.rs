@@ -6,6 +6,7 @@ use crate::commands::arg_structs::install_args::InstallArgs;
 use crate::commands::arg_structs::list_args::ListArgs;
 use crate::commands::arg_structs::modpack_args::ModpackCommands;
 use crate::commands::arg_structs::search_args::SearchMods;
+use crate::commands::arg_structs::sync_args::SyncArgs;
 use crate::commands::arg_structs::update_args::UpdateArgs;
 
 #[derive(Parser)]
@@ -34,7 +35,7 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     #[command(about = "Checks with the VintageStory mods website for any updates to mods you have installed. Run update after this command to update your mods")]
-    Sync,
+    Sync(SyncArgs),
 
     #[command(about = "List installed mods and their versions and any missing dependencies. Running sync first will show any available updates to your mods")]
     List(ListArgs),
@@ -75,6 +76,11 @@ pub enum Commands {
     #[command(about = "load mods from a text file")]
     LoadMods(LoadModsArgs)
 
+}
+
+#[derive(Args, Debug)]
+pub struct ModIDSync {
+   pub force: bool,
 }
 
 #[cfg(feature = "dev")]

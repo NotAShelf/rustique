@@ -1,7 +1,7 @@
 
 
 # Version 0.2.0-alpha
-* Fixed api error message with blank info. A proper message is displayed when a mod has an empty mod_id.
+* Fixed api error message with blank info. 
 * Config file is now live! You can easily set the default mod directory so you don't have to use -m for each use if different than default.
 * To manage the config file you use Rustique directly. Checkout `Rustique help config` for all options. Note that not everything is implemented yet.
 * Reorganized code base a bit, this doesn't affect anything user side, but it's a win for me. :3
@@ -15,3 +15,5 @@
 * Information text has a border now.
 * Rustique no longer deletes mods that are malformed during the update command, it reports the problem but leaves it alone.
 * Full rework of mod installation and dependency resolution. Update & Install are dramatically faster.
+* Reworked how the modinfo.json data is extracted, should make sync a bit faster.
+* Rustique can now attempt to find the modid from various methods to manage your mods. Users will be notified if Rustique cannot determine the mod_id. 

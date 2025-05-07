@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use crate::api::api_structs::ModInfo;
-use crate::commands::sync::{parse_sync_file, RustiqueSyncJson};
+use crate::commands::sync::{parse_json_file, RustiqueSyncJson, SYNC_FILE_NAME};
 use crate::utils::{RustiqueOptions, extract_all_mods_metadata, extract_zip_metadata, find_missing_dependencies, sanitize_string, elapsed_footer};
 use comfy_table::{Attribute, Cell, CellAlignment, Color, ContentArrangement, Row, Table, TableComponent};
 use rayon::prelude::*;
@@ -30,7 +30,7 @@ pub async fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(),
     let config = get_config().read().unwrap();
 
     // check for sync data so we can show latest version
-    let sync_data = parse_sync_file(mod_dir);
+    let sync_data = parse_json_file::<RustiqueSyncJson>(&PathBuf::from(mod_dir).join(SYNC_FILE_NAME));
 
     let mut table = setup_table_from_sync(&sync_data);
 
@@ -38,6 +38,8 @@ pub async fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(),
 
     let metadata = extract_all_mods_metadata(&mod_dir)?;
     let mut metadata: Vec<&ModInfo> = metadata.values().collect();
+
+    let total_mod_count = metadata.len();
 
     metadata.sort_by(|a,b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
 
@@ -64,7 +66,7 @@ pub async fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(),
     let mod_id_list: HashSet<ModID> = metadata.clone()
         .into_iter().map(|mod_info| mod_info.mod_id.clone()).collect();
 
-    let total_mod_count = mod_id_list.len();
+
 
     metadata.into_iter().for_each(|mod_info| {
         let mut row = Row::new();

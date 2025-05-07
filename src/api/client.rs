@@ -76,12 +76,13 @@ impl ApiClient {
                 source: e
             })?;
 
-        response.json::<Mod>()
+
+        Ok(response.json::<Mod>()
             .await
             .map_err(|e| RustiqueError::ApiError {
-                context: format!("fetch_mod (json) [{}]", mod_id),
+                context: format!("fetch_mod (json) [{}] - They may have provided the wrong mod_id or the api is not responding. Retry, if it fails you will need to manually update the mod.", mod_id),
                 source: e
-            })
+            })?)
     }
 
     pub async fn fetch_mods_parallel(&self, mod_list: Vec<ModID>) -> Result<HashMap<ModID, Mod>, RustiqueError> {
@@ -90,6 +91,8 @@ impl ApiClient {
 
         // Spawn a task for each mod
         for mod_id in mod_list {
+            info!("ModID: {}", mod_id);
+
             if mod_id.is_empty() {
                 error!("\n\r\tModID is empty or missing mod_id. Please contact the author to correct their malformed modinfo.json.\n\r\tWithout the mod id, Rustique will be unable to manage this mod.");
                 continue;
