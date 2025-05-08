@@ -74,7 +74,7 @@ async fn async_main() {
     if cli.verbose {
         debug!("Verbose logging enabled");
     }
-    let mut mod_opts: RustiqueOptions = RustiqueOptions::default();
+    let mod_opts: RustiqueOptions = RustiqueOptions::default();
     let mut mod_dir = mod_opts.get_mod_path();
     // the mods_dir from the cli takes priority from all other means, including the config file
     if cli.mods_dir.is_some() {
@@ -148,35 +148,6 @@ async fn async_main() {
                 }
             }
 
-
-            // if args.mod_ids.len() > 0 {
-            //     let mod_ids: HashSet<ModID> = args.mod_ids.iter().cloned().collect();
-            //     match install_mods(&mod_dir, InstallOrUpdate::Install(mod_ids)).await {
-            //         Ok(_) => {
-            //             if args.mod_ids.len() > 1 {
-            //                 info!("Mods successfully installed!");
-            //             } else {
-            //                 info!("Mods successfully installed!");
-            //             }
-            //             handle_sync_call(mod_opts.mod_dir.as_ref().unwrap()).await;
-            //         }
-            //         Err(e) => {
-            //             error!("Error attempting to install {:?} : {}", args.mod_ids, e.to_string());
-            //             exit(1);
-            //         }
-            //     }
-            // }
-            // if args.missing_dependencies {
-            //     match install_missing_dependencies(&mod_dir, None).await {
-            //         Ok(_) => {
-            //             info!("{}", "All dependencies resolved..".bold().green());
-            //         }
-            //         Err(e) => {
-            //             error!("{}", e.to_string());
-            //             exit(1);
-            //         }
-            //     }
-            // }
             if config.show_execution_time {
                 elapsed_footer(start_time, "Install");
             }
@@ -223,27 +194,26 @@ async fn async_main() {
                 info!("{:?}", config);
             }
         }
-        #[cfg(feature = "dev")]
-        Commands::LoadMods(args) => {
-            let file_path = get_expanded_path(PathBuf::from(args.filename.clone()));
-
-            // Use tokio's async file reading
-            match tokio::fs::read_to_string(file_path).await {
-                Ok(contents) => {
-                    let list: Vec<String> = contents.split('\n').map(|s| s.to_string()).collect();
-                    info!("{:?}", list);
-                    info!("COUNT: {}", list.len());
-                    let set: HashSet<String> = HashSet::from_iter(list);
-                    if let Err(e) = install_mods(&mod_dir, InstallOrUpdate::Install(set)).await {
-                        error!("Failed to install mods: {}", e);
-                    }
-                },
-                Err(e) => {
-                    error!("Failed to read file: {}", e);
-                }
-            }
-        }
-        _ => {}
+        // #[cfg(feature = "dev")]
+        // Commands::LoadMods(args) => {
+        //     let file_path = get_expanded_path(PathBuf::from(args.filename.clone()));
+        //
+        //     // Use tokio's async file reading
+        //     match tokio::fs::read_to_string(file_path).await {
+        //         Ok(contents) => {
+        //             let list: Vec<String> = contents.split('\n').map(|s| s.to_string()).collect();
+        //             info!("{:?}", list);
+        //             info!("COUNT: {}", list.len());
+        //             let set: HashSet<String> = HashSet::from_iter(list);
+        //             if let Err(e) = install_mods(&mod_dir, InstallOrUpdate::Install(set)).await {
+        //                 error!("Failed to install mods: {}", e);
+        //             }
+        //         },
+        //         Err(e) => {
+        //             error!("Failed to read file: {}", e);
+        //         }
+        //     }
+        // }
     }
 }
 

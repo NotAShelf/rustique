@@ -16,7 +16,7 @@ pub fn parse_config_args(config_cmd: &ConfigCommand) {
         ConfigSubCommand::List => {
             println!("listing all configurations");
         },
-        ConfigSubCommand::Show(args) => {
+        ConfigSubCommand::Show(_args) => {
             // show(&args.common);
         },
         ConfigSubCommand::Del(args) => {
@@ -111,23 +111,24 @@ fn list() {
 }
 
 fn del(args: &BoolArgs) {
-   match &args {
-       BoolArgs { mods_dir: true, .. } => {
-           println!("Setting mods_dir to default");
-       }
-       BoolArgs { pin_game_version, .. } => {
-           println!("Setting pin_game_version to default");
-       }
-       BoolArgs { backup_mods: true, .. } => {
-           println!("Setting backup_mods to default");
-       }
-       BoolArgs { backup_mods_dir: true, .. } => {
-           println!("Setting backup_mods to default");
-       }
-       BoolArgs { zip_mod_dirs: true, .. } => {
-           println!("Setting zip_mods to default");
-       }
+    if args.backup_mods_dir {
 
-       _ => {}
-   }
+    }
+
+    if args.zip_mod_dirs {
+
+    }
+
+    if args.backup_mods {
+
+    }
+
+    if args.pin_game_version {
+
+    }
+
+    if args.mods_dir {
+
+    }
+
 }

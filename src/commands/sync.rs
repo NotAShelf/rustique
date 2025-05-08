@@ -324,6 +324,8 @@ pub async fn mod_id_sync(force: bool) -> Result<ModIDSync, RustiqueError> {
             })
             .collect();
 
+        file_data.last_sync = get_current_time();
+
         debug!("file_data {:?}", file_data);
 
         info!("Attempting to write ModID Sync to {}", file_path.display());

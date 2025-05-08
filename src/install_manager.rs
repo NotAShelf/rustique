@@ -34,6 +34,7 @@ pub struct Installed {
     pub installed_file_path: Option<PathBuf>,
     // will be None if this was a fresh install and not an update
     pub old_file_path: Option<PathBuf>,
+    pub install_version: ModVersion,
     pub success: bool,
 }
 
@@ -57,6 +58,7 @@ pub async fn install_manager(
             installed_file_path: Some(mod_dir.join(mod_sync_info.file_name.clone())),
             success: true,
             old_file_path: Some(mod_dir.join(mod_sync_info.file_name.clone())),
+            install_version: mod_sync_info.installed_version.clone(),
         });
     });
 
@@ -81,7 +83,7 @@ pub async fn install_manager(
 
         // this function will consume each value out of the mods_requested so we can rebuild it
         // after the dependencies check
-       let mut recently_installed: Vec<Installed> =  match download_requested_mods(&mod_dir, &mut mods_requested, &client).await {
+       let recently_installed: Vec<Installed> =  match download_requested_mods(&mod_dir, &mut mods_requested, &client).await {
             Ok(processed_mods) => {
                 info!("Successfully installed mods: {:?}", processed_mods);
                 // update recently installed so we can get the dependencies
@@ -167,6 +169,9 @@ pub async fn install_manager(
         mods_requested.extend(needed_dependencies);
     }
 
+    // TODO: Figure out why sometimes items show up twice, even if they are installed once
+    mods_processed.sort_by(|a, b| a.mod_name.to_lowercase().cmp(&b.mod_name.to_lowercase()));
+    mods_processed.dedup_by(|a,b| a.mod_id == b.mod_id);
 
     Ok(mods_processed)
 }

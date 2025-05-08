@@ -35,6 +35,7 @@ pub async fn download_requested_mods(mod_dir: &PathBuf, mods_requested: &mut Vec
                 mod_name: mod_request.mod_name.clone(),
                 installed_file_path: None,
                 old_file_path: mod_request.current_file_path.clone(),
+                install_version:mod_request.version_to_install.clone(),
                 success: false,
             };
 
@@ -44,7 +45,6 @@ pub async fn download_requested_mods(mod_dir: &PathBuf, mods_requested: &mut Vec
                     info!("{} {}: {}", "Successfully downloaded mod".bright_green(), mod_request.mod_id.magenta(), installed_path.display().to_string().bright_yellow());
                     installed.installed_file_path = Some(installed_path);
                     installed.success = true;
-
                     installed.clone()
                 }
                 Err(e) => {
@@ -73,7 +73,7 @@ pub async fn download_requested_mods(mod_dir: &PathBuf, mods_requested: &mut Vec
 
 async fn download_mod(mod_dir: &PathBuf, download_url: String, api_client: &ApiClient) -> Result<PathBuf, RustiqueError> {
     let filename_from_api = &download_url.split('=').last().unwrap();
-    let file_path_before = PathBuf::from(mod_dir.clone().join(filename_from_api));
+
     // Replace any spaces in the downloaded file with _ . This makes it easier to process later
     let filename_fix = mod_dir.clone().join(filename_from_api).to_string_lossy().replace(" ", "_");
     let requested_file_path = PathBuf::from(filename_fix);

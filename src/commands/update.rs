@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use crate::api::client::ApiClient;
 use crate::commands::sync::{parse_json_file, sync, ModSyncInfo, RustiqueSyncJson, SYNC_FILE_NAME};
-use crate::utils::{delete_file, RustiqueOptions, elapsed_footer, notice, installation_results_table};
+use crate::utils::{delete_file, RustiqueOptions, elapsed_footer, notice, display_installation_results};
 use rayon::prelude::*;
 use std::process::exit;
 use std::time::Instant;
@@ -92,7 +92,7 @@ pub async fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<ModID>, _keep_ol
         }
 
         // display our results
-        installation_results_table(mods_processed);
+        display_installation_results(mods_processed);
 
     } else {
         println!("{} {} {}", "Looks like you need to run".bright_yellow(), "'Rustique sync'".bright_blue().bold(), "first".yellow());

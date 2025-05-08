@@ -9,6 +9,7 @@ use std::process::exit;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime};
 use chrono::{DateTime, Local, NaiveDateTime, Utc, Duration, TimeZone};
+use clap::builder::styling::RgbColor;
 use colored::Colorize;
 use comfy_table::{Cell, Row, Table, Color, Attribute, CellAlignment, TableComponent};
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
@@ -218,7 +219,7 @@ pub fn verify_zip_file(file_path: &PathBuf) -> Result<(), RustiqueError> {
             source: e,
         })?;
 
-    let mut archive = ZipArchive::new(file)
+    let archive = ZipArchive::new(file)
         .map_err(|e| RustiqueError::ZipError {
             context: format!("Invalid zip file: {}", file_path.to_string_lossy()),
             source: e
@@ -352,8 +353,8 @@ pub fn command_output(option: String, val: String) -> (CellData, CellData) {
     )
 }
 
-pub fn installation_results_table(mods_processed: Vec<Installed>) {
-    let (successful, failed): (Vec<Installed>, Vec<Installed>) = mods_processed.into_iter().partition(|m| m.success);
+pub fn display_installation_results(mods_processed: Vec<Installed>) {
+    let (mut successful, mut failed): (Vec<Installed>, Vec<Installed>) = mods_processed.into_iter().partition(|m| m.success);
 
     let mut s_table = Table::new();
     s_table.load_preset(UTF8_FULL_CONDENSED).apply_modifier(UTF8_ROUND_CORNERS);
@@ -365,13 +366,11 @@ pub fn installation_results_table(mods_processed: Vec<Installed>) {
         sh_row.add_cell(Cell::new("Successfully Installed".to_string()).fg(Color::Green).add_attribute(Attribute::Bold).set_alignment(CellAlignment::Center));
         s_table.set_header(sh_row);
 
-        successful.iter().for_each(|m|{
-            let mut row = Row::new();
-            row.add_cell(Cell::new(m.mod_name.clone()).fg(Color::Yellow).set_alignment(CellAlignment::Left));
-            s_table.add_row(row);
-        });
+        fill_table_body(&mut successful, &mut s_table, Color::Green, Color::Magenta);
 
         println!("{}", s_table);
+
+        display_table(vec![command_output("Total mods Installed".to_string(), successful.len().to_string())], None);
     }
 
     if failed.len() > 0 {
@@ -379,15 +378,20 @@ pub fn installation_results_table(mods_processed: Vec<Installed>) {
         fh_row.add_cell(Cell::new("Failed to Install".to_string()).fg(Color::Red).add_attribute(Attribute::Bold).set_alignment(CellAlignment::Center));
         f_table.set_header(fh_row);
 
-        failed.iter().for_each(|m|{
-            let mut row = Row::new();
-            row.add_cell(Cell::new(m.mod_name.clone()).fg(Color::Red).set_alignment(CellAlignment::Left));
-            f_table.add_row(row);
-        });
+        fill_table_body(&mut failed, &mut f_table, Color::Red, Color::Magenta);
 
         println!("{}", f_table);
     }
+}
 
+fn fill_table_body(list: &mut Vec<Installed>, table: &mut Table, l_color: Color, r_color: Color) {
+    list.sort_by(|a,b| a.mod_name.cmp(&b.mod_name));
 
+    list.iter().for_each(|m|{
+        let mut row = Row::new();
+        row.add_cell(Cell::new(m.mod_name.clone()).fg(l_color).set_alignment(CellAlignment::Left));
+        row.add_cell(Cell::new(m.install_version.clone()).fg(r_color).set_alignment(CellAlignment::Left));
+        table.add_row(row);
+    });
 }
 

@@ -1,6 +1,6 @@
 use crate::aliases::{ModFileName, ModID, ModVersion};
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{extract_all_mods_metadata, find_missing_dependencies, extract_zip_metadata, notice, elapsed_footer};
+use crate::utils::{extract_all_mods_metadata, find_missing_dependencies, extract_zip_metadata, notice, elapsed_footer, display_installation_results};
 use colored::Colorize;
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
@@ -10,6 +10,7 @@ use std::process::exit;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use comfy_table::{Attribute, Color};
+use lenient_semver::parse;
 use tracing::{debug, error, info, warn};
 use rayon::prelude::*;
 use crate::api::api_structs::ModInfo;
@@ -18,13 +19,13 @@ use crate::commands::sync::{get_sync_data, parse_json_file, ModSyncInfo, Rustiqu
 use crate::config_manager::get_config;
 use crate::install_manager::{install_manager, Install};
 use crate::rustique_errors::RustiqueError::SimpleError;
-use crate::version_management::parse_latest_version;
+use crate::version_management::{parse_latest_version, parse_version};
 
 
 // Report if trying install a mod that already exists
 // Use -f to force an installation
 // add way to set the version you want to download
-pub async fn install_cmd(mod_dir: &PathBuf, mut mods_requested: Vec<ModID>, force: bool) -> Result<(), RustiqueError> {
+pub async fn install_cmd(mod_dir: &PathBuf, mods_requested: Vec<ModID>, force: bool) -> Result<(), RustiqueError> {
 
     // get sync data
     let sync_data = get_sync_data(mod_dir).await?;
@@ -32,7 +33,7 @@ pub async fn install_cmd(mod_dir: &PathBuf, mut mods_requested: Vec<ModID>, forc
     let installed_mods = sync_data.rustique_sync.clone();
     // remove any mods from mods_requested if the exist in installed_mods
 
-    let mods_requested_cleaned : Vec<ModID>  = mods_requested.iter().filter(|&id| !installed_mods.contains_key(id)).cloned().collect();
+    let mods_requested_cleaned : Vec<ModID>  = mods_requested.iter().filter(|&id| !installed_mods.contains_key(id) && !force).cloned().collect();
 
     if mods_requested.is_empty() {
         notice("Looks like you have all the mods requested. If you would like to reinstall them, run this command again with --force", Some(comfy_table::Color::Yellow), vec![]);
@@ -44,7 +45,7 @@ pub async fn install_cmd(mod_dir: &PathBuf, mut mods_requested: Vec<ModID>, forc
     // get the download urls for all requested mods
     let result = client.fetch_mods_parallel(mods_requested_cleaned).await?;
 
-    let mut mods_requested: Vec<Install> =
+    let mods_requested: Vec<Install> =
         result.into_iter().map(|(mod_id, mod_info)| {
             let (version, download_url) = parse_latest_version(&mod_info.mod_json.releases);
             Install {
@@ -59,7 +60,9 @@ pub async fn install_cmd(mod_dir: &PathBuf, mut mods_requested: Vec<ModID>, forc
 
     info!("Mods requested {:?}", mods_requested);
 
-    install_manager(&mod_dir, mods_requested.clone(), installed_mods).await?;
+    let mods_processed = install_manager(&mod_dir, mods_requested.clone(), installed_mods).await?;
+
+    display_installation_results(mods_processed);
 
     Ok(())
 }
@@ -78,7 +81,7 @@ pub async fn install_missing_deps(mod_dir: &PathBuf, mods_requested: Vec<ModID>)
 
     // if there are reports of slowness is this section .values().par_bridge()...flat_map_iter() could be used to speed it up
     // this is prob not an issue even with a lot of mods as the data is all in memory at this point
-    let missing_deps: Vec<Install> = installed_mods
+    let mut missing_deps: Vec<Install> = installed_mods
         .values()
         .filter(|mod_info| mods_requested.is_empty() || mods_requested.contains(&mod_info.mod_id))
         .flat_map(|mod_info| {
@@ -103,10 +106,31 @@ pub async fn install_missing_deps(mod_dir: &PathBuf, mods_requested: Vec<ModID>)
                 .into_iter()
     }).collect();
 
+    let client = ApiClient::new();
 
-    info!("deps: {:?}", missing_deps);
+    // get the final list of mods we know need to be installed
+    let md_ids: Vec<ModID> = missing_deps.iter().map(|i| i.mod_id.clone()).collect();
 
-    install_manager(&mod_dir, missing_deps, sync_data).await?;
+    // get download_urls
+    let result = client.fetch_mods_parallel(md_ids).await?;
+
+    for mod_info in &mut missing_deps {
+        if let Some(data) = result.get(&mod_info.mod_id) {
+            mod_info.mod_name = data.mod_json.name.clone().unwrap_or_default();
+            let (version, download_url) = parse_latest_version(&*data.mod_json.releases);
+            mod_info.download_url = download_url;
+            mod_info.version_to_install = version;
+        }
+    }
+
+    debug!("deps: {:?}", missing_deps);
+
+    let mods_processed = install_manager(&mod_dir, missing_deps, sync_data).await?;
+
+
+    info!("mods_processed {:#?}", mods_processed);
+
+    display_installation_results(mods_processed);
 
     Ok(())
 }
