@@ -132,18 +132,18 @@ fn setup_table_from_sync(sync_data: Option<&HashMap<ModID, ModSyncInfo>>) -> Tab
 
     let mut header = Row::new();
     header
-        .add_cell(Cell::new("Name").add_attribute(Attribute::Bold).fg(Color::Blue))
-        .add_cell(Cell::new("ModID").add_attribute(Attribute::Bold).fg(Color::Blue))
-        .add_cell(Cell::new("Version").add_attribute(Attribute::Bold).fg(Color::Blue));
+        .add_cell(Cell::new("Name").add_attribute(Attribute::Bold).fg(Color::Green))
+        .add_cell(Cell::new("ModID").add_attribute(Attribute::Bold).fg(Color::Green))
+        .add_cell(Cell::new("Version").add_attribute(Attribute::Bold).fg(Color::Green));
 
     if sync_data.is_some() {
-        header.add_cell(Cell::new("Latest Version").add_attribute(Attribute::Bold).fg(Color::Blue));
+        header.add_cell(Cell::new("Latest Version").add_attribute(Attribute::Bold).fg(Color::Green));
     }
 
     header
-        .add_cell(Cell::new("Dependencies").fg(Color::Blue))
-        .add_cell(Cell::new("Missing Dependencies").add_attribute(Attribute::Bold).fg(Color::Blue))
-        .add_cell(Cell::new("Description").add_attribute(Attribute::Bold).fg(Color::Blue));
+        .add_cell(Cell::new("Dependencies").fg(Color::Green))
+        .add_cell(Cell::new("Missing Dependencies").add_attribute(Attribute::Bold).fg(Color::Green))
+        .add_cell(Cell::new("Description").add_attribute(Attribute::Bold).fg(Color::Green));
 
     table.add_row(header);
 

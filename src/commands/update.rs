@@ -18,7 +18,7 @@ pub async fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<ModID>, _keep_ol
     let sync_data = parse_json_file::<RustiqueSyncJson>(&PathBuf::from(mod_dir).join(SYNC_FILE_NAME));
 
     if sync_data.is_ok() {
-        notice("Updating mods...", Option::from(Color::Blue), vec![Attribute::Bold]);
+        notice("Updating mods...", Option::from(Color::Yellow), vec![Attribute::Bold]);
         let sync_data = sync_data?;
         let mut mods_to_check_update: HashMap<ModID, ModSyncInfo> = HashMap::new();
         let mut updates_exist = false;

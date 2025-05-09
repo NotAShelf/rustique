@@ -1,9 +1,9 @@
 use crate::aliases::{ModFileName, ModID, ModName, ModVersion};
 use crate::api::api_structs::{Mod};
 use crate::api::client::{ApiClient};
-use crate::config_manager::{get_config, CONFIG_DEFAULT_DIR};
+use crate::config_manager::{get_config, Config};
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{elapsed_footer, extract_all_mods_metadata, get_current_time, get_expanded_path, notice, timestamp_older_than};
+use crate::utils::{elapsed_footer, extract_all_mods_metadata, get_current_time, notice, timestamp_older_than};
 use crate::version_management::{parse_latest_version, parse_version};
 use colored::{Colorize};
 use comfy_table::Attribute;
@@ -127,7 +127,7 @@ pub async fn sync(mod_dir: &PathBuf) -> Result<(), RustiqueError> {
     let config = get_config().read().unwrap();
     mod_id_sync(false).await?;
 
-    notice("Syncing...", Option::from(comfy_table::Color::Blue), vec![Attribute::Bold]);
+    notice("Syncing...", Option::from(comfy_table::Color::Yellow), vec![Attribute::Bold]);
 
     // check if rustique-sync.json exists
     // if so, parse the file for updating
@@ -150,7 +150,9 @@ pub async fn sync(mod_dir: &PathBuf) -> Result<(), RustiqueError> {
        RustiqueSyncJson::new()
     };
 
-    let mod_id_fp = get_expanded_path(PathBuf::from(CONFIG_DEFAULT_DIR).join(MODID_SYNC_FILE_NAME));
+    let config_path = Config::get_path();
+
+    let mod_id_fp = config_path.join(MODID_SYNC_FILE_NAME);
     let id_sync_data = match parse_json_file::<ModIDSync>(&mod_id_fp) {
         Ok(json) => json,
         Err(e) => {
@@ -276,7 +278,7 @@ pub async fn mod_id_sync(force: bool) -> Result<ModIDSync, RustiqueError> {
     let config = get_config().read().unwrap();
     let start_time = Instant::now();
 
-    let config_dir = get_expanded_path(PathBuf::from(CONFIG_DEFAULT_DIR));
+    let config_dir = Config::get_path();
     let file_path = config_dir.join(MODID_SYNC_FILE_NAME);
 
     let mut file_data = if file_path.exists() {

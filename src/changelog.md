@@ -1,4 +1,8 @@
 
+# Version 0.2.4-alpha
+* You can now reset config values with `Rustique config del [OPT]`, see `Rustique config help del`
+* You can now list all config values with `Rustique config list`
+
 # Version 0.2.3-alpha
 * Fixed invalid missing dependencies showing up when you type list -u
 
@@ -7,7 +11,6 @@
 
 # Version 0.2.1-alpha
 * Using -v now shows the correct mod directory that Rustique is looking at
-* Misbehaving mods are now added to an exclusion list so they are skipped in the future. You can view this list with `rustique config list --exclusions`
 * Added compiler flags to make the Rustique binary smaller and reduced features from used libraries. (saves a few MBs from the executable)
 * Added misc command for generating auto complete for the shells zsh,bash,fish,powershell. `./Rustique help misc`
 

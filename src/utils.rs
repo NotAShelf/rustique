@@ -314,7 +314,7 @@ pub fn construct_cell(dt: CellData) -> Cell {
 }
 pub fn command_output(option: String, val: String) -> (CellData, CellData) {
     (
-        CellData::new(option, Some(Color::Blue), vec![Attribute::Bold]),
+        CellData::new(option, Some(Color::Yellow), vec![Attribute::Bold]),
         CellData::new(val, Some(Color::Magenta), vec![Attribute::Bold]),
     )
 }

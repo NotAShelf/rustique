@@ -95,7 +95,6 @@ async fn async_main() {
                 Ok(_) => {}
                 Err(e) => {
                     error!("{}", e.to_string().red().bold());
-                    exit(1);
                 }
             }
         }

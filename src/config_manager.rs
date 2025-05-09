@@ -1,5 +1,5 @@
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{get_expanded_path, RustiqueOptions};
+use crate::utils::{RustiqueOptions};
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
+use dirs::home_dir;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Config {
@@ -35,6 +36,24 @@ pub struct Config {
     pub table: TableConfig,
 }
 
+impl Config {
+    pub fn get_path() -> PathBuf {
+        if cfg!(target_os = "windows") {
+            if let Some(w_path) = std::env::var_os("APPDATA") {
+                PathBuf::from(w_path).join("rustique")
+            } else {
+                PathBuf::from(".").join("rustique")
+            }
+        } else {
+            if let Some(u_path) = home_dir() {
+                u_path.join("rustique").join("config")
+            } else {
+                PathBuf::from(".").join("rustique")
+            }
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug)]
 pub struct ModPack {
 }
@@ -52,11 +71,10 @@ pub struct TableConfig {
     cells: HashMap<String, Vec<String>>,
 }
 
-pub const CONFIG_DEFAULT_DIR: &str = "~/.config/rustique";
-
 impl Default for Config {
     fn default() -> Self {
-        let backup_mods_dir = get_expanded_path(PathBuf::from(CONFIG_DEFAULT_DIR).join("mod_backups"));
+        // let backup_mods_dir = get_expanded_path(PathBuf::from(CONFIG_DEFAULT_DIR).join("mod_backups"));
+        let backup_mods_dir = Self::get_path().join("mod_backups");
         Self {
             mod_dir: RustiqueOptions::default().mod_dir.unwrap().to_string_lossy().to_string(),
             pinned_game_version: "".to_string(), // if its empty then get the latest
@@ -78,7 +96,7 @@ impl Default for Config {
 impl Config {
     pub fn new(config_dir: Option<PathBuf>) -> Result<Config, RustiqueError> {
 
-        let config_path = config_dir.unwrap_or_else(|| get_expanded_path(PathBuf::from(CONFIG_DEFAULT_DIR)));
+        let config_path = config_dir.unwrap_or_else(|| Self::get_path());
 
         if !config_path.exists() {
             fs::create_dir_all(&config_path).map_err(|e| {
@@ -126,7 +144,7 @@ impl Config {
     }
 
     pub fn save(&self, config_dir: Option<PathBuf>) -> Result<(), RustiqueError> {
-        let config_path = config_dir.unwrap_or_else(|| get_expanded_path(PathBuf::from(CONFIG_DEFAULT_DIR)));
+        let config_path = config_dir.unwrap_or_else(|| Self::get_path());
         let config_file_path  = config_path.join("config.toml");
 
         let toml_content = toml::to_string_pretty(self).map_err(|e| {

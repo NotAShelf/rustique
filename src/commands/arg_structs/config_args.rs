@@ -15,10 +15,8 @@ pub enum ConfigSubCommand {
     /// List all config options and their current values
     List,
 
-    /// Show a specific option and its value
-    Show(ShowArgs),
-
-    /// Deletes an option, returning it to the default value
+    /// Deletes an option, returning it to the default value.
+    /// You can set multiple values at the same time: Rustique config del -mzB
     Del(BoolArgs),
 }
 
@@ -45,49 +43,55 @@ pub struct CommonArgs {
     #[arg(short, long)]
     pub mods_dir: Option<String>,
 
+    /// Setting this to 'true' will show a message if you have unzipped mods in your mod dir
     #[arg(short, long)]
     pub notify_of_unzipped_mods: Option<bool>,
 
-    /// The highest game version Rustique will use to download mods
+    /// The highest game version Rustique will use to download mods (WIP)
+    ///
+    /// Default: None
     #[arg(short, long, value_name = "GAME_VERSION")]
     pub pin_game_version: Option<String>,
 
-    /// Backup your mods before updating, preserves older versions
+    /// Backup your mods before updating, preserves older versions (WIP)
+    ///
+    /// Before Rustique updates any file, the old version will be copied to the --backup-mods-dir.
+    ///
+    /// Default: false
+    ///
     #[arg(short, long)]
     pub backup_mods: Option<bool>,
 
     /// Directory for mod backups
+    ///
+    /// Default: (Linux): ~/.config/rustique/mod_backups
+    ///
+    ///          (Windows) %appdata%/rustique/mod_backups
+    ///
     #[arg(short = 'B', long, value_name = "DIR")]
     pub backup_mods_dir: Option<String>,
 
-    /// Rustique will attempt to identify mods that are not zipped and zip them for you.
+    /// Rustique will attempt to identify mods that are not zipped and zip them for you. (WIP)
     #[arg(short, long)]
     pub zip_mod_dirs: Option<bool>,
 
     /// Displays how long a command takes to complete
+    ///
+    /// Default: true
     #[arg(short, long)]
     pub show_execution_time: Option<bool>,
 }
-
 #[derive(Args, Debug)]
 pub struct SetArgs {
-    // #[command(flatten)]
-
     #[command(flatten)]
     pub common: CommonArgs
-}
-
-#[derive(Args, Debug)]
-pub struct ShowArgs {
-    #[command(flatten)]
-    pub common: BoolArgs
 }
 
 #[derive(Args, Debug)]
 pub struct BoolArgs {
 
     #[arg(short, long)]
-    pub mods_dir: bool,
+    pub mod_dir: bool,
 
     /// The highest game version Rustique will use to download mods
     #[arg(short, long)]
@@ -100,6 +104,9 @@ pub struct BoolArgs {
     /// Directory for mod backups
     #[arg(short = 'B', long)]
     pub backup_mods_dir: bool,
+
+    #[arg(short, long)]
+    pub notify_of_unzipped_mods: bool,
 
     /// Rustique will attempt to identify mods that are not zipped and zip them for you.
     #[arg(short, long)]
