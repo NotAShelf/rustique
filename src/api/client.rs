@@ -1,7 +1,7 @@
 use crate::aliases::{ModID, ModName};
 use crate::api::api_structs::{Mod, Mods};
 use crate::rustique_errors::RustiqueError;
-use colored::Colorize;
+use owo_colors::OwoColorize;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;

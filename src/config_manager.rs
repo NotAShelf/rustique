@@ -1,6 +1,6 @@
 use crate::rustique_errors::RustiqueError;
 use crate::utils::{RustiqueOptions};
-use colored::Colorize;
+use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -46,7 +46,7 @@ impl Config {
             }
         } else {
             if let Some(u_path) = home_dir() {
-                u_path.join("rustique").join("config")
+                u_path.join(".config").join("rustique")
             } else {
                 PathBuf::from(".").join("rustique")
             }

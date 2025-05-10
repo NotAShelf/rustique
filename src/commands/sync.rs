@@ -5,7 +5,7 @@ use crate::config_manager::{get_config, Config};
 use crate::rustique_errors::RustiqueError;
 use crate::utils::{elapsed_footer, extract_all_mods_metadata, get_current_time, notice, timestamp_older_than};
 use crate::version_management::{parse_latest_version, parse_version};
-use colored::{Colorize};
+use owo_colors::OwoColorize;
 use comfy_table::Attribute;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;

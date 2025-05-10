@@ -4,7 +4,7 @@ use crate::config_manager::get_config;
 use crate::install_manager::{install_manager, Install, Installed};
 use crate::rustique_errors::RustiqueError;
 use crate::utils::{delete_file, display_installation_results, elapsed_footer, notice};
-use colored::Colorize;
+use owo_colors::OwoColorize;
 use comfy_table::{Attribute, Color};
 use std::collections::HashMap;
 use std::path::{PathBuf};

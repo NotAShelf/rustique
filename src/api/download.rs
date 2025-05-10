@@ -2,7 +2,7 @@ use crate::api::client::ApiClient;
 use crate::install_manager::{Install, Installed};
 use crate::rustique_errors::RustiqueError;
 use crate::utils::{verify_zip_file};
-use colored::Colorize;
+use owo_colors::OwoColorize;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug,info, warn};

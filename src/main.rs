@@ -21,15 +21,16 @@ use crate::logging::{init_logging, VerboseLevel};
 use crate::utils::{elapsed_footer, get_expanded_path, RustiqueOptions};
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
-use colored::Colorize;
+use owo_colors::OwoColorize;
 use commands::sync::sync;
 use commands::update::update_mods;
 use std::io;
 use std::path::PathBuf;
 use std::process::exit;
 use std::time::Instant;
+use tokio::io::AsyncWriteExt;
 use tracing::{debug, error, info, warn};
-
+use crate::api::client::ApiClient;
 
 fn main() {
     // Initialize the Tokio runtime
@@ -156,7 +157,16 @@ async fn async_main() {
             info!("displaying stuff about the mod {:?}", args.mod_id);
         }
         Commands::Search(_args) => {
-            info!("Searching stuff");
+            let client = ApiClient::new();
+            let result = client.fetch_all_mods().await.unwrap();
+
+            let mods_file = mod_dir.join("mods.json");
+            let json_string = serde_json::to_string_pretty(&result).unwrap();
+            let mut file = tokio::fs::File::create(mods_file).await.unwrap();
+            // file.write_all(json_string.as_bytes()).await?;
+            AsyncWriteExt::write_all(&mut file, json_string.as_bytes()).await.unwrap();
+
+
         }
         Commands::ModPack{command} => {
             match command {

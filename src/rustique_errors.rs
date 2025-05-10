@@ -1,4 +1,4 @@
-use colored::Colorize;
+use owo_colors::OwoColorize;
 use std::fmt;
 
 #[allow(dead_code)]

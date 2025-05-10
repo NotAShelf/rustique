@@ -5,7 +5,7 @@ use crate::config_manager::get_config;
 use crate::install_manager::{Install, Installed};
 use crate::rustique_errors::RustiqueError;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
-use colored::Colorize;
+use owo_colors::OwoColorize;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::{UTF8_BORDERS_ONLY, UTF8_FULL_CONDENSED};
 use comfy_table::{Attribute, Cell, CellAlignment, Color, Row, Table};
