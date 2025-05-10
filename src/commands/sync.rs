@@ -302,7 +302,7 @@ pub async fn mod_id_sync(force: bool) -> Result<ModIDSync, RustiqueError> {
     //
     if file_data.all_mods.is_empty() || force || timestamp_older_than(24, &file_data.last_sync){
 
-        notice("Daily ModID Sync...", Some(comfy_table::Color::Blue), vec![Attribute::Bold]);
+        notice("Daily ModID Sync...", Some(comfy_table::Color::Yellow), vec![Attribute::Bold]);
 
         let client = ApiClient::new();
         // get all mod info
