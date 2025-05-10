@@ -115,9 +115,12 @@ pub async fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(),
 }
 
 fn grab_this_mod_deps(mod_info: &ModInfo, dep_list: Vec<Install>) -> String {
-    dep_list.iter()
+    let mut res = dep_list.iter()
         .filter(|i| mod_info.dependencies.as_ref().map_or(false, |deps| deps.contains_key(&i.mod_id)))
-        .map(|i| i.mod_id.clone()).collect::<Vec<ModID>>().join(",")
+        .map(|i| i.mod_id.clone()).collect::<Vec<ModID>>();
+    res.sort();
+    res.dedup_by(|a,b|a.to_lowercase().eq(&b.to_lowercase()));
+    res.join(",")
 }
 
 

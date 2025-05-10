@@ -1,4 +1,8 @@
 
+# Version 0.2.5-alpha
+* Fixed display issue where dependencies were being duplicated when viewing `list`
+* Fixed issue where the config folder for rustique was being created in the wrong place on linux. 
+
 # Version 0.2.4-alpha
 * You can now reset config values with `Rustique config del [OPT]`, see `Rustique config help del`
 * You can now list all config values with `Rustique config list`
