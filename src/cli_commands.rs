@@ -4,7 +4,7 @@ use crate::commands::arg_structs::info_args::ModInfoArgs;
 use crate::commands::arg_structs::install_args::InstallArgs;
 use crate::commands::arg_structs::list_args::ListArgs;
 use crate::commands::arg_structs::modpack_args::ModpackCommands;
-use crate::commands::arg_structs::search_args::SearchMods;
+use crate::commands::arg_structs::search_args::SearchArgs;
 use crate::commands::arg_structs::sync_args::SyncArgs;
 use crate::commands::arg_structs::update_args::UpdateArgs;
 use clap::{Args, Parser, Subcommand, ValueEnum};
@@ -63,7 +63,7 @@ pub enum Commands {
     Info(ModInfoArgs),
 
     #[command(about = "Search the mod website for mods. (Not implemented)")]
-    Search(SearchMods),
+    Search(SearchArgs),
 
     #[command(about = "Create, download, update modpacks for VintageStory (Not Implemented)")]
     ModPack {

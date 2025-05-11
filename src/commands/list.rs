@@ -1,7 +1,7 @@
 use crate::aliases::ModID;
-use crate::api::api_structs::ModInfo;
-use crate::commands::sync::{get_sync_data, ModSyncInfo};
-use crate::config_manager::get_config;
+use crate::api::api_structs::{ModInfo, ModsSearchFile};
+use crate::commands::sync::{get_sync_data, parse_json_file, ModSyncInfo, SEARCH_FILE_NAME};
+use crate::config_manager::{get_config, Config};
 use crate::install_manager::Install;
 use crate::rustique_errors::RustiqueError;
 use crate::utils::{extract_all_mods_metadata, gather_dependencies, gather_missing_dependencies, sanitize_string};
@@ -13,6 +13,7 @@ use comfy_table::{Attribute, Cell, Color, ContentArrangement, Row, Table};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Instant;
+use tracing::info;
 
 pub async fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(), RustiqueError> {
     let start_time = Instant::now();
@@ -21,6 +22,9 @@ pub async fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(),
     // check for sync data so we can show latest version
     let sync_data = get_sync_data(mod_dir).await?.rustique_sync;
     let mut table = setup_table_from_sync(Some(&sync_data));
+
+    // TODO: Turn this into a function for ease of use
+    let search_data = parse_json_file::<ModsSearchFile>(&Config::get_path().join(SEARCH_FILE_NAME))?;
 
     let installed_mods = extract_all_mods_metadata(&mod_dir)?;
 
@@ -36,6 +40,16 @@ pub async fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(),
     let metadata: Vec<&ModInfo> = if only_updated {
         metadata.into_iter().filter(|mod_info| {
             if let Some(sync) = sync_data.get(mod_info.mod_id.as_str()) {
+                let latest = sync.latest_known_version.to_string();
+                let current = sync.installed_version.to_string();
+                return &latest != &current;
+            } else if let Some(sync) = sync_data.iter().filter_map(|(_, sync_info)| {
+                if sync_info.mod_name.to_lowercase().eq(&mod_info.name.to_lowercase()) {
+                    Some(sync_info)
+                } else {
+                    None
+                }
+            }).last() {
                 let latest = sync.latest_known_version.to_string();
                 let current = sync.installed_version.to_string();
                 return &latest != &current;
@@ -55,8 +69,31 @@ pub async fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(),
 
     metadata.into_iter().for_each(|mod_info| {
         let mut row = Row::new();
+        let mod_id = if mod_info.mod_id.is_empty() {
+            // get info from
+            let res =  search_data.mods.iter().filter(|mod_api_info|{
+                return if let Some(name) = mod_api_info.name.as_ref() {
+                    if name.to_lowercase().eq(&mod_info.name.to_lowercase()) {
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }).last();
+            if res.is_some() {
+                res.unwrap().mod_id.to_string()
+            } else {
+                String::from("UNKNOWN")
+            }
+        } else {
+            mod_info.mod_id.clone()
+        };
+
+        info!("Setting list for {}", mod_id);
         row.add_cell(Cell::new(&mod_info.name).fg(Color::Yellow))
-            .add_cell(Cell::new(&mod_info.mod_id));
+            .add_cell(Cell::new(&mod_id));
 
         let installed_version = parse_version(mod_info.version.clone().unwrap_or_default()).unwrap().to_string();
         let installed_version_cell = Cell::new(&installed_version).add_attribute(Attribute::Dim);
@@ -78,8 +115,6 @@ pub async fn list_installed(mod_dir: &PathBuf, only_updated: bool) -> Result<(),
         if sync_data.len() > 0 {
             row.add_cell(latest_version_cell);
         }
-
-
 
         let dep_list = grab_this_mod_deps(mod_info, all_dependencies.clone());
 

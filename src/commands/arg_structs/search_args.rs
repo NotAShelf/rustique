@@ -1,11 +1,14 @@
 use clap::{Args, ValueEnum};
 
 #[derive(Args)]
-pub struct SearchMods {
+#[group()]
+pub struct SearchArgs {
 
     /// This searches by mod text and title
     #[arg(short, long)]
     pub query: Option<String>,
+
+
     pub game_version: Option<String>,
 
     pub game_versions: Option<Vec<String>>,

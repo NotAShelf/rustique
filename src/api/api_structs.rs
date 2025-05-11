@@ -91,13 +91,28 @@ pub struct ModInfo {
 // Used for endpoint /api/mods
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Mods {
-    pub mods: Vec<ModsApi>,
+    pub mods: Vec<ModApi>,
     #[serde(default, rename = "statuscode")]
     pub status_code: String
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ModsApi {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ModsSearchFile {
+    pub mods: Vec<ModApi>,
+    pub last_sync: String
+}
+
+impl ModsSearchFile {
+    pub fn new() -> Self {
+        Self {
+            mods: Vec::new(),
+            last_sync: String::new()
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ModApi {
     #[serde(default, rename = "modid", alias = "mod_id")]
     pub mod_id: u32,
     #[serde(default, rename = "assetid")]
@@ -121,6 +136,29 @@ pub struct ModsApi {
     pub tags: Vec<String>,
     #[serde(default, rename = "lastreleased")]
     pub last_released: Option<String>
+}
+
+impl Default for ModApi {
+    fn default() -> Self {
+        Self {
+            mod_id: 0,
+            asset_id: 0,
+            downloads: 0,
+            follows: 0,
+            trending_points: 0,
+            comments: 0,
+            name: None,
+            summary: None,
+            mod_id_strs: vec![],
+            author: None,
+            url_alias: None,
+            side: None,
+            mod_type: None,
+            logo: None,
+            tags: vec![],
+            last_released: None,
+        }
+    }
 }
 
 // Used for endpoint /api/mod/mod_id

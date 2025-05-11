@@ -9,13 +9,14 @@ mod commands;
 mod logging;
 mod config_manager;
 mod install_manager;
+mod traits;
 
 use crate::cli_commands::{Cli, Commands, ShellType};
 use crate::commands::arg_structs::modpack_args::ModpackCommands;
 use crate::commands::config::parse_config_args;
 use crate::commands::install::{install_cmd, install_missing_deps};
 use crate::commands::list::list_installed;
-use crate::commands::sync::mod_id_sync;
+use crate::commands::sync::mods_search_sync;
 use crate::config_manager::{get_config, init_config};
 use crate::logging::{init_logging, VerboseLevel};
 use crate::utils::{elapsed_footer, get_expanded_path, RustiqueOptions};
@@ -31,6 +32,7 @@ use std::time::Instant;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error, info, warn};
 use crate::api::client::ApiClient;
+use crate::commands::search::search;
 
 fn main() {
     // Initialize the Tokio runtime
@@ -80,7 +82,7 @@ async fn async_main() {
         Commands::Sync(args) => {
             // Sync will add a rustique-sync.json to a valid mod_dir
             if args.ids {
-                match mod_id_sync(args.force).await {
+                match mods_search_sync(args.force).await {
                     Ok(_) => {},
                     Err(e) => {
                         error!("{}", e.to_string().red().bold());
@@ -156,17 +158,13 @@ async fn async_main() {
         Commands::Info(args) => {
             info!("displaying stuff about the mod {:?}", args.mod_id);
         }
-        Commands::Search(_args) => {
-            let client = ApiClient::new();
-            let result = client.fetch_all_mods().await.unwrap();
-
-            let mods_file = mod_dir.join("mods.json");
-            let json_string = serde_json::to_string_pretty(&result).unwrap();
-            let mut file = tokio::fs::File::create(mods_file).await.unwrap();
-            // file.write_all(json_string.as_bytes()).await?;
-            AsyncWriteExt::write_all(&mut file, json_string.as_bytes()).await.unwrap();
-
-
+        Commands::Search(args) => {
+            match search(args) {
+                Ok(_) => {}
+                Err(e) => {
+                    error!("{}", e.to_string().red().bold());
+                }
+            }
         }
         Commands::ModPack{command} => {
             match command {

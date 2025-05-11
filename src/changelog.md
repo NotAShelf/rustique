@@ -1,3 +1,5 @@
+# Version 0.2.6-alpha
+* Fixed missing mod id for mods that have malformed modinfo.json file but rustique was able to obtain the numerical mod id.
 
 # Version 0.2.5-alpha
 * Fixed display issue where dependencies were being duplicated when viewing `list`

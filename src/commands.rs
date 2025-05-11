@@ -9,3 +9,4 @@ pub mod info;
 pub mod config;
 pub mod changelog;
 pub mod bulk_downloader;
+pub mod search;

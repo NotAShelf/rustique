@@ -10,6 +10,7 @@ use rayon::prelude::*;
 use std::collections::{HashMap};
 use std::path::PathBuf;
 use tracing::{error, info};
+use crate::traits::string_ext::StrLowerExt;
 
 // install & update both will obtain the info needed to fill this struct
 #[derive(Debug, Clone)]
@@ -114,9 +115,9 @@ pub async fn install_manager(
                             .unwrap_or_default()
                             .into_iter()
                             .filter(|(dep_id, _)|{
-                                    !dep_id.to_lowercase().contains("game")
-                                    && !dep_id.to_lowercase().contains("creative")
-                                    && !dep_id.to_lowercase().contains("survival")
+                                    !dep_id.lower_contains("game")
+                                    && !dep_id.lower_contains("creative")
+                                    && !dep_id.lower_contains("survival")
                                     && !total_mods_seen.contains_key(dep_id.to_lowercase().as_str())
                             }).collect::<HashMap<_, _>>())
                     },
