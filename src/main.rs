@@ -10,6 +10,8 @@ mod logging;
 mod config_manager;
 mod install_manager;
 mod traits;
+mod config_structs;
+mod flatten_map;
 
 use crate::cli_commands::{Cli, Commands, ShellType};
 use crate::commands::arg_structs::modpack_args::ModpackCommands;
@@ -29,9 +31,7 @@ use std::io;
 use std::path::PathBuf;
 use std::process::exit;
 use std::time::Instant;
-use tokio::io::AsyncWriteExt;
 use tracing::{debug, error, info, warn};
-use crate::api::client::ApiClient;
 use crate::commands::search::search;
 
 fn main() {

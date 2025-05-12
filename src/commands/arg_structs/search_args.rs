@@ -1,46 +1,43 @@
-use clap::{Args, ValueEnum};
+use clap::{Args};
+use clap::ArgGroup;
+use comfy_table::Color;
+use crate::commands::search::{Field, SortBy, SortOrder};
+use crate::config_structs::CellColor;
 
 #[derive(Args)]
-#[group()]
 pub struct SearchArgs {
 
-    /// This searches by mod text and title
+    /// This text query will search all available text fields, author, summary, name, urlalias, tags, side, type
     #[arg(short, long)]
     pub query: Option<String>,
 
+    #[arg(short, long, )]
+    pub color: Option<CellColor>,
 
-    pub game_version: Option<String>,
 
-    pub game_versions: Option<Vec<String>>,
+    /// If you know the field name from the api you can search on it directly.
+    ///
+    /// This argument must be used with --query or nothing happens
+    ///
+    ///
+    #[arg(short, long, requires = "query")]
+    pub field: Option<Field>,
 
-    #[arg(short, long)]
+    /// Search by specific author.
+    /// Note that the API doesn't appear to include more than 1 author, so this works for just the main author
+    #[arg(short,long)]
     pub author: Option<String>,
 
+
+
+
+    /// Search by a specific type of tag, example: Weapons or Technology
     #[arg(short, long)]
-    pub order_by: Option<OrderBy>,
+    pub tag: Option<String>,
 
-    #[arg(short = 'O', long)]
-    pub order_direction: Option<OrderDirection>,
-}
+    #[arg(short = 's', long)]
+    pub sort_by: Option<SortBy>,
 
-
-
-#[derive(ValueEnum, Clone)]
-pub enum OrderBy {
-    Author,
-    AssetId,
-    Comments,
-    Created,
-    Downloads,
-    Follows,
-    ModId,
-    Name,
-    Released,
-    Trending,
-}
-
-#[derive(ValueEnum, Clone)]
-pub enum OrderDirection {
-    Asc,
-    Desc,
+    #[arg(short = 'd', long)]
+    pub sort_direction: Option<SortOrder>,
 }

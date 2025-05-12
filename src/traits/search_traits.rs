@@ -1,14 +1,15 @@
 use std::cmp::Ordering;
+use crate::commands::search::{Field, SortBy};
 
 pub trait Searchable {
     fn matches_text(&self, query: &str) -> bool;
-    fn matches_field(&self, field: &str, value: &str) -> bool;
+    fn matches_field(&self, field: &Field, value: &str) -> bool;
     fn matches_id(&self, id: u32) -> bool;
     fn matches_tag(&self, tag: &str) -> bool;
 }
 
 pub trait Sortable {
-    fn get_sort_value(&self, field: &str) -> SortValue;
+    fn get_sort_by(&self, field: &SortBy) -> SortValue;
 }
 
 #[derive(Debug, PartialEq)]

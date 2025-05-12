@@ -8,7 +8,9 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
+use comfy_table::Column;
 use dirs::home_dir;
+use crate::config_structs::{AliasConfig, ModPack, TableSection, Tables};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Config {
@@ -33,7 +35,7 @@ pub struct Config {
 
     pub mod_pack: ModPack,
     pub alias: Vec<AliasConfig>,
-    pub table: TableConfig,
+    pub table: Tables,
 }
 
 impl Config {
@@ -54,23 +56,6 @@ impl Config {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-pub struct ModPack {
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct AliasConfig {
-    pub name: String,
-    pub mod_dir: String,
-    pub pinned_game_version: String,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct TableConfig {
-    headers: HashMap<String, Vec<String>>,
-    cells: HashMap<String, Vec<String>>,
-}
-
 impl Default for Config {
     fn default() -> Self {
         // let backup_mods_dir = get_expanded_path(PathBuf::from(CONFIG_DEFAULT_DIR).join("mod_backups"));
@@ -85,10 +70,7 @@ impl Default for Config {
             mod_pack: ModPack {},
             notify_of_unzipped_mods: false,
             alias: vec![],
-            table: TableConfig {
-                headers: HashMap::new(),
-                cells: HashMap::new(),
-            },
+            table: Tables::with_defaults()
         }
     }
 }

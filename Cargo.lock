@@ -4,13 +4,14 @@ version = 4
 
 [[package]]
 name = "Rustique"
-version = "0.2.6"
+version = "0.3.0"
 dependencies = [
  "chrono",
  "clap",
  "clap_complete",
  "comfy-table",
  "dirs",
+ "indexmap",
  "lenient_semver",
  "owo-colors",
  "rayon",
@@ -917,6 +918,8 @@ checksum = "cea70ddb795996207ad57735b50c5982d8844f38ba9ee5f1aedcfb708a2aa11e"
 dependencies = [
  "equivalent",
  "hashbrown",
+ "rayon",
+ "serde",
 ]
 
 [[package]]
