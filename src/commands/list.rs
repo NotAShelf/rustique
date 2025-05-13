@@ -183,7 +183,7 @@ fn setup_table_from_sync(sync_data: Option<&HashMap<ModID, ModSyncInfo>>) -> Tab
         .add_cell(Cell::new("Missing Dependencies").add_attribute(Attribute::Bold).fg(Color::Green))
         .add_cell(Cell::new("Description").add_attribute(Attribute::Bold).fg(Color::Green));
 
-    table.add_row(header);
+    table.set_header(header);
 
     table
 }

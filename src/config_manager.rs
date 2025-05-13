@@ -1,5 +1,5 @@
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{RustiqueOptions};
+use crate::utils::{notice, rustique_message, CellData, RustiqueMessage, RustiqueOptions};
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -8,8 +8,11 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
-use comfy_table::Column;
+use std::thread::current;
+use chrono::Local;
+use comfy_table::{Attribute, CellAlignment, Color, Column};
 use dirs::home_dir;
+use tracing::error;
 use crate::config_structs::{AliasConfig, ModPack, TableSection, Tables};
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -118,9 +121,16 @@ impl Config {
         match toml::from_str::<Config>(&contents) {
             Ok(config) => Ok(config),
             Err(e) => {
-                eprintln!("Failed to parse config: {}", e.to_string());
-                eprintln!("Using default config");
-                Ok(Config::default())
+                // eprintln!("Failed to parse config: {}", e.to_string().red());
+                // eprintln!("Using default config");
+                backup_config(&config_file_path, Some(e.to_string()))?;
+
+                // write the default
+
+                let config = Config::default();
+                config.save(Option::from(Config::get_path()))?;
+
+                Ok(config)
             }
         }
     }
@@ -140,6 +150,54 @@ impl Config {
 
         Ok(())
     }
+}
+
+pub fn backup_config(config_path: &PathBuf, message: Option<String>) -> Result<(), RustiqueError> {
+    if config_path.exists() {
+        let back_name = format!("toml.bak-{}", Local::now().format("%Y%m%d_%H%M%S"));
+        let backup_path = config_path.with_extension(&back_name);
+
+        let h1 = CellData::new(
+            "Rustique has discovered an error with your config.toml file".to_string(),
+            Some(Color::Magenta),
+            vec![Attribute::Bold],
+            None,
+        );
+
+        let m1 = CellData::new(
+            "Your old config has been backed up to the following location:".to_string(),
+            Some(Color::Yellow), vec![], None
+        );
+
+        let m2 = CellData::new(
+            format!("{}", config_path.with_extension(&back_name).display()),
+            Some(Color::Green),
+            vec![Attribute::Bold],None,
+        );
+
+        let m3 = CellData::new(
+          "A new config has been written using default values. You will need to set your configuration options again.".to_string(),
+          Some(Color::Yellow),
+          vec![],None,
+        );
+
+        let m4 = CellData::new("".to_string(), None, vec![], None);
+        let m5 = CellData::new(
+            format!("{}", message.unwrap_or_default()),
+            Some(Color::Red),
+            vec![Attribute::Bold, Attribute::Italic],
+            Some(CellAlignment::Left)
+        );
+
+        rustique_message(RustiqueMessage {
+            header: Some(h1),
+            message: vec![m1,m2,m3, m4, m5],
+        });
+
+        fs::copy(config_path, &backup_path)?;
+    }
+
+    Ok(())
 }
 
 static CONFIG: OnceLock<RwLock<Config>> = OnceLock::new();

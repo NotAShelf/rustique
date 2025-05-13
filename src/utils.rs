@@ -17,6 +17,7 @@ use std::io::{Read};
 use std::path::{Path, PathBuf};
 use std::time::{Instant};
 use std::{fs};
+use comfy_table::ContentArrangement::Dynamic;
 use tracing::{debug, error};
 use zip::ZipArchive;
 
@@ -224,7 +225,7 @@ pub fn elapsed_footer(start_time: Instant, operation: &str) {
     table
         .load_preset(UTF8_BORDERS_ONLY)
         .apply_modifier(UTF8_ROUND_CORNERS)
-        .set_content_arrangement(comfy_table::ContentArrangement::Dynamic);
+        .set_content_arrangement(Dynamic);
 
     let elapsed = format!("{:.2}s", start_time.elapsed().as_secs_f64());
     // let out_str = format!("{} {} {}{}", operation.bright_green().bold(),"operation took:".bright_green().bold(), elapsed.bright_purple(), "s".bright_yellow());
@@ -241,7 +242,10 @@ pub fn elapsed_footer(start_time: Instant, operation: &str) {
 
 pub fn notice(message: &str, fg_color: Option<Color>, attributes: Vec<Attribute>) {
     let mut table = Table::new();
-    table.load_preset(UTF8_BORDERS_ONLY).apply_modifier(UTF8_ROUND_CORNERS);
+    table
+        .load_preset(UTF8_BORDERS_ONLY)
+        .apply_modifier(UTF8_ROUND_CORNERS)
+        .set_content_arrangement(Dynamic);
 
     let mut cell = Cell::new(message);
 
@@ -264,18 +268,83 @@ pub fn notice(message: &str, fg_color: Option<Color>, attributes: Vec<Attribute>
     println!("{}", table);
 }
 
+pub struct RustiqueMessage {
+    pub header: Option<CellData>,
+    pub message: Vec<CellData>
+}
+
+pub fn rustique_message(rustique_message: RustiqueMessage) {
+    let mut table = Table::new();
+    table.load_preset(UTF8_BORDERS_ONLY)
+        .apply_modifier(UTF8_ROUND_CORNERS)
+        .set_content_arrangement(Dynamic);
+
+    if rustique_message.header.is_some() {
+        let header_data = rustique_message.header;
+        if header_data.is_some() {
+            let header_data = header_data.unwrap_or_default();
+            let mut h_cell = Cell::new(header_data.text);
+            if header_data.attributes.len() > 0 {
+                for attribute in &header_data.attributes {
+                    h_cell = h_cell.add_attribute(attribute.clone());
+                }
+            }
+            h_cell = h_cell.fg(header_data.color.unwrap_or(Color::Green))
+                .set_alignment(header_data.alignment.unwrap_or(CellAlignment::Center));
+
+            let mut row = Row::new();
+            row.add_cell(h_cell);
+
+            table.set_header(row);
+        }
+    }
+
+    let rows: Vec<Row> = rustique_message.message.iter().map(|message_data|{
+        let mut cell = Cell::from(message_data.text.clone());
+
+        if message_data.attributes.len() > 0 {
+            for attr in &message_data.attributes {
+                cell = cell.add_attribute(attr.clone());
+            }
+        }
+        cell = cell.fg(message_data.color.unwrap_or(Color::Yellow))
+            .set_alignment(message_data.alignment.unwrap_or(CellAlignment::Center));
+
+        let mut row = Row::new();
+        row.add_cell(cell);
+        row
+    }).collect();
+
+    table.add_rows(rows);
+
+    println!("{}", table);
+}
+
 pub struct CellData {
-    text: String,
-    attributes: Vec<Attribute>,
-    color: Option<Color>,
+    pub(crate) text: String,
+    pub(crate) attributes: Vec<Attribute>,
+    pub(crate) color: Option<Color>,
+    pub(crate) alignment: Option<CellAlignment>
+}
+
+impl Default for CellData {
+    fn default() -> Self {
+        Self {
+            text: "".to_string(),
+            attributes: vec![],
+            color: None,
+            alignment: None,
+        }
+    }
 }
 
 impl CellData {
-    pub fn new(text: String, color: Option<Color>, attributes: Vec<Attribute>) -> CellData {
+    pub fn new(text: String, color: Option<Color>, attributes: Vec<Attribute>, alignment: Option<CellAlignment>) -> CellData {
         Self {
             text,
             attributes,
             color,
+            alignment
         }
     }
 }
@@ -314,8 +383,8 @@ pub fn construct_cell(dt: CellData) -> Cell {
 }
 pub fn command_output(option: String, val: String) -> (CellData, CellData) {
     (
-        CellData::new(option, Some(Color::Yellow), vec![Attribute::Bold]),
-        CellData::new(val, Some(Color::Magenta), vec![Attribute::Bold]),
+        CellData::new(option, Some(Color::Yellow), vec![Attribute::Bold], None),
+        CellData::new(val, Some(Color::Magenta), vec![Attribute::Bold], None),
     )
 }
 

@@ -1,6 +1,7 @@
 # Version 0.3.0-alpha
 * Implemented search! Checkout `Rustique help search` on how to use it
 * You can now change what information to display with search via the config file! You can't set these values yet via Rustique, but you can manually edit the file.
+* If the config.toml file is malformed, the malformed config is backed up and a new config will be created with a nice message.
 
 # Version 0.2.6-alpha
 * Fixed missing mod id for mods that have malformed modinfo.json file but rustique was able to obtain the numerical mod id.
