@@ -9,6 +9,7 @@ use owo_colors::OwoColorize;
 use tracing::{debug, info};
 use crate::api::api_structs::{ModApi, ModsSearchFile};
 use crate::commands::arg_structs::search_args::SearchArgs;
+use crate::commands::search::SortBy::Released;
 use crate::commands::sync::{parse_json_file, SEARCH_FILE_NAME};
 use crate::config_manager::{get_config, Config};
 use crate::config_structs::{CellColor, SearchColumn};
@@ -16,6 +17,7 @@ use crate::rustique_errors::RustiqueError;
 use crate::traits::option_ext::OptionExt;
 use crate::traits::search_traits::{Searchable, SortValue, Sortable};
 use crate::traits::vec_ext::VecStringExt;
+use crate::utils::prep_cell;
 //TODO: implement searching by date or time?? Maybe
 
 impl Searchable for ModApi {
@@ -262,117 +264,66 @@ pub fn show_search_table(results: Vec<ModApi>) {
         .apply_modifier(UTF8_ROUND_CORNERS)
         .set_content_arrangement(ContentArrangement::Dynamic);
 
-    let mut headers = Row::new();
-
-    for (k, v) in search_headers.iter() {
+    let col_cells: Vec<Cell> = search_headers.iter().map(|(k, v)| {
         let color = v.color.clone();
         let attr = v.attribute.clone();
 
-        match SearchColumn::from_str(k) {
-            Ok(SearchColumn::Name) => {
-                headers.add_cell(prep_cell("Name", color, attr));
-            }
-            Ok(SearchColumn::Author) => {
-                headers.add_cell(prep_cell("Author", color, attr));
-            }
-            Ok(SearchColumn::ModId) => {
-                headers.add_cell(prep_cell("Mod ID", color, attr));
-            }
-            Ok(SearchColumn::ModidStrs) => {
-                headers.add_cell(prep_cell("ModID Strings", color, attr));
-            }
-            Ok(SearchColumn::AssetId) => {
-                headers.add_cell(prep_cell("Asset ID", color, attr));
-            }
-            Ok(SearchColumn::Downloads) => {
-                headers.add_cell(prep_cell("Downloads", color, attr));
-            }
-            Ok(SearchColumn::Follows) => {
-                headers.add_cell(prep_cell("Follows", color, attr));
-            }
-            Ok(SearchColumn::Trending) => {
-                headers.add_cell(prep_cell("Trending", color, attr));
-            }
-            Ok(SearchColumn::Comments) => {
-                headers.add_cell(prep_cell("Comments", color, attr));
-            }
-            Ok(SearchColumn::Summary) => {
-                headers.add_cell(prep_cell("Summary", color, attr));
-            }
-            Ok(SearchColumn::UrlAliases) => {
-                headers.add_cell(prep_cell("Url Aliases", color, attr));
-            }
-            Ok(SearchColumn::Side) => {
-                headers.add_cell(prep_cell("Side", color, attr));
-            }
-            Ok(SearchColumn::Type) => {
-                headers.add_cell(prep_cell("Type", color, attr));
-            }
-            Ok(SearchColumn::Tags) => {
-                headers.add_cell(prep_cell("Tags", color, attr));
-            }
-            Ok(SearchColumn::LastReleased) => {
-                headers.add_cell(prep_cell("Last Released", color, attr));
-            }
-            _ => {
-                headers.add_cell(prep_cell("N/A", None, None));
-            }
-        }
-    }
+        let col_txt = match SearchColumn::from_str(k) {
+            Ok(SearchColumn::Name) => "Name",
+            Ok(SearchColumn::Author) => "Author",
+            Ok(SearchColumn::ModId) => "ModID",
+            Ok(SearchColumn::ModidStrs) => "ModID Strings",
+            Ok(SearchColumn::AssetId) => "AssetID",
+            Ok(SearchColumn::Downloads) => "Downloads",
+            Ok(SearchColumn::Follows) => "Follows",
+            Ok(SearchColumn::Trending) => "Trending Points",
+            Ok(SearchColumn::Comments) => "Comments",
+            Ok(SearchColumn::Summary) => "Summary",
+            Ok(SearchColumn::UrlAliases) => "Url Aliases",
+            Ok(SearchColumn::Side) => "Side",
+            Ok(SearchColumn::Type) => "Type",
+            Ok(SearchColumn::Tags) => "Tags",
+            Ok(SearchColumn::LastReleased) => "Last Released",
+            _ => "N/A"
+        };
+
+        prep_cell(col_txt, color, attr, None)
+    }).collect();
+
+    table.set_header(Row::from(col_cells));
 
     let b_rows: Vec<Row> = results.iter().map(|m| {
         let cells: Vec<Cell> = search_cells.iter().map(|(k,v)| {
             let color = v.color.clone();
             let attr = v.attribute.clone();
 
-            match SearchColumn::from_str(k) {
-                Ok(SearchColumn::Name) => prep_cell(m.name.clone().unwrap_or_default().as_str(), color, attr),
-                Ok(SearchColumn::ModId) => prep_cell(m.mod_id.to_string().as_str(), color, attr),
-                Ok(SearchColumn::AssetId) => prep_cell(m.asset_id.to_string().as_str(), color, attr),
-                Ok(SearchColumn::Downloads) => prep_cell(m.downloads.to_string().as_str(), color, attr),
-                Ok(SearchColumn::Follows) => prep_cell(m.follows.to_string().as_str(), color, attr),
-                Ok(SearchColumn::Trending) => prep_cell(m.trending_points.to_string().as_str(), color, attr),
-                Ok(SearchColumn::Comments) => prep_cell(m.comments.to_string().as_str(), color, attr),
-                Ok(SearchColumn::Summary) => prep_cell(m.summary.clone().unwrap_or_default().as_str(), color, attr),
-                Ok(SearchColumn::ModidStrs) => prep_cell(m.mod_id_strs.join(",").as_str(), color, attr),
-                Ok(SearchColumn::Author) => prep_cell(m.author.clone().unwrap_or_default().as_str(), color, attr),
-                Ok(SearchColumn::UrlAliases) => prep_cell(m.url_alias.clone().unwrap_or_default().as_str(), color, attr),
-                Ok(SearchColumn::Side) => prep_cell(m.side.clone().unwrap_or_default().as_str(), color, attr),
-                Ok(SearchColumn::Type) => prep_cell(m.mod_type.clone().unwrap_or_default().as_str(), color, attr),
-                Ok(SearchColumn::Tags) => prep_cell(m.tags.join(",").as_str(), color, attr),
-                Ok(SearchColumn::LastReleased) => prep_cell(m.last_released.clone().unwrap_or_default().as_str(), color, attr),
-                _ => {Cell::new("")}
-            }
+            let col_txt = match SearchColumn::from_str(k) {
+                Ok(SearchColumn::Name)      => m.name.clone().unwrap_or_default(),
+                Ok(SearchColumn::ModId)     => m.mod_id.to_string(),
+                Ok(SearchColumn::AssetId)   => m.asset_id.to_string(),
+                Ok(SearchColumn::Downloads) => m.downloads.to_string(),
+                Ok(SearchColumn::Follows)   => m.follows.to_string(),
+                Ok(SearchColumn::Trending)  => m.trending_points.to_string(),
+                Ok(SearchColumn::Comments)  => m.comments.to_string(),
+                Ok(SearchColumn::Summary)   => m.summary.clone().unwrap_or_default(),
+                Ok(SearchColumn::ModidStrs) => m.mod_id_strs.join(","),
+                Ok(SearchColumn::Author)    => m.author.clone().unwrap_or_default(),
+                Ok(SearchColumn::UrlAliases) => m.url_alias.clone().unwrap_or_default(),
+                Ok(SearchColumn::Side)      => m.side.clone().unwrap_or_default(),
+                Ok(SearchColumn::Type)      => m.mod_type.clone().unwrap_or_default(),
+                Ok(SearchColumn::Tags)      => m.tags.join(","),
+                Ok(SearchColumn::LastReleased) => m.last_released.clone().unwrap_or_default(),
+                _ => String::new()
+            };
+            prep_cell(&*col_txt, color, attr, None)
+
         }).collect();
 
         Row::from(cells)
     }).collect();
 
-    table.set_header(headers);
     table.add_rows(b_rows);
 
     println!("{}", table);
 }
 
-fn prep_cell(text: &str, color: Option<CellColor>, attribute: Option<String>) -> Cell {
-    let mut cell = Cell::from(text);
-
-    if color.is_some() {
-        info!("Trying to set cell color: {}", color.clone().unwrap());
-        cell = cell.fg(Color::from(color.unwrap_or(CellColor::Reset)));
-    }
-
-    // TODO: Add actual attribute type so any Comfy_table attribute can be used
-    // For now we limit the usable attributes
-    if attribute.is_some() {
-        let attr: Attribute = match attribute.unwrap().as_str() {
-            "bold" => Attribute::Bold,
-            "dim" => Attribute::Dim,
-            "italic" => Attribute::Italic,
-            _ => Attribute::Reset
-        };
-        cell = cell.add_attribute(attr);
-    }
-
-    cell
-}

@@ -18,8 +18,9 @@ use std::path::{Path, PathBuf};
 use std::time::{Instant};
 use std::{fs};
 use comfy_table::ContentArrangement::Dynamic;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 use zip::ZipArchive;
+use crate::config_structs::CellColor;
 
 #[derive(Clone, Debug)]
 pub struct RustiqueOptions {
@@ -465,4 +466,31 @@ pub fn gather_missing_dependencies(installed_mods: &HashMap<ModFileName, ModInfo
                 ).unwrap_or_default()
                 .into_iter()
         }).collect())
+}
+
+pub fn prep_cell(text: &str, color: Option<CellColor>, attribute: Option<String>, delimiter: Option<char>) -> Cell {
+    let mut cell = Cell::from(text);
+
+    if color.is_some() {
+        info!("Trying to set cell color: {}", color.clone().unwrap());
+        cell = cell.fg(Color::from(color.unwrap_or(CellColor::Reset)));
+    }
+
+    // TODO: Add actual attribute type so any Comfy_table attribute can be used
+    // For now we limit the usable attributes
+    if attribute.is_some() {
+        let attr: Attribute = match attribute.unwrap().as_str() {
+            "bold" => Attribute::Bold,
+            "dim" => Attribute::Dim,
+            "italic" => Attribute::Italic,
+            _ => Attribute::NoHidden
+        };
+        cell = cell.add_attribute(attr);
+    }
+
+    if delimiter.is_some() {
+        cell = cell.set_delimiter(delimiter.unwrap_or(' '));
+    }
+
+    cell
 }

@@ -48,7 +48,7 @@ pub struct ModIDSyncData {
     pub modid_strs: Vec<String>
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
 pub struct ModSyncInfo {
     pub file_name: ModFileName,
     pub mod_name: String,
@@ -56,6 +56,15 @@ pub struct ModSyncInfo {
     pub latest_known_version: ModVersion,
     pub latest_download_url: String,
 }
+
+// impl Default for ModIDSync {
+//     fn default() -> Self {
+//         Self {
+//             all_mods: Default::default(),
+//             last_sync: "".to_string(),
+//         }
+//     }
+// }
 
 
 #[allow(unused)]

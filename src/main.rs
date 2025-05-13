@@ -17,7 +17,7 @@ use crate::cli_commands::{Cli, Commands, ShellType};
 use crate::commands::arg_structs::modpack_args::ModpackCommands;
 use crate::commands::config::parse_config_args;
 use crate::commands::install::{install_cmd, install_missing_deps};
-use crate::commands::list::list_installed;
+use crate::commands::list::new_list;
 use crate::commands::sync::mods_search_sync;
 use crate::config_manager::{get_config, init_config};
 use crate::logging::{init_logging, VerboseLevel};
@@ -94,12 +94,21 @@ async fn async_main() {
 
         }
         Commands::List(args) => {
-            match list_installed(&mod_dir, args.updates).await {
-                Ok(_) => {}
+            match new_list(&mod_dir, args.updates).await {
+                Ok(_) => {
+
+                },
                 Err(e) => {
                     error!("{}", e.to_string().red().bold());
                 }
             }
+
+            // match list_installed(&mod_dir, args.updates).await {
+            //     Ok(_) => {}
+            //     Err(e) => {
+            //         error!("{}", e.to_string().red().bold());
+            //     }
+            // }
         }
         Commands::Update(args) => {
             match update_mods(&mod_dir, args.mod_ids.clone(), args.keep_old_files).await {
