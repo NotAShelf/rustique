@@ -46,7 +46,10 @@ pub enum Commands {
 
     #[command(about = "Install a specific mod. Must use the mod_id, Example: ./Rustique install alchemy")]
     Install(InstallArgs),
-
+    
+    #[command(about = "Search the mod website for new mods, Example: ./Rustique search -q magic")]
+    Search(SearchArgs),
+    
     #[command(about = "Manage config options for Rustique")]
     Config(ConfigCommand),
 
@@ -59,12 +62,9 @@ pub enum Commands {
     #[command(about = "View the changelogs for a installed mod (Not Implemented)")]
     Changelog(ChangeLogArgs),
 
-    #[command(about = "Shows values from the modinfo.json file inside the mod zip (Not Implemented)")]
+    #[command(about = "Shows info from the mod website file inside the mod zip (Not Implemented)")]
     Info(ModInfoArgs),
-
-    #[command(about = "Search the mod website for mods. (Not implemented)")]
-    Search(SearchArgs),
-
+    
     #[command(about = "Create, download, update modpacks for VintageStory (Not Implemented)")]
     ModPack {
         #[clap(subcommand)]

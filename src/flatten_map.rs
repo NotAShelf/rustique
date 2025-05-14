@@ -11,6 +11,7 @@ use crate::config_structs::{CellAttr, CellColor, ColumnProperties};
 
 
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct FlattenMap(IndexMap<String, ColumnProperties>);
 
 impl Serialize for FlattenMap {
@@ -55,23 +56,10 @@ impl FlattenMap
         self.0.insert(key.to_string(), ColumnProperties {color, attribute});
         self
     }
-
-    // pub fn keys(&self) -> Vec<String> {
-    //     self.0.keys().cloned().collect()
+    
+    // pub fn iter(&self) -> impl Iterator<Item = (&String, &ColumnProperties)> {
+    //     self.0.iter()
     // }
-    // 
-    // 
-    // pub fn get(&self, key: &str) -> Option<&ColumnProperties> {
-    //     self.0.get(key)
-    // }
-    // 
-    // pub fn values(&self) -> Vec<&ColumnProperties> {
-    //     self.0.values().collect()
-    // }
-
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &ColumnProperties)> {
-        self.0.iter()
-    }
 }
 impl<'de> Deserialize<'de> for FlattenMap {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>

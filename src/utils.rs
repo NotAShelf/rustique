@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Instant};
 use std::{fs};
 use comfy_table::ContentArrangement::Dynamic;
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 use zip::ZipArchive;
 use crate::config_structs::{CellAttr, CellColor};
 

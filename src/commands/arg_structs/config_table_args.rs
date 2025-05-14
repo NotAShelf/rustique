@@ -19,8 +19,32 @@ pub enum TableSubCommands {
     ///
     Del(TableSetArgs),
 
+    ///
     /// Shows the current values defined in the config file
+    /// 
     List,
+    
+    ///
+    /// Reset a table back to the Rustique defaults
+    ///
+    Reset(ResetArgsMiddle),
+}
+
+#[derive(Args)]
+pub struct ResetArgsMiddle {
+    #[command(subcommand)]
+    pub command: ResetArgs
+}
+
+#[derive(Subcommand)]
+pub enum ResetArgs {
+    ///
+    /// Reset the List table to defaults
+    List, 
+    
+    ///
+    /// Reset the Search table to defaults
+    Search
 }
 
 #[derive(Args)]
@@ -72,36 +96,34 @@ where T: ValueEnum + Clone + Send + Sync + 'static {
     ///
     /// You must specify at least `1` field
     ///
-    #[arg(short, long, requires = "table_flags", value_name = "FIELD")]
+    #[arg(short, long, requires = "headers_or_cells", value_name = "FIELD")]
     pub field: Option<T>,
 
     ///
     /// Fields lets you modify many fields at the same time. If you use this with --color or --attr
     /// you will set ALL provided fields to those colors and with those attributes
     ///
-    #[arg(short = 'F', long, requires = "table_flags", value_name = "FIELDS", num_args = 1..)]
+    #[arg(short = 'F', long, requires = "headers_or_cells", value_name = "FIELDS", num_args = 1..)]
     pub fields: Vec<T>,
 
     ///
     /// Set the cell color
     ///
-    #[arg(short = 'r',long, requires = "table_flags", requires = "fields", value_name = "COLOR")]
+    /// 
+    #[arg(short = 'r',long, requires = "headers_or_cells", requires = "fields", value_name = "COLOR")]
     pub color: Option<CellColor>,
 
     ///
     /// Set the attribute of the cell. For now you can only specify `1` attribute at a time
     ///
-    #[arg(short, long, requires = "table_flags", requires = "fields",value_name = "ATTR")]
+    #[arg(short, long, requires = "headers_or_cells", requires = "fields",value_name = "ATTR")]
     pub attr: Option<CellAttr>,
-    
-    #[arg(long)]
-    pub reset: bool,
 }
 
 
 #[derive(Args)]
 #[command(group(
-    ArgGroup::new("table_flags")
+    ArgGroup::new("headers_or_cells")
         .args(["headers", "cells"])
         .multiple(false)
         .required(true)

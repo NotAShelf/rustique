@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Tables {
     pub list: TableSection,
     pub search: TableSection,
@@ -26,7 +26,11 @@ impl Serialize for Tables {
 
 impl Tables {
     pub fn with_defaults() -> Self {
-        let mut list = TableSection::new();
+        Self { list: Self::list_defaults(), search: Self::search_defaults() }
+    }
+    
+    pub fn list_defaults() -> TableSection {
+    let mut list = TableSection::new();
 
         // List headers
         list.headers
@@ -90,8 +94,12 @@ impl Tables {
                 ListColumn::Description.as_str(),
                 Some(CellColor::Reset),
                 None,
-            );
-
+            ); 
+        
+        list
+    }
+    
+    pub fn search_defaults() -> TableSection {
         let mut search = TableSection::new();
 
         // Search headers
@@ -107,12 +115,12 @@ impl Tables {
             .with("mod_id", Some(CellColor::Magenta), Some(CellAttr::Bold))
             .with("name", Some(CellColor::Reset), None)
             .with("summary", Some(CellColor::Reset), None);
-
-        Self { list, search }
+        
+        search
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct TableSection {
     pub headers: FlattenMap,
     pub cells: FlattenMap,
