@@ -5,6 +5,7 @@
 * To pin a specific game version use `Rustique config set -p 1.20.8`
 * The "Latest Version" in list command will now show (pinned) if a version has been pinned.
 * Columns with numbers displayed should now be right aligned.
+* The Info command is now live. See `Rustique help info ` to see how it use it.
 
 # Version 0.3.0-alpha
 * Implemented search! Checkout `Rustique help search` on how to use it

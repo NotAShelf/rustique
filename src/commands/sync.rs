@@ -14,6 +14,7 @@ use std::default::Default;
 use std::path::PathBuf;
 use std::process::exit;
 use std::time::{Instant};
+use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error, info, warn};
 use crate::commands::search::SEARCH_FILE_NAME;
@@ -93,8 +94,6 @@ pub const GAME_VERSION_SYNC_FILE_NAME: &str = "game-versions.json";
 
 // This contains all the data from the api/mods request. This is used to located mod_IDs
 // and for searching for new mods. This is synced once a day or manually
-
-
 pub async fn get_sync_data(mod_dir: &PathBuf) -> Result<RustiqueSyncJson, RustiqueError> {
 
     let fp = mod_dir.join(PathBuf::from(SYNC_FILE_NAME));
@@ -236,8 +235,9 @@ pub async fn sync(mod_dir: &PathBuf) -> Result<(), RustiqueError> {
         .fetch_mods_parallel(
             sync_data.rustique_sync.keys().cloned().collect()
         ).await?;
-
+    
     for (mod_id, res_mod) in &result {
+
         let pkg = config.pkg.iter().find(|p| p.mod_id.eq(mod_id)).cloned().unwrap_or_default();
         let (mod_version, download_url, game_versions) = if !pkg.mod_id.is_empty() || !config.pinned_game_version.is_empty() {
             parse_pinned_version(&res_mod.mod_json.releases, pkg, config.pinned_game_version.clone())
@@ -268,7 +268,7 @@ pub async fn sync(mod_dir: &PathBuf) -> Result<(), RustiqueError> {
     let json = prettify(&data, "Sync")?;
 
     // Use tokio's async file operations
-    let mut file = tokio::fs::File::create(sync_file_path)
+    let mut file = File::create(sync_file_path)
         .await
         .map_err(|e| RustiqueError::IoError {
             context: format!("Error writing sync file to mod_dir: {}", mod_dir.to_string_lossy()),
@@ -283,6 +283,7 @@ pub async fn sync(mod_dir: &PathBuf) -> Result<(), RustiqueError> {
 
     Ok(())
 }
+
 
 pub async fn daily_file_syncs(force: bool) -> Result<ModsSearchFile, RustiqueError> {
 

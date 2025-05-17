@@ -141,7 +141,7 @@ pub struct ModApi {
 
 
 // Used for endpoint /api/mod/mod_id
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mod {
     #[serde(rename="mod", alias = "Mod")]
     pub mod_json: ApiModJson,
@@ -151,7 +151,8 @@ pub struct Mod {
 }
 
 
-#[derive(Deserialize, Serialize, Debug)]
+// Used with api/mod/modid
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct ApiModJson {
     #[serde(default, rename="modid", alias = "ModID", alias = "mod_id")]
     pub mod_id: u32,
@@ -192,8 +193,16 @@ pub struct ApiModJson {
 
     #[serde(default)]
     pub downloads: u32,
+    
     #[serde(default)]
     pub follows: u32,
+    
+    #[serde(default)]
+    pub trending_points: u32,
+    
+    #[serde(default)]
+    pub comments: u32,
+    
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub side: Option<String>,
 
@@ -214,8 +223,7 @@ pub struct ApiModJson {
     pub screenshots: Vec<Screenshots>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-#[derive(Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct Releases {
     #[serde(default, rename = "release_id")]
     pub release_id: u32,
@@ -243,7 +251,7 @@ pub struct Releases {
     pub changelog: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct Screenshots {
     #[serde(default, rename = "fileid")]
     pub file_id: u32,

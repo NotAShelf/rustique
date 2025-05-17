@@ -62,7 +62,7 @@ pub enum Commands {
     #[command(about = "View the changelogs for a installed mod (Not Implemented)")]
     Changelog(ChangeLogArgs),
 
-    #[command(about = "Shows info from the mod website file inside the mod zip (Not Implemented)")]
+    #[command(about = "Get more information about the mod specified")]
     Info(ModInfoArgs),
     
     #[command(about = "Create, download, update modpacks for VintageStory (Not Implemented)")]
