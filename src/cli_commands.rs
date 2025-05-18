@@ -9,6 +9,7 @@ use crate::commands::arg_structs::sync_args::SyncArgs;
 use crate::commands::arg_structs::update_args::UpdateArgs;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
+use crate::commands::arg_structs::download_args::DownloadArgs;
 
 #[derive(Parser)]
 #[command(name = "Rustique")]
@@ -58,9 +59,12 @@ pub enum Commands {
           #[arg(short, long = "gen-auto-complete", value_name = "SHELL")]
           gen_auto_complete: Option<ShellType>,
     },
+    
+    #[command(about = "Download a Vintage Story executable")]
+    Download(DownloadArgs),
 
-    #[command(about = "View the changelogs for a installed mod (Not Implemented)")]
-    Changelog(ChangeLogArgs),
+    // #[command(about = "View the changelogs for a installed mod (Not Implemented)")]
+    // Changelog(ChangeLogArgs),
 
     #[command(about = "Get more information about the mod specified")]
     Info(ModInfoArgs),
@@ -71,6 +75,7 @@ pub enum Commands {
         command: ModpackCommands,
     },
 }
+
 
 #[derive(Args, Debug)]
 pub struct ModIDSync {

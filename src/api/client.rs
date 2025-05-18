@@ -3,11 +3,16 @@ use crate::api::api_structs::{GameVersions, Mod, Mods};
 use crate::rustique_errors::RustiqueError;
 use owo_colors::OwoColorize;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Display;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{error, info};
+use std::fmt::Write;
+use clap::ValueEnum;
 
 const API_BASE_URL: &str = "https://mods.vintagestory.at/api";
+const VS_CDN_STABLE_RELEASE: &str = "https://cdn.vintagestory.at/gamefiles/stable";
+const VS_CDN_UNSTABLE_RELEASE: &str = "https://cdn.vintagestory.at/gamefiles/unstable";
 const RUSTIQUE_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"), "  (github: Tekunogosu/Rustique)");
 
 #[derive(Debug, Clone)]
@@ -15,11 +20,40 @@ pub struct ApiClient {
     agent: Arc<reqwest::Client>,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub struct ModApiFetch {
-    pub mod_id: ModID,
-    pub mod_name: ModName,
+#[derive(Debug, Clone, ValueEnum)]
+pub enum VSMirrorType {
+    Stable,
+    Unstable
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum VSExecutabletype {
+    Server, 
+    Client
+}
+
+#[allow(clippy::upper_case_acronyms)]
+#[derive(Clone, ValueEnum, Debug)]
+pub enum VSOSType {
+    Linux,
+    OSX,
+    Windows
+}
+
+impl Display for VSOSType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VSOSType::Linux => write!(f, "linux"),
+            VSOSType::OSX => write!(f, "osx"),
+            VSOSType::Windows => write!(f, "windows")
+        }
+    }
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum VSWinInstallerType {
+    Install,
+    Update
 }
 
 impl ApiClient {
@@ -39,12 +73,14 @@ impl ApiClient {
         Self { agent }
     }
 
-    fn uri(endpoint: &str) -> String {
+    fn api_uri(endpoint: &str) -> String {
         format!("{API_BASE_URL}/{endpoint}")
     }
+    fn cdn_uri_stable(endpoint: &str) -> String { format!("{VS_CDN_STABLE_RELEASE}/{endpoint}")}
+    fn cdn_uri_unstable(endpoint: &str) -> String { format!("{VS_CDN_UNSTABLE_RELEASE}/{endpoint}") }
 
     pub async fn fetch_all_mods(&self) -> Result<Mods, RustiqueError> {
-        let response = self.agent.get(Self::uri("mods"))
+        let response = self.agent.get(Self::api_uri("mods"))
             .send()
             .await
             .map_err(|e| RustiqueError::ApiError {
@@ -68,7 +104,7 @@ impl ApiClient {
 
         info!("{} {}", "Fetching mod: ".bright_green(), mod_id.bright_yellow());
 
-        let response = self.agent.get(Self::uri(&format!("mod/{mod_id}")))
+        let response = self.agent.get(Self::api_uri(&format!("mod/{mod_id}")))
             .send()
             .await
             .map_err(|e| RustiqueError::ApiError {
@@ -129,7 +165,7 @@ impl ApiClient {
     }
 
     pub async fn fetch_game_versions(&self) -> Result<HashSet<String>, RustiqueError> {
-        let res = self.agent.get(Self::uri("gameversions"))
+        let res = self.agent.get(Self::api_uri("gameversions"))
             .send().await
             .map_err(|e| RustiqueError::ApiError {
             context: "Failed during gameversions api call".to_string(),
@@ -155,5 +191,61 @@ impl ApiClient {
                 context: format!("get_request: {mod_uri}"),
                 source: e,
             })
+    }
+    
+    pub fn download_uri(
+        &self,
+        os_type: &VSOSType, 
+        exe_type: &VSExecutabletype, 
+        vsmirror_type: &VSMirrorType, 
+        game_version: &str,
+        win_installer: Option<&VSWinInstallerType>
+    ) -> Result<String, RustiqueError> {
+        
+        let mut download_str = String::from("vs_");
+        
+        let etype = match exe_type {
+            VSExecutabletype::Client => "client",
+            VSExecutabletype::Server => "server",
+        };
+        
+        if matches!(os_type, VSOSType::Windows) {
+            if win_installer.is_none() && etype == "server" {
+                download_str += "server_win";
+            } else {
+                download_str += match win_installer {
+                    Some(VSWinInstallerType::Install) | None => "install_",
+                    Some(VSWinInstallerType::Update) => "update_",
+                };
+                download_str += "win";
+            }
+        } else {
+            write!(&mut download_str, "{}_{}", etype, os_type.to_string().as_str()).map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
+        }
+       
+        // use std::fmt::write to avoid extra allocation with format!
+        write!(&mut download_str, "-x64_{game_version}").map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
+        
+        download_str += if matches!(os_type, VSOSType::OSX) || matches!(os_type, VSOSType::Linux) {
+            ".tar.gz"
+        } else {
+            ".zip"  
+        };
+        
+        
+        let cdn = if matches!(vsmirror_type, VSMirrorType::Stable) {
+            Self::cdn_uri_stable(&download_str)
+        } else {
+            Self::cdn_uri_unstable(&download_str)
+        };
+        
+        Ok(cdn)
+        
+        // 
+        // self.agent
+        //     .get(&cdn)
+        //     .send()
+        //     .await
+        //     .map_err(|e| RustiqueError::SimpleError(format!("Failed to retrieve download from {}, {}", &cdn, e)))
     }
 }

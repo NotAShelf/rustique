@@ -1,7 +1,7 @@
 use crate::aliases::{ModFileName, ModID};
 use crate::api::api_structs::ModInfo;
-use crate::commands::sync::{ModSyncInfo, SYNC_FILE_NAME};
-use crate::config_manager::{get_config};
+use crate::commands::sync::{GameVersionSync, ModSyncInfo, GAME_VERSION_SYNC_FILE_NAME, SYNC_FILE_NAME};
+use crate::config_manager::{get_config, Config};
 use crate::install_manager::Install;
 use crate::rustique_errors::RustiqueError;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
@@ -13,9 +13,12 @@ use std::fs::{DirEntry, File};
 use std::io::{Read};
 use std::path::{Path, PathBuf};
 use std::{fs};
+use std::process::exit;
+use semver::Version;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error};
 use zip::ZipArchive;
+use crate::traits::string_ext::StrLowerExt;
 
 #[derive(Clone, Debug)]
 pub struct RustiqueOptions {
@@ -296,3 +299,38 @@ pub async fn write_json_file(file_path: &PathBuf, json: String, config_dir: &Pat
     Ok(())
 }
 
+pub fn latest_stable() -> String {
+    
+    let version = sorted_game_versions();
+   
+    // filter out all the unstable version which end with -rc.xx
+    let out: Vec<String> = version.iter().filter(|v| !v.lower_contains("-rc")).cloned().collect();
+    
+    out.first().unwrap_or(&String::new()).to_string()
+}
+
+pub fn sorted_game_versions() -> Vec<String> {
+    let version_file_path = Config::get_path().join(GAME_VERSION_SYNC_FILE_NAME);
+
+    let mut versions = if version_file_path.exists() {
+        match parse_json_file::<GameVersionSync>(&version_file_path) {
+            Ok(file_data) => file_data.game_versions,
+            Err(e) => {
+                eprintln!("Error: {e}");
+                exit(1)
+            }
+        }
+    } else {
+        eprintln!("Unable to get latest game version by default, run Rustique sync and try again");
+        exit(1)
+    };
+    
+    versions.sort_by(|v1,v2| {
+        let v1_p = lenient_semver::parse(v1).unwrap();
+        let v2_p = lenient_semver::parse(v2).unwrap();
+        v1_p.cmp(&v2_p)
+    });
+
+    versions.reverse();
+    versions
+}

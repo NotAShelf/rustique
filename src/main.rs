@@ -37,6 +37,7 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::time::Instant;
 use tracing::{debug, error, info, warn};
+use crate::commands::download::download;
 use crate::commands::info::info;
 use crate::commands::search::search;
 use crate::information_utils::elapsed_footer;
@@ -122,13 +123,18 @@ async fn async_main() {
                     handle_sync_call(&mod_dir).await;
                 }
                 Err(e) => {
-                    warn!("{}", e.to_string().red().bold());
+                    warn!("{}\n\r", e.to_string().red().bold());
                     exit(1);
                 }
             }
         }
-        Commands::Changelog(name) => {
-            println!("list {:?}", name.name);
+        Commands::Download(args) => {
+            match download(args).await {
+                Ok(()) => {},
+                Err(e) => {
+                    eprint!("{}", e.to_string().red().bold());
+                }
+            }
         }
         Commands::Install(args) => {
             let start_time = Instant::now();
