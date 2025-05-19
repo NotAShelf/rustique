@@ -1,13 +1,13 @@
 use crate::utils::latest_stable;
 use clap::ArgGroup;
 use clap::Args;
-use crate::api::client::{VSExecutabletype, VSOSType};
+use crate::api::client::{VSExecutabletype, VSOSType, VSWinInstallerType};
 use crate::rustique_errors::RustiqueError;
 
 #[derive(Args, Debug)]
 pub struct DownloadArgs {
 
-    /// Set where you want to save the download, will use your default mod_dir if omitted 
+    /// Set where you want to save the download. By default, this will be your Downloads dir OR whatever is set in your rustique config
     #[arg(short, long, value_name = "PATH")]
     pub save_dir: Option<String>,
     
@@ -22,7 +22,11 @@ pub struct DownloadArgs {
     
     /// Select executable type, client by default. Note: Mac `DOES NOT` have a server
     #[arg(short = 't', long = "type",  value_name = "TYPE", default_value = "client")]
-    pub exe_type: VSExecutabletype
+    pub exe_type: VSExecutabletype,
+    
+    /// This lets you choose between the installer or update exe for Windows only, this flag is ignored if os_type = linux/osx
+    #[arg(short, long, default_value = "install")]
+    pub windows_installer_type: Option<VSWinInstallerType>,
 }
 
 impl DownloadArgs {

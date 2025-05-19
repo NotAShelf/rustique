@@ -14,7 +14,6 @@ use std::io::{Read};
 use std::path::{Path, PathBuf};
 use std::{fs};
 use std::process::exit;
-use semver::Version;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error};
 use zip::ZipArchive;

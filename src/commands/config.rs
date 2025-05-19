@@ -225,13 +225,14 @@ async fn del(args: &BoolArgs) {
 async fn list() {
     let config = get_config().read().await;
     let display_vec: Vec<(CellData, CellData)> = vec![
-        command_output("config.mod_dir".to_string(), config.mod_dir.to_string()),
-        command_output("config.backup_mods".to_string(), config.backup_mods.to_string()),
-        command_output("config.backup_mods_dir".to_string(), config.backup_mods_dir.to_string()),
-        command_output("config.zip_mod_files".to_string(), config.zip_mod_files.to_string()),
-        command_output("config.show_execution_time".to_string(), config.show_execution_time.to_string()),
-        command_output("config.notify_of_unzipped_mods".to_string(), config.notify_of_unzipped_mods.to_string()),
-        command_output("config.pinned_game_version".to_string(), config.pinned_game_version.to_string()),
+        command_output("config.mod_dir".into(),                 config.mod_dir.to_string()),
+        command_output("config.backup_mods_dir".into(),         config.backup_mods_dir.to_string()),
+        command_output("config.game_download_dir".into(),       config.game_download_dir.to_string()),
+        command_output("config.backup_mods".into(),             config.backup_mods.to_string()),
+        command_output("config.zip_mod_files".into(),           config.zip_mod_files.to_string()),
+        command_output("config.show_execution_time".into(),     config.show_execution_time.to_string()),
+        command_output("config.notify_of_unzipped_mods".into(), config.notify_of_unzipped_mods.to_string()),
+        command_output("config.pinned_game_version".into(),     config.pinned_game_version.to_string()),
     ];
     
     display_table(display_vec, None);

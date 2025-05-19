@@ -1,4 +1,4 @@
-use crate::aliases::{ModID, ModName};
+use crate::aliases::{FileName, ModID, UrlString};
 use crate::api::api_structs::{GameVersions, Mod, Mods};
 use crate::rustique_errors::RustiqueError;
 use owo_colors::OwoColorize;
@@ -9,6 +9,7 @@ use std::time::Duration;
 use tracing::{error, info};
 use std::fmt::Write;
 use clap::ValueEnum;
+use reqwest::Response;
 
 const API_BASE_URL: &str = "https://mods.vintagestory.at/api";
 const VS_CDN_STABLE_RELEASE: &str = "https://cdn.vintagestory.at/gamefiles/stable";
@@ -200,7 +201,7 @@ impl ApiClient {
         vsmirror_type: &VSMirrorType, 
         game_version: &str,
         win_installer: Option<&VSWinInstallerType>
-    ) -> Result<String, RustiqueError> {
+    ) -> Result<(UrlString, FileName), RustiqueError> {
         
         let mut download_str = String::from("vs_");
         
@@ -210,7 +211,7 @@ impl ApiClient {
         };
         
         if matches!(os_type, VSOSType::Windows) {
-            if win_installer.is_none() && etype == "server" {
+            if etype == "server" {
                 download_str += "server_win";
             } else {
                 download_str += match win_installer {
@@ -228,8 +229,10 @@ impl ApiClient {
         
         download_str += if matches!(os_type, VSOSType::OSX) || matches!(os_type, VSOSType::Linux) {
             ".tar.gz"
-        } else {
+        } else if matches!(exe_type, VSExecutabletype::Server) {
             ".zip"  
+        } else {
+            ".exe"
         };
         
         
@@ -239,7 +242,7 @@ impl ApiClient {
             Self::cdn_uri_unstable(&download_str)
         };
         
-        Ok(cdn)
+        Ok((cdn, download_str))
         
         // 
         // self.agent
@@ -247,5 +250,12 @@ impl ApiClient {
         //     .send()
         //     .await
         //     .map_err(|e| RustiqueError::SimpleError(format!("Failed to retrieve download from {}, {}", &cdn, e)))
+    }
+    
+    pub async fn head(&self, uri: &str) -> Result<Response, RustiqueError> {
+        self.agent.head(uri).send().await.map_err(|e| RustiqueError::ApiError {
+            context: format!("Failed calling agent.head({uri})"),
+            source: e,
+        })
     }
 }

@@ -4,3 +4,5 @@ pub type ModName = String;
 pub type ModVersion = String;
 pub type ModFileName = String;
 pub type DownloadURL = String;
+pub type FileName = String;
+pub type UrlString = String;

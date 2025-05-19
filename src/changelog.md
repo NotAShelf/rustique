@@ -1,3 +1,7 @@
+# Version 0.3.2-alpha
+* Implemented the `Rustique download` command to download versions of the Vintage Story game itself. You can specify where its saved via the command line or the config. Default save location is your Downloads folder.
+* Implemented `Rustique list --game-versions` which will show all valid game versions. This will show valid versions for the new `download` command and version pinning, which was implemented last update.
+
 # Version 0.3.1-alpha
 * Version pinning is live! You can now pin a specific mod version and/or a specific game version. There are some situations where you get weird results by setting both or mods not having an game version that matches at all. Please report any situations where you encounter errors. 
 * You can now enable the following columns for the list display table; Pinned Version, Game Version.

@@ -26,7 +26,7 @@ use crate::commands::list::new_list;
 use crate::commands::sync::{daily_file_syncs, game_version_sync};
 use crate::config_manager::{get_config, init_config};
 use crate::logging::{init_logging, VerboseLevel};
-use crate::utils::{get_expanded_path, RustiqueOptions};
+use crate::utils::{get_expanded_path, sorted_game_versions, RustiqueOptions};
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use owo_colors::OwoColorize;
@@ -36,11 +36,13 @@ use std::io;
 use std::path::PathBuf;
 use std::process::exit;
 use std::time::Instant;
+use comfy_table::Color;
 use tracing::{debug, error, info, warn};
 use crate::commands::download::download;
 use crate::commands::info::info;
 use crate::commands::search::search;
-use crate::information_utils::elapsed_footer;
+use crate::information_utils::{elapsed_footer, notice};
+use crate::traits::string_ext::StrLowerExt;
 
 fn main() {
     // Initialize the Tokio runtime
@@ -108,12 +110,22 @@ async fn async_main() {
             }
         }
         Commands::List(args) => {
-            match new_list(&mod_dir, args.updates).await {
-                Ok(()) => {
+            if args.game_versions.is_some() {
+                let sorted_versions = sorted_game_versions();
+                let filter_by = &args.game_versions.clone().unwrap_or("1.20".into());
+                
+                let versions: Vec<String> = sorted_versions.into_iter().filter(|v| v.lower_contains(filter_by)).collect();
+                
+               notice(&format!("[{}]",versions.join("], [").as_str()), Some(Color::Yellow), vec![]); 
+                
+            } else {
+                match new_list(&mod_dir, args.updates).await {
+                    Ok(()) => {
 
-                },
-                Err(e) => {
-                    error!("{}", e.to_string().red().bold());
+                    },
+                    Err(e) => {
+                        error!("{}", e.to_string().red().bold());
+                    }
                 }
             }
         }

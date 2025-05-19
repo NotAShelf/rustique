@@ -1,4 +1,3 @@
-use crate::commands::arg_structs::changelog_args::ChangeLogArgs;
 use crate::commands::arg_structs::config_args::ConfigCommand;
 use crate::commands::arg_structs::info_args::ModInfoArgs;
 use crate::commands::arg_structs::install_args::InstallArgs;
