@@ -103,6 +103,7 @@ impl Default for Config {
             sync_mod_search_file_every: 24,
             pkg: Vec::default(),
             table: Tables::with_defaults(),
+            modpack_install_dir: Self::get_path().join("modpacks").join("installed").to_string_lossy().to_string(),
         }
     }
 }

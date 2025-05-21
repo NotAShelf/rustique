@@ -27,6 +27,15 @@ impl ModPackToml {
         
         Ok(())
     }
+    
+    pub fn gen_modinfo_json(&self, save_path: &PathBuf) -> Result<(), RustiqueError> {
+        Ok(())
+    }
+    
+    pub fn create_modpack_zip(&self, save_path: &PathBuf) -> Result<(), RustiqueError> {
+        
+        Ok(())
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

@@ -1,0 +1,118 @@
+name: Rustique Workflow
+
+on:
+  push:
+    branches: [ 0.4 ]
+  pull_request:
+    branches: [ 0.4 ]
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux build with musl (Debian 12 compatible)
+          - os: ubuntu-20.04
+            target: x86_64-unknown-linux-musl
+            binary_name: Rustique
+            asset_name: rustique-linux-x86_64
+          
+          # Windows build
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary_name: Rustique.exe
+            asset_name: rustique-windows-x86_64
+          
+          # macOS build
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            binary_name: Rustique
+            asset_name: rustique-macos-x86_64
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+    
+    # Setup for Linux musl build
+    - name: Install musl tools (Linux)
+      if: matrix.os == 'ubuntu-20.04'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y musl-tools musl-dev
+
+    # Build with cargo
+    - name: Build with Cargo
+      run: cargo build --release --target ${{ matrix.target }}
+    
+    # Prepare artifacts for upload - Linux
+    - name: Prepare artifacts (Linux)
+      if: matrix.os == 'ubuntu-20.04'
+      run: |
+        cd target/${{ matrix.target }}/release
+        strip ${{ matrix.binary_name }} || true
+        tar -czf ${{ matrix.asset_name }}.tar.gz ${{ matrix.binary_name }}
+        shasum -a 256 ${{ matrix.asset_name }}.tar.gz > ${{ matrix.asset_name }}.tar.gz.sha256
+        mv ${{ matrix.asset_name }}.tar.gz ${{ matrix.asset_name }}.tar.gz.sha256 $GITHUB_WORKSPACE/
+      
+    # Prepare artifacts for upload - macOS
+    - name: Prepare artifacts (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        cd target/${{ matrix.target }}/release
+        strip ${{ matrix.binary_name }} || true
+        tar -czf ${{ matrix.asset_name }}.tar.gz ${{ matrix.binary_name }}
+        shasum -a 256 ${{ matrix.asset_name }}.tar.gz > ${{ matrix.asset_name }}.tar.gz.sha256
+        mv ${{ matrix.asset_name }}.tar.gz ${{ matrix.asset_name }}.tar.gz.sha256 $GITHUB_WORKSPACE/
+    
+    # Prepare artifacts for upload - Windows
+    - name: Prepare artifacts (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        cd target/${{ matrix.target }}/release
+        Compress-Archive -Path ${{ matrix.binary_name }} -DestinationPath ${{ matrix.asset_name }}.zip
+        Get-FileHash -Algorithm SHA256 ${{ matrix.asset_name }}.zip | Out-File ${{ matrix.asset_name }}.zip.sha256
+        Move-Item ${{ matrix.asset_name }}.zip, ${{ matrix.asset_name }}.zip.sha256 $env:GITHUB_WORKSPACE/
+      shell: pwsh
+    
+    # Upload artifacts
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.asset_name }}
+        path: |
+          ${{ matrix.asset_name }}.tar.gz
+          ${{ matrix.asset_name }}.tar.gz.sha256
+          ${{ matrix.asset_name }}.zip
+          ${{ matrix.asset_name }}.zip.sha256
+        if-no-files-found: ignore
+
+  # Create a release when a tag is pushed
+  release:
+    name: Create Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            */*.tar.gz
+            */*.tar.gz.sha256
+            */*.zip
+            */*.zip.sha256
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
