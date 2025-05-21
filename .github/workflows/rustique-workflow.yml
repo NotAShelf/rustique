@@ -63,9 +63,9 @@ jobs:
       run: |
         cd target/${{ matrix.target }}/release
         strip ${{ matrix.binary_name }} || true
-        tar -czf ${{ matrix.asset_name }}.tar.gz ${{ matrix.binary_name }}
+        tar -czf $GITHUB_WORKSPACE/${{ matrix.asset_name }}.tar.gz ${{ matrix.binary_name }}
+        cd $GITHUB_WORKSPACE
         shasum -a 256 ${{ matrix.asset_name }}.tar.gz > ${{ matrix.asset_name }}.tar.gz.sha256
-        mv ${{ matrix.asset_name }}.tar.gz ${{ matrix.asset_name }}.tar.gz.sha256 $GITHUB_WORKSPACE/
 
     # Prepare artifacts for upload - macOS
     - name: Prepare artifacts (macOS)
@@ -73,25 +73,45 @@ jobs:
       run: |
         cd target/${{ matrix.target }}/release
         strip ${{ matrix.binary_name }} || true
-        tar -czf ${{ matrix.asset_name }}.tar.gz ${{ matrix.binary_name }}
+        tar -czf $GITHUB_WORKSPACE/${{ matrix.asset_name }}.tar.gz ${{ matrix.binary_name }}
+        cd $GITHUB_WORKSPACE
         shasum -a 256 ${{ matrix.asset_name }}.tar.gz > ${{ matrix.asset_name }}.tar.gz.sha256
-        mv ${{ matrix.asset_name }}.tar.gz ${{ matrix.asset_name }}.tar.gz.sha256 $GITHUB_WORKSPACE/
 
     # Prepare artifacts for upload - Windows
     - name: Prepare artifacts (Windows)
       if: matrix.os == 'windows-latest'
       run: |
         cd target/${{ matrix.target }}/release
-        Compress-Archive -Path ${{ matrix.binary_name }} -DestinationPath ${{ matrix.asset_name }}.zip
-        Get-FileHash -Algorithm SHA256 ${{ matrix.asset_name }}.zip | Out-File ${{ matrix.asset_name }}.zip.sha256
-        Move-Item ${{ matrix.asset_name }}.zip, ${{ matrix.asset_name }}.zip.sha256 $env:GITHUB_WORKSPACE/
+        Compress-Archive -Path ${{ matrix.binary_name }} -DestinationPath $env:GITHUB_WORKSPACE\${{ matrix.asset_name }}.zip
+        cd $env:GITHUB_WORKSPACE
+        Get-FileHash -Algorithm SHA256 ${{ matrix.asset_name }}.zip | ForEach-Object {$_.Hash} | Out-File ${{ matrix.asset_name }}.zip.sha256
       shell: pwsh
-
-    # Upload artifacts
-    - name: Upload artifacts
+      
+      
+      # Upload binary artifacts directly
+    - name: Upload Linux/macOS binary
+      if: matrix.os != 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.asset_name }}
+        path: target/${{ matrix.target }}/release/${{ matrix.binary_name }}
+        if-no-files-found: error
+
+    # Upload Windows binary
+    - name: Upload Windows binary
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.asset_name }}
+        path: target/${{ matrix.target }}/release/${{ matrix.binary_name }}
+        if-no-files-found: error
+      
+
+    # Upload artifacts
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.asset_name }}-release-pkg
         path: |
           ${{ matrix.asset_name }}.tar.gz
           ${{ matrix.asset_name }}.tar.gz.sha256
@@ -99,25 +119,28 @@ jobs:
           ${{ matrix.asset_name }}.zip.sha256
         if-no-files-found: ignore
 
-  # Create a release when a tag is pushed
-  release:
+
+release:
     name: Create Release
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
-      - name: Download artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
-
+        with:
+          path: release-artifacts
+      
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            */*.tar.gz
-            */*.tar.gz.sha256
-            */*.zip
-            */*.zip.sha256
-          draft: true
+            release-artifacts/*-release-pkg/*.tar.gz
+            release-artifacts/*-release-pkg/*.tar.gz.sha256
+            release-artifacts/*-release-pkg/*.zip
+            release-artifacts/*-release-pkg/*.zip.sha256
+          draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          

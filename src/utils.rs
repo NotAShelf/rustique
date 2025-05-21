@@ -1,7 +1,7 @@
 use crate::config::config_manager::Config;
 use crate::aliases::{ModFileName, ModID};
 use crate::api::api_structs::{ModApi, ModInfo, ModsSearchFile};
-use crate::commands::sync::{GameVersionSync, ModSyncInfo, GAME_VERSION_SYNC_FILE_NAME, SYNC_FILE_NAME};
+use crate::commands::sync::{daily_file_syncs, game_version_sync, sync, GameVersionSync, ModSyncInfo, GAME_VERSION_SYNC_FILE_NAME, SYNC_FILE_NAME};
 use crate::install_manager::Install;
 use crate::rustique_errors::RustiqueError;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
@@ -299,7 +299,26 @@ pub async fn write_json_file(file_path: &PathBuf, json: String, config_dir: &Pat
     Ok(())
 }
 
+pub async fn verify_config_dir() -> Result<(), RustiqueError> {
+    let config_path = Config::get_path();
+    if !config_path.exists() {
+        // create the 
+        game_version_sync(true).await?;
+    }
+    
+    Ok(())
+}
+
+
 pub fn latest_stable() -> String {
+   
+    // Have to check if the file even exists first or we get weird behavior 
+    // this function is called during the process in which clap creates the cli args,
+    // if the file doesn't exist, the program exits immediately
+    // this file will be created the first time sync is executed
+    if !Config::get_path().join(GAME_VERSION_SYNC_FILE_NAME).exists() {
+        return "0.0.0".into()
+    }
     
     let version = sorted_game_versions();
    
