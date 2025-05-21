@@ -300,6 +300,14 @@ pub async fn write_json_file(file_path: &PathBuf, json: String, config_dir: &Pat
 
 pub fn latest_stable() -> String {
     
+    // Have to check if the file even exists first or we get weird behavior 
+    // this function is called during the process in which clap creates the cli args,
+    // if the file doesn't exist, the program exits immediately
+    // this file will be created the first time sync is executed
+    if !Config::get_path().join(GAME_VERSION_SYNC_FILE_NAME).exists() {
+        return "0.0.0".into()
+    }
+    
     let version = sorted_game_versions();
    
     // filter out all the unstable version which end with -rc.xx
