@@ -74,7 +74,7 @@ impl ApiClient {
         Self { agent }
     }
 
-    fn api_uri(endpoint: &str) -> String {
+    pub fn api_uri(endpoint: &str) -> String {
         format!("{API_BASE_URL}/{endpoint}")
     }
     fn cdn_uri_stable(endpoint: &str) -> String { format!("{VS_CDN_STABLE_RELEASE}/{endpoint}")}

@@ -1,5 +1,4 @@
 use crate::commands::arg_structs::config_args::{BoolArgs, CommonArgs, ConfigCommand, ConfigSubCommand};
-use crate::config_manager::{get_config, Config, Package};
 use crate::utils::{get_expanded_path, parse_json_file};
 use std::path::PathBuf;
 use std::process::exit;
@@ -7,9 +6,10 @@ use comfy_table::{Attribute, CellAlignment, Color, ContentArrangement, Row, Tabl
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::{UTF8_FULL_CONDENSED};
 use tracing::{warn};
-use crate::commands::config_table::config_table;
+use crate::config::config_table::config_table;
 use crate::commands::sync::{GameVersionSync, GAME_VERSION_SYNC_FILE_NAME};
-use crate::config_structs::{CellAttr, CellColor};
+use crate::config::config_manager::{get_config, Config, Package};
+use crate::config::config_structs::{CellAttr, CellColor};
 use crate::information_utils::{command_output, display_table, notice, prep_cell, CellData};
 use crate::traits::string_ext::StrLowerExt;
 use crate::version_management::parse_version;

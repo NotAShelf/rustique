@@ -4,7 +4,7 @@ use comfy_table::{CellAlignment, Color, ContentArrangement, Row, Table};
 use crate::api::api_structs::Releases;
 use crate::api::client::ApiClient;
 use crate::commands::arg_structs::info_args::ModInfoArgs;
-use crate::config_structs::{CellAttr, CellColor};
+use crate::config::config_structs::{CellAttr, CellColor};
 use crate::information_utils::{notice, prep_cell};
 use crate::rustique_errors::RustiqueError;
 

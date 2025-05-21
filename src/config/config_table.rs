@@ -4,9 +4,9 @@ use clap::{ValueEnum};
 use comfy_table::{Attribute, CellAlignment, Color};
 use tracing::{error};
 use crate::commands::arg_structs::config_table_args::{ResetArgs, TableArgs, TableArgsSubCommands, TableGroup, TableSubCommands, TableSubFlags};
-use crate::config_manager::get_config;
-use crate::config_structs::{CellAttr, CellColor, ColumnProperties, TableSection, Tables};
-use crate::flatten_map::FlattenMap;
+use crate::config::config_manager::get_config;
+use crate::config::config_structs::{CellAttr, CellColor, ColumnProperties, TableSection, Tables};
+use crate::config::flatten_map::FlattenMap;
 use crate::information_utils::{display_table, notice, CellData};
 
 pub async fn config_table(args: &TableArgs) {

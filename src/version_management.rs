@@ -5,7 +5,7 @@ use semver::{Version};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use tracing::{error, info};
-use crate::config_manager::Package;
+use crate::config::config_manager::Package;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct RustiquePkgs {

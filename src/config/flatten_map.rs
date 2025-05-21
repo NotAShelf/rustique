@@ -6,8 +6,7 @@ use clap::ValueEnum;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize, Serializer};
 use serde::ser::SerializeMap;
-use crate::config_structs;
-use crate::config_structs::{CellAttr, CellColor, ColumnProperties};
+use crate::config::config_structs::{CellAttr, CellColor, ColumnProperties};
 
 
 #[derive(Debug)]
@@ -93,27 +92,6 @@ impl<'de> Deserialize<'de> for FlattenMap {
                             if let Some(color_str) = value.as_str() {
                                 entry.color = Option::from(<CellColor as FromStr>::from_str(color_str).unwrap_or(CellColor::Reset));
                             }
-                            // if let Some(color_str) = value.as_str() {
-                            //     entry.color = match color_str {
-                            //         "reset" => Some(CellColor::Reset),
-                            //         "green" => Some(CellColor::Green),
-                            //         "dark_green" => Some(CellColor::DarkGreen),
-                            //         "grey" => Some(CellColor::Grey),
-                            //         "dark_grey" => Some(CellColor::DarkGrey),
-                            //         "cyan" => Some(CellColor::Cyan),
-                            //         "dark_cyan" => Some(CellColor::DarkCyan),
-                            //         "yellow" => Some(CellColor::Yellow),
-                            //         "dark_yellow" => Some(CellColor::DarkYellow),
-                            //         "red" => Some(CellColor::Red),
-                            //         "dark_red" => Some(CellColor::DarkRed),
-                            //         "magenta" => Some(CellColor::Magenta),
-                            //         "dark_magenta" => Some(CellColor::DarkMagenta),
-                            //         "blue" => Some(CellColor::Blue),
-                            //         "dark_blue" => Some(CellColor::DarkBlue),
-                            //         "black" => Some(CellColor::Black),
-                            //         _ => None
-                            //     };
-                            // }
                         } else if attr == "attribute" {
                             if let Some(attr_str) = value.as_str() {
                                 entry.attribute = Option::from(<CellAttr as FromStr>::from_str(attr_str).unwrap_or(CellAttr::NoHidden));

@@ -1,4 +1,3 @@
-use crate::config_structs::Tables;
 use crate::rustique_errors::RustiqueError;
 use crate::utils::RustiqueOptions;
 use chrono::Local;
@@ -12,6 +11,7 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::OnceLock;
 use tokio::sync::RwLock;
+use crate::config::config_structs::Tables;
 use crate::information_utils::{rustique_message, CellData, RustiqueMessage};
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -37,7 +37,10 @@ pub struct Config {
     pub notify_of_unzipped_mods: bool,
     
     pub game_download_dir: String,
-    
+   
+   
+    // This directory is where the .zip files from the mod db are saved.
+    pub modpack_install_dir: String,
     
     
     #[serde(default)]
@@ -50,6 +53,7 @@ pub struct Config {
 
     pub table: Tables,
 }
+
 
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
 pub struct Package {
@@ -68,12 +72,12 @@ impl Config {
             if let Some(w_path) = std::env::var_os("APPDATA") {
                 PathBuf::from(w_path).join("rustique")
             } else {
-                PathBuf::from(".").join("rustique")
+                PathBuf::from("../..").join("rustique")
             }
         } else if let Some(u_path) = home_dir() {
             u_path.join(".config").join("rustique")
         } else {
-            PathBuf::from(".").join("rustique")
+            PathBuf::from("../..").join("rustique")
         }
     }
 }

@@ -1,3 +1,5 @@
+# Version 0.4.0-alpha
+
 # Version 0.3.2-alpha
 * Implemented the `Rustique download` command to download versions of the Vintage Story game itself. You can specify where its saved via the command line or the config. Default save location is your Downloads folder.
 * Implemented `Rustique list --game-versions` which will show all valid game versions. This will show valid versions for the new `download` command and version pinning, which was implemented last update.

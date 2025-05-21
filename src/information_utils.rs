@@ -3,7 +3,7 @@ use comfy_table::{Attribute, Cell, CellAlignment, Color, Row, Table};
 use comfy_table::ContentArrangement::Dynamic;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::{UTF8_BORDERS_ONLY, UTF8_FULL_CONDENSED};
-use crate::config_structs::{CellAttr, CellColor};
+use crate::config::config_structs::{CellAttr, CellColor};
 use crate::install_manager::Installed;
 
 pub struct RustiqueMessage {

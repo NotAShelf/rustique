@@ -1,6 +1,5 @@
 use crate::aliases::ModID;
 use crate::commands::sync::{ModSyncInfo, RustiqueSyncJson, SYNC_FILE_NAME};
-use crate::config_manager::get_config;
 use crate::install_manager::{install_manager, Install, Installed};
 use crate::rustique_errors::RustiqueError;
 use crate::utils::{delete_file, parse_json_file};
@@ -11,6 +10,7 @@ use std::path::{PathBuf};
 use std::process::exit;
 use std::time::Instant;
 use tracing::{debug, info};
+use crate::config::config_manager::get_config;
 use crate::information_utils::{display_installation_results, elapsed_footer, notice};
 
 #[allow(clippy::map_entry)]

@@ -7,7 +7,7 @@ use tokio::io::AsyncWriteExt;
 use tracing::info;
 use crate::api::client::{ApiClient, VSMirrorType};
 use crate::commands::arg_structs::download_args::DownloadArgs;
-use crate::config_manager::get_config;
+use crate::config::config_manager::get_config;
 use crate::information_utils::notice;
 use crate::rustique_errors::RustiqueError;
 use crate::traits::string_ext::StrLowerExt;

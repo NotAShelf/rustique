@@ -70,10 +70,7 @@ pub enum Commands {
     Info(ModInfoArgs),
     
     #[command(about = "Create, download, update modpacks for VintageStory (Not Implemented)")]
-    MP {
-        #[clap(subcommand)]
-        command: ModpackCommands,
-    },
+    ModPack(ModpackCommands)
 }
 
 

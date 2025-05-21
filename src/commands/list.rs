@@ -1,7 +1,6 @@
 use crate::aliases::{ModFileName, ModID};
 use crate::api::api_structs::{ModInfo};
 use crate::commands::sync::{get_sync_data, ModSyncInfo};
-use crate::config_manager::{get_config};
 use crate::rustique_errors::RustiqueError;
 use crate::utils::{extract_all_mods_metadata, gather_dependencies, gather_missing_dependencies, sanitize_string};
 use crate::version_management::parse_version;
@@ -12,7 +11,8 @@ use comfy_table::{Cell, CellAlignment, ContentArrangement, Row, Table};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Instant;
-use crate::config_structs::{CellAttr, CellColor, ListColumn};
+use crate::config::config_manager::get_config;
+use crate::config::config_structs::{CellAttr, CellColor, ListColumn};
 use crate::information_utils::prep_cell;
 use crate::install_manager::Install;
 

@@ -1,9 +1,18 @@
 use clap::{Args, Subcommand};
 
+
+#[derive(Args, Debug)]
+pub struct ModpackCommands {
+   #[command(subcommand)] 
+   pub subcommand: ModpackSubCommands,
+}
+
+
 #[derive(Subcommand, Debug, Clone)]
-pub enum ModpackCommands {
+pub enum ModpackSubCommands {
     
     /// Create a new mod pack.  
+    #[command(about = "Create a new modpack")]
     Create(MPCreateArgs),
 
     /// Installing a modpack is like installing a mod, except it is treated differently with Rustique.
@@ -32,6 +41,9 @@ pub enum ModpackCommands {
     
     /// Show all modpacks that are currently installed
     List(MPListArgs),
+    
+    /// Displays a nice table showing informatio about the modpack, including descriptions of each mod.
+    Info(MPInfo)
 }
 
 #[derive(Args, Debug, Clone)]
@@ -74,6 +86,7 @@ pub struct MPCreateArgs {
     /// *Optional* Website
     #[arg(short, long)]
     pub website: Option<String>,
+    
 }
 
 
@@ -109,3 +122,6 @@ pub struct MPEnableArgs{
 
 #[derive(Args, Debug, Clone)]
 pub struct MPListArgs {}
+
+#[derive(Args, Debug, Clone)]
+pub struct MPInfo {}

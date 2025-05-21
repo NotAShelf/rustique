@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use std::collections::{HashMap};
 use std::path::{Path, PathBuf};
 use tracing::{error, info};
-use crate::config_manager::get_config;
+use crate::config::config_manager::get_config;
 use crate::traits::string_ext::StrLowerExt;
 
 // install & update both will obtain the info needed to fill this struct

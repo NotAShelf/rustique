@@ -1,11 +1,9 @@
 use crate::aliases::{ModFileName, ModID, ModName, ModVersion};
 use crate::api::api_structs::{Mod, ModApi, ModsSearchFile};
 use crate::api::client::{ApiClient};
-use crate::config_manager::{get_config, Config};
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{delete_file, extract_all_mods_metadata, get_current_time, parse_json_file, timestamp_older_than, write_json_file};
+use crate::utils::{delete_file, extract_all_mods_metadata, find_mod_id, get_current_time, parse_json_file, timestamp_older_than, write_json_file};
 use crate::version_management::{parse_latest_version, parse_pinned_version, parse_version};
-use owo_colors::OwoColorize;
 use comfy_table::Attribute;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;
@@ -18,6 +16,7 @@ use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error, info, warn};
 use crate::commands::search::SEARCH_FILE_NAME;
+use crate::config::config_manager::{get_config, Config};
 use crate::information_utils::{elapsed_footer, notice};
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -188,27 +187,7 @@ pub async fn sync(mod_dir: &PathBuf) -> Result<(), RustiqueError> {
 
         // check here for bad mod_id
         let mod_id = if mod_info.mod_id.is_empty() {
-            info!("{} has an empty mod id, attempting locate mod id...", mod_filename);
-            let res: Vec<ModApi> = mods_search_data.mods.iter().filter(|mod_search| {
-                match &mod_search.name {
-                    Some(name) => {
-                        mod_info.name.to_lowercase().eq(&name.to_lowercase())
-                    }
-                    None => {
-                        mod_search.mod_id_strs.contains(&mod_info.name)
-                    }
-                }
-            }).cloned().collect();
-
-            if res.is_empty() || res.len() > 1 {
-                // no mods match
-                warn!("Unable to determine the mod_id for {} - {}.\n\r\t Their modinfo.json is malformed and no information provided allowed Rustique to determine it.\n\r\t \
-                             Please contact the author to correct their modinfo.json file", mod_info.name.bright_red().bold(), mod_filename.bright_red().bold());
-                String::new()
-            } else {
-                res[0].mod_id.to_string()
-            }
-
+            find_mod_id(&mod_info.name, mod_filename, &mods_search_data.mods)?
         } else {
             mod_info.mod_id.clone()
         };

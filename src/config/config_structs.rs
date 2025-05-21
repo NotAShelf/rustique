@@ -1,4 +1,4 @@
-use crate::flatten_map::FlattenMap;
+use crate::config::flatten_map::FlattenMap;
 use clap::ValueEnum;
 use comfy_table::{Attribute, Color};
 use serde::ser::SerializeMap;

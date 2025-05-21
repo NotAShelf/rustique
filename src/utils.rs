@@ -1,7 +1,7 @@
+use crate::config::config_manager::Config;
 use crate::aliases::{ModFileName, ModID};
-use crate::api::api_structs::ModInfo;
+use crate::api::api_structs::{ModApi, ModInfo, ModsSearchFile};
 use crate::commands::sync::{GameVersionSync, ModSyncInfo, GAME_VERSION_SYNC_FILE_NAME, SYNC_FILE_NAME};
-use crate::config_manager::{get_config, Config};
 use crate::install_manager::Install;
 use crate::rustique_errors::RustiqueError;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
@@ -15,8 +15,9 @@ use std::path::{Path, PathBuf};
 use std::{fs};
 use std::process::exit;
 use tokio::io::AsyncWriteExt;
-use tracing::{debug, error};
+use tracing::{debug, error, info, warn};
 use zip::ZipArchive;
+use crate::config::config_manager::get_config;
 use crate::traits::string_ext::StrLowerExt;
 
 #[derive(Clone, Debug)]
@@ -332,4 +333,27 @@ pub fn sorted_game_versions() -> Vec<String> {
 
     versions.reverse();
     versions
+}
+
+pub fn find_mod_id(mod_name: &String, mod_filename: &ModFileName, mods_search_data: &Vec<ModApi>) -> Result<String, RustiqueError> {
+    info!("{} has an empty mod id, attempting locate mod id...", mod_filename);
+    let res: Vec<ModApi> = mods_search_data.iter().filter(|mod_search| {
+        match &mod_search.name {
+            Some(name) => {
+                mod_name.eq_ignore_ascii_case(name)
+            }
+            None => {
+                mod_search.mod_id_strs.contains(mod_name)
+            }
+        }
+    }).cloned().collect();
+
+    if res.is_empty() || res.len() > 1 {
+        // no mods match
+        warn!("Unable to determine the mod_id for {} - {}.\n\r\t Their modinfo.json is malformed and no information provided allowed Rustique to determine it.\n\r\t \
+                     Please contact the author to correct their modinfo.json file", mod_name.bright_red().bold(), mod_filename.bright_red().bold());
+        Err(RustiqueError::SimpleError(format!("Unable to locate mod_id for {mod_name}")))
+    } else {
+        Ok(res[0].mod_id.to_string())
+    } 
 }

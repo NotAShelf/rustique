@@ -1,6 +1,6 @@
 #![warn(clippy::perf, clippy::pedantic)]
 #![warn(clippy::manual_string_new)]
-#![allow(clippy::redundant_closure_for_method_calls, clippy::struct_field_names, clippy::doc_markdown)]
+#![allow(clippy::redundant_closure_for_method_calls, clippy::struct_field_names, clippy::doc_markdown, clippy::unnecessary_wraps)]
 
 mod utils;
 mod api;
@@ -11,20 +11,17 @@ mod aliases;
 mod version_management;
 mod commands;
 mod logging;
-mod config_manager;
 mod install_manager;
 mod traits;
-mod config_structs;
-mod flatten_map;
 mod information_utils;
+mod modpack;
+mod config;
 
 use crate::cli_commands::{Cli, Commands, ShellType};
-use crate::commands::arg_structs::modpack_args::ModpackCommands;
-use crate::commands::config::parse_config_args;
+use config::config::parse_config_args;
 use crate::commands::install::{install_cmd, install_missing_deps};
 use crate::commands::list::new_list;
 use crate::commands::sync::{daily_file_syncs, game_version_sync};
-use crate::config_manager::{get_config, init_config};
 use crate::logging::{init_logging, VerboseLevel};
 use crate::utils::{get_expanded_path, sorted_game_versions, RustiqueOptions};
 use clap::{CommandFactory, Parser};
@@ -41,7 +38,9 @@ use tracing::{debug, error, info, warn};
 use crate::commands::download::download;
 use crate::commands::info::info;
 use crate::commands::search::search;
+use crate::config::config_manager::{get_config, init_config};
 use crate::information_utils::{elapsed_footer, notice};
+use crate::modpack::modpack_commands::parse_modpack_commands;
 use crate::traits::string_ext::StrLowerExt;
 
 fn main() {
@@ -186,7 +185,7 @@ async fn async_main() {
         }
         Commands::Info(args) => {
             match info(args).await {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(e) => {
                     error!("{}", e.to_string().red().bold());
                 }
@@ -198,8 +197,8 @@ async fn async_main() {
                 error!("{}", e.to_string().red().bold());
             }
         },
-        Commands::MP{command} => {
-           println!("{command:?}");
+        Commands::ModPack(cmds) => {
+           parse_modpack_commands(cmds, &mod_dir).await;
         }
        Commands::Misc{ .. }=> {},
     }
