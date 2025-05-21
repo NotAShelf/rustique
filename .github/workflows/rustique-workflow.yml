@@ -15,8 +15,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux build with musl (Debian 12 compatible)
-          - os: ubuntu-20.04
+          # Change to ubuntu-latest. 20.x is deprecated
+          - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             binary_name: Rustique
             asset_name: rustique-linux-x86_64
