@@ -98,7 +98,7 @@ impl Default for Config {
             backup_mods_dir: backup_mods_dir.to_string_lossy().to_string(),
             show_execution_time: true,
             notify_of_unzipped_mods: false,
-            game_download_dir: dirs::download_dir().unwrap().to_str().unwrap().to_string(),
+            game_download_dir: dirs::download_dir().unwrap_or_default().to_string_lossy().to_string(),
             sync_latest_game_version_file_every: 24,
             sync_mod_search_file_every: 24,
             pkg: Vec::default(),

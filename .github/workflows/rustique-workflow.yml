@@ -1,3 +1,4 @@
+
 name: Rustique Workflow
 
 on:
@@ -15,21 +16,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Change to ubuntu-latest. 20.x is deprecated
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             binary_name: Rustique
             asset_name: rustique-linux-x86_64
             rustflags: ""
 
-          # Windows build
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             binary_name: Rustique.exe
             asset_name: rustique-windows-x86_64
             rustflags: "-C link-args=/SUBSYSTEM:CONSOLE"
 
-          # macOS build
           - os: macos-latest
             target: x86_64-apple-darwin
             binary_name: Rustique
@@ -44,81 +42,39 @@ jobs:
       with:
         targets: ${{ matrix.target }}
 
-    # Setup for Linux musl build
     - name: Install musl tools (Linux)
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get install -y musl-tools musl-dev
 
-    # Build with cargo
     - name: Build with Cargo
       env:
         RUSTFLAGS: ${{ matrix.rustflags }}
       run: cargo build --release --target ${{ matrix.target }}
 
-    # Prepare artifacts for upload - Linux
-    - name: Prepare artifacts (Linux)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        cd target/${{ matrix.target }}/release
-        strip ${{ matrix.binary_name }} || true
-        tar -czf $GITHUB_WORKSPACE/${{ matrix.asset_name }}.tar.gz ${{ matrix.binary_name }}
-        cd $GITHUB_WORKSPACE
-        shasum -a 256 ${{ matrix.asset_name }}.tar.gz > ${{ matrix.asset_name }}.tar.gz.sha256
-
-    # Prepare artifacts for upload - macOS
-    - name: Prepare artifacts (macOS)
-      if: matrix.os == 'macos-latest'
-      run: |
-        cd target/${{ matrix.target }}/release
-        strip ${{ matrix.binary_name }} || true
-        tar -czf $GITHUB_WORKSPACE/${{ matrix.asset_name }}.tar.gz ${{ matrix.binary_name }}
-        cd $GITHUB_WORKSPACE
-        shasum -a 256 ${{ matrix.asset_name }}.tar.gz > ${{ matrix.asset_name }}.tar.gz.sha256
-
-    # Prepare artifacts for upload - Windows
-    - name: Prepare artifacts (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        cd target/${{ matrix.target }}/release
-        Compress-Archive -Path ${{ matrix.binary_name }} -DestinationPath $env:GITHUB_WORKSPACE\${{ matrix.asset_name }}.zip
-        cd $env:GITHUB_WORKSPACE
-        Get-FileHash -Algorithm SHA256 ${{ matrix.asset_name }}.zip | ForEach-Object {$_.Hash} | Out-File ${{ matrix.asset_name }}.zip.sha256
-      shell: pwsh
-      
-      
-      # Upload binary artifacts directly
-    - name: Upload Linux/macOS binary
+    # Create ZIP for Linux/macOS
+    - name: Create ZIP (Linux/macOS)
       if: matrix.os != 'windows-latest'
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.asset_name }}
-        path: target/${{ matrix.target }}/release/${{ matrix.binary_name }}
-        if-no-files-found: error
-
-    # Upload Windows binary
-    - name: Upload Windows binary
-      if: matrix.os == 'windows-latest'
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.asset_name }}
-        path: target/${{ matrix.target }}/release/${{ matrix.binary_name }}
-        if-no-files-found: error
+      run: |
+        cd target/${{ matrix.target }}/release
+        zip -j ${{ matrix.asset_name }}.zip ${{ matrix.binary_name }}
       
+    # Create ZIP for Windows
+    - name: Create ZIP (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        cd target/${{ matrix.target }}/release
+        Compress-Archive -Path ${{ matrix.binary_name }} -DestinationPath ${{ matrix.asset_name }}.zip
+      shell: pwsh
 
-    # Upload artifacts
-    - name: Upload release artifacts
+    # Upload the ZIP artifacts only
+    - name: Upload ZIP artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.asset_name }}-release-pkg
-        path: |
-          ${{ matrix.asset_name }}.tar.gz
-          ${{ matrix.asset_name }}.tar.gz.sha256
-          ${{ matrix.asset_name }}.zip
-          ${{ matrix.asset_name }}.zip.sha256
-        if-no-files-found: ignore
-
+        name: ${{ matrix.asset_name }}
+        path: target/${{ matrix.target }}/release/${{ matrix.asset_name }}.zip
+        if-no-files-found: error
 
   release:
     name: Create Release
@@ -134,13 +90,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            release-artifacts/*-release-pkg/*.tar.gz
-            release-artifacts/*-release-pkg/*.tar.gz.sha256
-            release-artifacts/*-release-pkg/*.zip
-            release-artifacts/*-release-pkg/*.zip.sha256
+          files: release-artifacts/*/*
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
