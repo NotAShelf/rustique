@@ -8,9 +8,10 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use tokio::sync::RwLock;
+use tracing::{debug, info};
 use crate::config::config_structs::Tables;
 use crate::information_utils::{rustique_message, CellData, RustiqueMessage};
 
@@ -40,7 +41,7 @@ pub struct Config {
    
    
     // This directory is where the .zip files from the mod db are saved.
-    pub modpack_install_dir: String,
+    pub modpacks_dir: String,
     
     
     #[serde(default)]
@@ -103,7 +104,7 @@ impl Default for Config {
             sync_mod_search_file_every: 24,
             pkg: Vec::default(),
             table: Tables::with_defaults(),
-            modpack_install_dir: Self::get_path().join("modpacks").join("installed").to_string_lossy().to_string(),
+            modpacks_dir: Self::get_path().join("modpacks").to_string_lossy().to_string(),
         }
     }
 }
@@ -117,7 +118,11 @@ impl Config {
                 RustiqueError::ConfigFileError(format!("Failed to create config directory: {e}"))
             })?;
         }
-
+        
+        
+        // make sure the modpack_dir is setup early
+        Self::setup_modpack_dir()?;
+        
         let config_file_path = config_path.join("config.toml");
 
         if !config_file_path.exists() {
@@ -157,6 +162,8 @@ impl Config {
         file.read_to_string(&mut contents).map_err(|e| {
             RustiqueError::ConfigFileError(format!("Failed to read config file: {e}"))
         })?;
+       
+        
 
         match toml::from_str::<Config>(&contents) {
             Ok(config) => Ok(config),
@@ -170,6 +177,24 @@ impl Config {
                 Ok(config)
             }
         }
+    }
+    
+    pub fn setup_modpack_dir() -> Result<(), RustiqueError> {
+        let modpack_dir = Self::get_path().join(&Config::default().modpacks_dir);
+        // create the modpack directory if it hasn't been created
+        debug!("Checking if {} exists", modpack_dir.to_string_lossy());
+        if !Path::new(&modpack_dir).exists() {
+            info!("Created modpack directory");
+
+            for dir in ["installed", "packs", "mypacks"] {
+                info!("creating modpacks/{dir}");
+                let d = &modpack_dir.join(dir);
+                fs::create_dir_all(d)
+                    .map_err(|e| RustiqueError::SimpleError(format!("Failed to create {}: {}", d.to_string_lossy(), e)))?;
+            }
+        } 
+        
+        Ok(())
     }
 
     pub fn save(&self, config_dir: Option<PathBuf>) -> Result<(), RustiqueError> {

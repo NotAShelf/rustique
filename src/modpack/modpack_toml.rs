@@ -1,11 +1,16 @@
 use std::collections::HashMap;
-use std::error::Error;
+use std::fs;
+use zip::{ZipWriter, CompressionMethod};
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
+use comfy_table::{Attribute, Color};
 use serde::{Deserialize, Serialize};
-use crate::aliases::ModID;
+use tracing::debug;
+use zip::write::SimpleFileOptions;
+use crate::aliases::{FileName, ModID};
 use crate::api::api_structs::ModInfo;
+use crate::information_utils::{command_output, display_table, notice, CellData};
 use crate::rustique_errors::RustiqueError;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -16,21 +21,8 @@ pub struct ModPackToml {
 }
 
 impl ModPackToml {
-    pub fn save(&self, save_path: &PathBuf, ) -> Result<(), RustiqueError> {
-        
-        let toml_content = toml::to_string_pretty(self)
-            .map_err(|e| RustiqueError::SimpleError(format!("Failed in modpack toml save {e}")))?;
-        
-        
-        File::create(save_path)
-            .map_err(|e| RustiqueError::SimpleError(format!("Failed to create modpack toml {e}")))?
-            .write_all(toml_content.as_bytes())
-            .map_err(|e| RustiqueError::SimpleError(format!("Failed to write modpack toml {e}")))?;
-        
-        Ok(())
-    }
-    
-    pub fn gen_modinfo_json(&self, save_path: &PathBuf) -> Result<(), RustiqueError> {
+    /// Creates a ModInfo from the ModPackToml data
+    pub fn gen_modinfo(&self) -> Result<ModInfo, RustiqueError> {
        
         let mut mod_info = ModInfo::default();
         
@@ -47,30 +39,71 @@ impl ModPackToml {
             mod_info.description = Some(desc);
         }
         
-       
         if let Some(website) = self.modpack.website.clone() {
             mod_info.website = Some(website);
         }
         
         mod_info.dependencies = Some(self.mods.values().map(|mp_mod| (mp_mod.mod_id.clone(), mp_mod.version.clone())).collect());
         
+        debug!("{mod_info:#?}");
         
-        println!("{mod_info:#?}");
+        Ok(mod_info)
+    }
+    
+    pub fn build_modpack(&self, save_path: &PathBuf, modpack_id: FileName) -> Result<(), RustiqueError> {
+        // config dir should all be setup by this point
+       
+        let zip_path = save_path.join("mypacks").join(modpack_id +".zip");
+        let zip_archive = File::create(&zip_path)?;
+        let mut zip = ZipWriter::new(zip_archive);
         
-        let file_name = "modinfo.json";
+        let display_vec: Vec<(CellData, CellData)> = vec![];
         
-        let mut file = File::create(save_path.join(file_name))?;
+        let options = SimpleFileOptions::default()
+            .compression_method(CompressionMethod::Deflated);
+
+        let toml_content = toml::to_string_pretty(self)
+            .map_err(|e| RustiqueError::SimpleError(format!("Failed to make pretty modpack toml: {}", e.to_string())))?;
+        self.add_file_to_zip(&mut zip, "modpack.toml", &toml_content, options).inspect_err(|_| {
+            let _ = self.delete_zip(&zip_path);
+        })?;
         
-        file.write_all(serde_json::to_string_pretty(&mod_info)
-            .map_err(|e| RustiqueError::SimpleError(format!("Failed writing the mod_info of the modpack, {e}")))?
-            .as_bytes())?;
         
+        let mod_info = serde_json::to_string_pretty(&self.gen_modinfo()?)
+            .map_err(|e|RustiqueError::SimpleError(e.to_string()))?;
+        self.add_file_to_zip(&mut zip, "modinfo.json", &mod_info, options).inspect_err(|_| {
+            let _ = self.delete_zip(&zip_path);
+        })?;
+        
+        
+        zip.finish().map_err(|e| {
+            let _ = self.delete_zip(&zip_path);
+            RustiqueError::ZipError {
+                context: "Failed creating modpack zip".into(),
+                source: e
+            }
+        })?;
+        
+        
+        display_table(
+            vec![command_output("Your Modpack has been created and saved to".into(), zip_path.to_string_lossy().to_string())], 
+            None);
+
+        Ok(())
+    }
+    
+    fn delete_zip(&self, save_path: &PathBuf) -> Result<(), RustiqueError> {
+        fs::remove_file(save_path)
+            .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
         
         Ok(())
     }
     
-    pub fn create_modpack_zip(&self, save_path: &PathBuf) -> Result<(), RustiqueError> {
-        
+    fn add_file_to_zip(&self, zip: &mut ZipWriter<File>, filename: &str, content: &str, options: SimpleFileOptions) -> Result<(), RustiqueError> {
+        zip.start_file(filename, options)
+            .map_err(|e| RustiqueError::ZipError { context: format!("create: {filename}"), source: e })?;
+        zip.write_all(content.as_bytes())
+            .map_err(|e| RustiqueError::SimpleError(format!("Failed to write to zip archive {}",e.to_string())))?;
         Ok(())
     }
 }

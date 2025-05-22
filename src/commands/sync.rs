@@ -1,5 +1,5 @@
 use crate::aliases::{ModFileName, ModID, ModName, ModVersion};
-use crate::api::api_structs::{Mod, ModApi, ModsSearchFile};
+use crate::api::api_structs::{Mod, ModsSearchFile};
 use crate::api::client::{ApiClient};
 use crate::rustique_errors::RustiqueError;
 use crate::utils::{delete_file, extract_all_mods_metadata, find_mod_id, get_current_time, parse_json_file, timestamp_older_than, write_json_file};

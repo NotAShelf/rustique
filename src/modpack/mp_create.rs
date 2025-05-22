@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use semver::Version;
-use tracing::{debug, info, warn};
+use tracing::warn;
 use crate::commands::arg_structs::modpack_args::MPCreateArgs;
 use crate::commands::search::parse_search_file;
 use crate::modpack::modpack_toml::{MPMods, ModPack, ModPackToml};
@@ -15,12 +15,11 @@ use crate::rustique_errors::RustiqueError;
 use crate::utils::{extract_all_mods_metadata, find_mod_id};
 use crate::version_management::parse_version;
 use owo_colors::OwoColorize;
-use serde_json::json;
 use crate::aliases::ModID;
-use crate::config::config_manager::{get_config, Config};
+use crate::config::config_manager::get_config;
 
 pub fn mp_create_interactive() -> Result<(), RustiqueError> {
-
+    todo!();
     Ok(())
 }
 
@@ -43,16 +42,10 @@ pub fn collect_mp_create_args(args: &MPCreateArgs) -> Result<ModPackToml, Rustiq
 
 
 pub async fn mp_create(mod_dir: &PathBuf, mod_pack: &mut ModPackToml) -> Result<(), RustiqueError> {
-
-   
-    // parse all mods in mod_dir
-    // grab each mod id and version
-    // populate the mods section of the ModPackToml
-    // write toml
     
     let config = get_config().read().await;
     
-    let mods_search_data = parse_search_file()?.mods;
+    let mods_search_data = parse_search_file().await?.mods;
     
     let all_mods = extract_all_mods_metadata(mod_dir).await?;
     let mp_mods: HashMap<ModID, MPMods> = all_mods.iter().filter_map(|(mod_filename, mod_info)| {
@@ -78,18 +71,10 @@ pub async fn mp_create(mod_dir: &PathBuf, mod_pack: &mut ModPackToml) -> Result<
 
     mod_pack.mods = mp_mods;
     
-    // write the mod_pack to the file
-    
-    debug!("{mod_pack:#?}");
-    
-   
     // TODO: make flag for saving modpack to a different directory
-    let save_location = Config::get_path().join(Path::new(&format!("{}.toml", mod_pack.modpack.mpk_id)));
+    let save_location = Path::new(&config.modpacks_dir).to_path_buf();
     
-    
-    mod_pack.save(&save_location)?;
-    
-    mod_pack.gen_modinfo_json(&Config::get_path())?;
+    mod_pack.build_modpack(&save_location, mod_pack.modpack.mpk_id.clone())?;
 
 
     Ok(())
