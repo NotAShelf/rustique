@@ -53,29 +53,12 @@ jobs:
         RUSTFLAGS: ${{ matrix.rustflags }}
       run: cargo build --release --target ${{ matrix.target }}
     
-    - name: Create ZIP (Linux/macOS)
-      if: matrix.os != 'windows-latest'
-      run: |
-        cd target/${{ matrix.target }}/release
-        mkdir -p $GITHUB_WORKSPACE/dist
-        cp ${{ matrix.binary_name }} $GITHUB_WORKSPACE/dist/
-        cd $GITHUB_WORKSPACE
-        zip -j ${{ matrix.asset_name }}.zip dist/${{ matrix.binary_name }}
-      
-    # Create ZIP for Windows
-    - name: Create ZIP (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        cd target/${{ matrix.target }}/release
-        Compress-Archive -Path ${{ matrix.binary_name }} -DestinationPath $env:GITHUB_WORKSPACE\${{ matrix.asset_name }}.zip
-      shell: pwsh
-
     # Upload the ZIP artifacts only
     - name: Upload ZIP artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.asset_name }}
-        path: ${{ matrix.asset_name }}.zip
+        path: target/${{ matrix.target }}/release/${{ matrix.binary_name }}
         if-no-files-found: error
 
   release:
@@ -93,7 +76,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: release-artifacts/*
-          draft: false
+          draft: true
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
