@@ -15,6 +15,7 @@ use crate::information_utils::{display_installation_results, notice};
 // add way to set the version you want to download
 pub async fn install_cmd(mod_dir: &PathBuf, mods_requested: Vec<ModID>, force: bool) -> Result<(), RustiqueError> {
 
+    info!("install_cmd: {mods_requested:?}");
     // get sync data
     let sync_data = get_sync_data(mod_dir).await?;
 
@@ -31,7 +32,11 @@ pub async fn install_cmd(mod_dir: &PathBuf, mods_requested: Vec<ModID>, force: b
     let client = ApiClient::new();
 
     // get the download urls for all requested mods
-    let result = client.fetch_mods_parallel(mods_requested_cleaned).await?;
+    let result = client.fetch_mods_parallel(mods_requested_cleaned.clone()).await?;
+    
+    if result.is_empty() {
+        return Err(SimpleError(format!("Invalid modid {mods_requested_cleaned:?}")));
+    }
 
     let mods_requested: Vec<Install> =
         result.into_iter().map(|(mod_id, mod_info)| {
@@ -76,7 +81,11 @@ pub async fn install_missing_deps(mod_dir: &PathBuf, mods_requested: Vec<ModID>)
     let md_ids: Vec<ModID> = missing_deps.iter().map(|i| i.mod_id.clone()).collect();
 
     // get download_urls
-    let result = client.fetch_mods_parallel(md_ids).await?;
+    let result = client.fetch_mods_parallel(md_ids.clone()).await?;
+    
+    if result.is_empty() {
+        return Err(SimpleError(format!("No mod(s) found with id(s) {md_ids:?}")))
+    }
 
     for mod_info in &mut missing_deps {
         if let Some(data) = result.get(&mod_info.mod_id) {

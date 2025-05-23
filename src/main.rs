@@ -151,16 +151,7 @@ async fn async_main() {
             let start_time = Instant::now();
             let config = get_config().read().await;
 
-            if args.missing_dependencies {
-                match install_missing_deps(&mod_dir, args.mod_ids.clone()).await {
-                    Ok(()) => {
-                        handle_sync_call(&mod_dir).await;
-                    },
-                    Err(e) => {
-                        error!("{}", e);
-                    }
-                }
-            }
+            
 
             if !args.mod_ids.is_empty() {
                 match install_cmd(&mod_dir, args.mod_ids.clone(), args.missing_dependencies).await {
@@ -172,7 +163,18 @@ async fn async_main() {
                     }
                 }
             }
-
+            
+            if args.mod_ids.is_empty() && args.missing_dependencies {
+                match install_missing_deps(&mod_dir, args.mod_ids.clone()).await {
+                    Ok(()) => {
+                        handle_sync_call(&mod_dir).await;
+                    },
+                    Err(e) => {
+                        error!("{}", e);
+                    }
+                }
+            }
+            
             if config.show_execution_time {
                 elapsed_footer(start_time, "Install");
             }

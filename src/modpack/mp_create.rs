@@ -74,7 +74,7 @@ pub async fn mp_create(mod_dir: &PathBuf, mod_pack: &mut ModPackToml) -> Result<
     // TODO: make flag for saving modpack to a different directory
     let save_location = Path::new(&config.modpacks_dir).to_path_buf();
     
-    mod_pack.build_modpack(&save_location, mod_pack.modpack.mpk_id.clone())?;
+    mod_pack.build_modpack(save_location, mod_pack.modpack.mpk_id.clone())?;
 
 
     Ok(())

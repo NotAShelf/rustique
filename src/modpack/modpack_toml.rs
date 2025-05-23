@@ -50,15 +50,14 @@ impl ModPackToml {
         Ok(mod_info)
     }
     
-    pub fn build_modpack(&self, save_path: &PathBuf, modpack_id: FileName) -> Result<(), RustiqueError> {
+    pub fn build_modpack(&self, save_path: PathBuf, modpack_id: FileName) -> Result<(), RustiqueError> {
         // config dir should all be setup by this point
        
         let zip_path = save_path.join("mypacks").join(modpack_id +".zip");
         let zip_archive = File::create(&zip_path)?;
         let mut zip = ZipWriter::new(zip_archive);
-        
-        let display_vec: Vec<(CellData, CellData)> = vec![];
-        
+       
+        // Compression needs to be set to Deflated to make it the most compatible
         let options = SimpleFileOptions::default()
             .compression_method(CompressionMethod::Deflated);
 
