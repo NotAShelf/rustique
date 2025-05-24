@@ -12,9 +12,11 @@ use std::time::Instant;
 use tracing::{debug, info};
 use crate::config::config_manager::get_config;
 use crate::information_utils::{display_installation_results, elapsed_footer, notice};
+use crate::traits::ref_ext::PathRef;
 
 #[allow(clippy::map_entry)]
-pub async fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<ModID>, keep_old_files: bool) -> Result<(), RustiqueError> {
+pub async fn update_mods<V: AsRef<[ModID]>>(mod_dir: impl PathRef, update_mod_ids: V, keep_old_files: bool) -> Result<(), RustiqueError> {
+    let (mod_dir, update_mod_ids) = (mod_dir.as_ref(), update_mod_ids.as_ref());
     let start_time = Instant::now();
     let config = get_config().read().await;
     let sync_data = parse_json_file::<RustiqueSyncJson>(&PathBuf::from(mod_dir).join(SYNC_FILE_NAME));
@@ -29,7 +31,7 @@ pub async fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<ModID>, keep_old
             mods_to_check_update.clone_from(&sync_data.rustique_sync);
             updates_exist = true;
         } else {
-            for typed_mod_id in &update_mod_ids {
+            for typed_mod_id in update_mod_ids {
                 let mod_sync_data = &sync_data.rustique_sync;
                 // user typed in a valid typed_mod_id so violet is happy now
                 let typed_mod_id = typed_mod_id.to_lowercase();
@@ -63,7 +65,7 @@ pub async fn update_mods(mod_dir: &PathBuf, update_mod_ids: Vec<ModID>, keep_old
                         mod_name: mod_sync_info.mod_name.clone(),
                         version_to_install: mod_sync_info.latest_known_version.clone(),
                         download_url: mod_sync_info.latest_download_url.clone(),
-                        current_file_path: Some(mod_dir.clone().join(mod_sync_info.file_name)),
+                        current_file_path: Some(mod_dir.join(mod_sync_info.file_name)),
                     })
                 } else {
                     None

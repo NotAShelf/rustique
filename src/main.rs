@@ -41,6 +41,7 @@ use crate::commands::search::search;
 use crate::config::config_manager::{get_config, init_config};
 use crate::information_utils::{elapsed_footer, notice};
 use crate::modpack::modpack_commands::parse_modpack_commands;
+use crate::traits::ref_ext::PathRef;
 use crate::traits::string_ext::StrLowerExt;
 
 fn main() {
@@ -164,7 +165,7 @@ async fn async_main() {
                 }
             }
             
-            if args.mod_ids.is_empty() && args.missing_dependencies {
+            if args.missing_dependencies {
                 match install_missing_deps(&mod_dir, args.mod_ids.clone()).await {
                     Ok(()) => {
                         handle_sync_call(&mod_dir).await;
@@ -207,8 +208,8 @@ async fn async_main() {
 }
 
 // Update this function to be async
-async fn handle_sync_call(mod_dir: &PathBuf) {
-    match sync(mod_dir).await {
+async fn handle_sync_call(mod_dir: impl PathRef) {
+    match sync(mod_dir.as_ref()).await {
         Ok(()) => {},
         Err(e) => {
             error!("{}", e.to_string().red().bold());

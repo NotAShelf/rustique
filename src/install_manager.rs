@@ -1,5 +1,5 @@
 use crate::aliases::{DownloadURL, ModID, ModName, ModVersion};
-use crate::api::api_structs::Mod;
+use crate::api::api_structs::{Mod, ModInfo};
 use crate::api::client::{ApiClient};
 use crate::api::download::download_requested_mods;
 use crate::commands::sync::ModSyncInfo;
@@ -112,7 +112,7 @@ pub async fn install_manager(
         let mut needed_dependencies: Vec<Install> = recently_installed.par_iter()
             .filter_map(|installed_mod| {
                 let path = installed_mod.installed_file_path.clone()?;
-                match extract_zip_metadata(&path) {
+                match extract_zip_metadata::<ModInfo>(&path, "modinfo.json") {
                     Ok(mod_info) =>  {
                         Some(mod_info.dependencies
                             .unwrap_or_default()

@@ -15,6 +15,7 @@ use crate::config::config_manager::get_config;
 use crate::config::config_structs::{CellAttr, CellColor, ListColumn};
 use crate::information_utils::prep_cell;
 use crate::install_manager::Install;
+use crate::traits::ref_ext::PathRef;
 
 fn grab_this_mod_deps(mod_info: &ModInfo, dep_list: &[Install]) -> String {
     let mut res = dep_list.iter()
@@ -26,7 +27,8 @@ fn grab_this_mod_deps(mod_info: &ModInfo, dep_list: &[Install]) -> String {
 }
 
 #[allow(clippy::filter_map_next)]
-pub async fn new_list(mod_dir: &PathBuf, only_updated: bool) -> Result<(), RustiqueError> {
+pub async fn new_list(mod_dir: impl PathRef, only_updated: bool) -> Result<(), RustiqueError> {
+    let mod_dir = mod_dir.as_ref();
     let start_time = Instant::now();
     let config = get_config().read().await;
 

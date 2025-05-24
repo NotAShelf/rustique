@@ -14,6 +14,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, info};
 use crate::config::config_structs::Tables;
 use crate::information_utils::{rustique_message, CellData, RustiqueMessage};
+use crate::traits::ref_ext::PathRef;
 
 #[derive(Deserialize, Serialize, Debug)]
 #[allow(clippy::struct_excessive_bools)]
@@ -218,7 +219,8 @@ impl Config {
     }
 }
 
-pub fn backup_config(config_path: &PathBuf, message: Option<String>) -> Result<(), RustiqueError> {
+pub fn backup_config(config_path: impl PathRef, message: Option<String>) -> Result<(), RustiqueError> {
+    let config_path = config_path.as_ref();
     if config_path.exists() {
         let back_name = format!("toml.bak-{}", Local::now().format("%Y%m%d_%H%M%S"));
         let backup_path = config_path.with_extension(&back_name);

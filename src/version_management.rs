@@ -66,6 +66,18 @@ pub fn parse_latest_version(releases: &[Releases]) -> (ModVersion, DownloadURL, 
     return_version_results(result)
 }
 
+pub fn parse_download_url_from_version<V: AsRef<[Releases]>>(releases: V, version: &str) -> Result<DownloadURL, RustiqueError> {
+    releases.as_ref()
+        .iter()
+        .find_map(|release| {
+            release.mod_version.as_ref()
+                .filter(|mv| *mv == &version)
+                .and_then(|_| release.main_file.clone())
+        })
+        .ok_or_else(|| RustiqueError::SimpleError(format!("Version {} not found", version)))
+}
+
+
 pub fn parse_version(mod_version: &str) -> Result<Version, RustiqueError> {
     lenient_semver::parse(mod_version).map_err(|e| RustiqueError::SimpleError(e.to_string()))
 }

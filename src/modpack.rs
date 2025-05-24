@@ -9,3 +9,4 @@ pub mod mp_disable;
 pub mod mp_create;
 pub mod modpack_toml;
 pub mod modpack_commands;
+mod symlink_manager;

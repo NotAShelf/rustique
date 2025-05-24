@@ -266,6 +266,9 @@ pub async fn show_search_table(results: Vec<ModApi>) {
     let search_config = &config.table.search;
     let search_headers = &search_config.headers;
     let search_cells = &search_config.cells;
+    
+    debug!("search headers: {search_headers:#?}");
+    debug!("search cells: {search_cells:#?}");
 
     let mut table = Table::new();
     table.load_preset(UTF8_FULL_CONDENSED)
@@ -277,21 +280,21 @@ pub async fn show_search_table(results: Vec<ModApi>) {
         let attr = v.attribute.clone();
 
         let col_txt = match <SearchColumn as FromStr>::from_str(k) {
-            Ok(SearchColumn::Name) => "Name",
-            Ok(SearchColumn::Author) => "Author",
-            Ok(SearchColumn::ModId) => "ModID",
-            Ok(SearchColumn::ModidStrs) => "ModID Strings",
-            Ok(SearchColumn::AssetId) => "AssetID",
-            Ok(SearchColumn::Downloads) => "Downloads",
-            Ok(SearchColumn::Follows) => "Follows",
-            Ok(SearchColumn::Trending) => "Trending Points",
-            Ok(SearchColumn::Comments) => "Comments",
-            Ok(SearchColumn::Summary) => "Summary",
-            Ok(SearchColumn::UrlAliases) => "Url Aliases",
-            Ok(SearchColumn::Side) => "Side",
-            Ok(SearchColumn::Type) => "Type",
-            Ok(SearchColumn::Tags) => "Tags",
-            Ok(SearchColumn::LastReleased) => "Last Released",
+            Ok(SearchColumn::Name)          => "Name",
+            Ok(SearchColumn::Author)        => "Author",
+            Ok(SearchColumn::ModId)         => "ModID",
+            Ok(SearchColumn::ModidStrs)     => "ModID Strings",
+            Ok(SearchColumn::AssetId)       => "AssetID",
+            Ok(SearchColumn::Downloads)     => "Downloads",
+            Ok(SearchColumn::Follows)       => "Follows",
+            Ok(SearchColumn::Trending)      => "Trending Points",
+            Ok(SearchColumn::Comments)      => "Comments",
+            Ok(SearchColumn::Summary)       => "Summary",
+            Ok(SearchColumn::UrlAlias)      => "Url Alias",
+            Ok(SearchColumn::Side)          => "Side",
+            Ok(SearchColumn::Type)          => "Type",
+            Ok(SearchColumn::Tags)          => "Tags",
+            Ok(SearchColumn::LastReleased)  => "Last Released",
             _ => "N/A"
         };
 
@@ -333,7 +336,7 @@ pub async fn show_search_table(results: Vec<ModApi>) {
                 Ok(SearchColumn::Summary)   => m.summary.clone().unwrap_or_default(),
                 Ok(SearchColumn::ModidStrs) => m.mod_id_strs.join(","),
                 Ok(SearchColumn::Author)    => m.author.clone().unwrap_or_default(),
-                Ok(SearchColumn::UrlAliases) => m.url_alias.clone().unwrap_or_default(),
+                Ok(SearchColumn::UrlAlias)  => m.url_alias.clone().unwrap_or_default(),
                 Ok(SearchColumn::Side)      => m.side.clone().unwrap_or_default(),
                 Ok(SearchColumn::Type)      => m.mod_type.clone().unwrap_or_default(),
                 Ok(SearchColumn::Tags)      => m.tags.join(","),

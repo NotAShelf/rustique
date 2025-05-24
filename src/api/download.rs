@@ -8,6 +8,7 @@ use tokio::io::AsyncWriteExt;
 use tracing::{debug,info, warn};
 use url::Url;
 use crate::rustique_errors::RustiqueError::UrlParseError;
+use crate::traits::ref_ext::PathRef;
 
 pub async fn download_requested_mods(mod_dir: &Path, mods_requested: &mut Vec<Install>, api_client: &ApiClient) -> Result<Vec<Installed>, RustiqueError> {
 
@@ -117,7 +118,8 @@ async fn download_mod(mod_dir: &Path, download_url: String, api_client: &ApiClie
     Err(last_error.unwrap_or_else(|| RustiqueError::SimpleError("Maximum retries exceeded".to_string())))
 }
 
-async fn download_and_verify(url: &Url, file_path: &PathBuf, api_client: &ApiClient) -> Result<PathBuf, RustiqueError> {
+async fn download_and_verify(url: &Url, file_path: impl PathRef, api_client: &ApiClient) -> Result<PathBuf, RustiqueError> {
+    let file_path = file_path.as_ref();
     let response = api_client.get_request(url.as_ref()).await
         .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
 
@@ -177,6 +179,6 @@ async fn download_and_verify(url: &Url, file_path: &PathBuf, api_client: &ApiCli
 
     debug!("File downloaded to {}", file_path.display());
 
-    Ok(file_path.clone())
+    Ok(file_path.into())
 }
 

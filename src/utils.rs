@@ -1,7 +1,7 @@
 use crate::config::config_manager::Config;
 use crate::aliases::{ModFileName, ModID};
 use crate::api::api_structs::{ModApi, ModInfo};
-use crate::commands::sync::{sync, GameVersionSync, ModSyncInfo, GAME_VERSION_SYNC_FILE_NAME, SYNC_FILE_NAME};
+use crate::commands::sync::{GameVersionSync, ModSyncInfo, GAME_VERSION_SYNC_FILE_NAME, SYNC_FILE_NAME};
 use crate::install_manager::Install;
 use crate::rustique_errors::RustiqueError;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
@@ -11,13 +11,14 @@ use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs::{DirEntry, File};
 use std::io::{Read};
-use std::path::{Path, PathBuf};
-use std::{fs};
+use std::path::PathBuf;
+use std::fs;
 use std::process::exit;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error, info, warn};
 use zip::ZipArchive;
 use crate::config::config_manager::get_config;
+use crate::traits::ref_ext::PathRef;
 use crate::traits::string_ext::StrLowerExt;
 
 #[derive(Clone, Debug)]
@@ -27,13 +28,14 @@ pub struct RustiqueOptions {
 
 impl RustiqueOptions {
     pub fn default() -> Self {
-        if cfg!(target_os = "windows") {
-            Self::windows()
-        } else {
-            Self::unix()
-        }
+        #[cfg(windows)]
+        return Self::windows();
+        
+        #[cfg(unix)]
+        return Self::unix();
     }
 
+    #[cfg(windows)]
     pub fn windows() -> Self {
         if let Some(path) = std::env::var_os("APPDATA") {
             return RustiqueOptions {
@@ -44,6 +46,7 @@ impl RustiqueOptions {
     }
 
     // this also works for mac
+    #[cfg(unix)]
     pub fn unix() -> Self {
         // TODO: check if dir exists, if not check for the flatpack dir, throw error message if none are found
         if let Some(home) = home_dir() {
@@ -110,7 +113,8 @@ pub fn timestamp_older_than(num_hours: i64, timestamp: &str) -> bool {
 // if the path contains ~/, which is short for /home/<user>, then expand it, otherwise just return
 // the path,
 // TODO: Need handle windows default
-pub fn get_expanded_path(dir: PathBuf) -> PathBuf {
+pub fn get_expanded_path(dir: impl PathRef) -> PathBuf {
+    let dir = dir.as_ref();
     if dir.starts_with("~/") {
         if let Some(home) = home_dir() {
             let d = match dir.strip_prefix("~") {
@@ -121,10 +125,13 @@ pub fn get_expanded_path(dir: PathBuf) -> PathBuf {
         }
     }
 
-    dir
+    dir.to_path_buf()
 }
 
-pub fn extract_zip_metadata(entry: &PathBuf) -> Result<ModInfo, RustiqueError> {
+pub fn extract_zip_metadata<T>(entry: impl PathRef, inner_file: &str) -> Result<T, RustiqueError>
+where T: for<'de> serde::Deserialize<'de>
+{
+    let entry = entry.as_ref(); 
     // This function doesn't need async as it's doing synchronous file operations
     if entry.is_dir() {
         return Err(RustiqueError::ModNotZipped(entry.display().to_string()));
@@ -142,27 +149,38 @@ pub fn extract_zip_metadata(entry: &PathBuf) -> Result<ModInfo, RustiqueError> {
             context: format!("Failed to open zip archive {:?}: {}", entry.file_name(),e),
             source: e
         })?;
-    let mut mod_info_file = archive.by_name("modinfo.json")
+    let mut mod_info_file = archive.by_name(inner_file)
         .map_err(|e| RustiqueError::ZipError {
-            context: format!("Failed to find modinfo.json in {:?}: {}", entry.file_name(),e),
+            context: format!("Failed to find {} in {:?}: {}", inner_file, entry.file_name(), e),
             source: e
         })?;
     let mut mod_info_contents = String::new();
     mod_info_file.read_to_string(&mut mod_info_contents)
         .map_err(|e| RustiqueError::IoError {
-            context: format!("Failed to read modinfo.json in {:?}", entry.file_name()),
+            context: format!("Failed to read {} in {:?}", inner_file, entry.file_name()),
             source: e,
         })?;
-    let mod_info = serde_json5::from_str::<ModInfo>(&mod_info_contents)
-        .map_err(|e: serde_json5::Error| RustiqueError::JsonError {
-            context: format!("Failed to parse json in {}", entry.file_name().unwrap_or_default().to_string_lossy()),
-            source: e
-        })?;
+    let mod_info = if inner_file.to_lowercase().ends_with(".json") {
+        serde_json5::from_str::<T>(&mod_info_contents)
+            .map_err(|e: serde_json5::Error| RustiqueError::JsonError {
+                context: format!("Failed to parse json in {}", entry.file_name().unwrap_or_default().to_string_lossy()),
+                source: e
+            })?
+    } else if inner_file.to_lowercase().ends_with(".toml") {
+        toml::from_str::<T>(&mod_info_contents)
+            .map_err(|e| RustiqueError::TomlError {
+                context: format!("Failed to parse toml in {}", entry.file_name().unwrap_or_default().to_string_lossy()),
+                source: e
+            })?
+    } else {
+        return Err(RustiqueError::SimpleError(format!("Unsupported file format {inner_file}")))
+    };
+        
     Ok(mod_info)
 }
 
-pub async fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<ModFileName, ModInfo>, RustiqueError> {
-
+pub async fn extract_all_mods_metadata(mod_dir: impl PathRef) -> Result<HashMap<ModFileName, ModInfo>, RustiqueError> {
+    let mod_dir = mod_dir.as_ref();
     let dir = fs::read_dir(mod_dir)
         .map_err(|e| RustiqueError::IoError {
             context: format!("Can't read mod_dir: {}", mod_dir.to_string_lossy()),
@@ -177,7 +195,7 @@ pub async fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<ModF
     let results:Vec<(ModFileName, ModInfo)> = entries_vec.par_iter()
         .filter_map(|entry| {
             let filename = entry.file_name().to_string_lossy().to_string();
-            match extract_zip_metadata(&entry.path()) {
+            match extract_zip_metadata::<ModInfo>(&entry.path(), "modinfo.json") {
                 Ok(mod_info) => Some((filename, mod_info)),
                 Err(e) => {
                      if matches!(e, RustiqueError::ModNotZipped(_)) && config.notify_of_unzipped_mods {
@@ -193,8 +211,9 @@ pub async fn extract_all_mods_metadata(mod_dir: &PathBuf) -> Result<HashMap<ModF
       Ok(results.into_iter().collect())
 }
 
-pub fn verify_zip_file(file_path: &PathBuf) -> Result<(), RustiqueError> {
+pub fn verify_zip_file(file_path: impl PathRef) -> Result<(), RustiqueError> {
     // Open and verify the zip file integrity
+    let file_path = file_path.as_ref();
     let file = File::open(file_path)
         .map_err(|e| RustiqueError::IoError {
             context: format!("Failed to open file for verification: {}", file_path.to_string_lossy()),
@@ -215,7 +234,8 @@ pub fn verify_zip_file(file_path: &PathBuf) -> Result<(), RustiqueError> {
     Ok(())
 }
 
-pub async fn delete_file(file: &Path) -> Result<(), RustiqueError> {
+pub async fn delete_file(file: impl PathRef) -> Result<(), RustiqueError> {
+    let file = file.as_ref();
     debug!("Trying to delete {}", file.display());
     if file.exists() && !file.is_dir() {
         tokio::fs::remove_file(file).await
@@ -231,8 +251,6 @@ pub async fn delete_file(file: &Path) -> Result<(), RustiqueError> {
 // Replaces all instances of the newline and tab character from text, as well as excessive spaces.
 // This is a fix for https://github.com/Tekunogosu/Rustique/issues/3
 pub fn sanitize_string(string: &str) -> String {
-    // let re = Regex::new(r"[\n\t ]+").unwrap();
-    // re.replace_all(string, " ").to_string()
     string
         .split_whitespace()
         .fold(String::new(), |mut acc, word| {
@@ -249,10 +267,12 @@ pub fn gather_dependencies(installed_mods: &HashMap<ModFileName, ModInfo>) -> Ve
     gather_missing_dependencies(installed_mods, &[], &HashMap::new())
 }
 
-pub fn gather_missing_dependencies(installed_mods: &HashMap<ModFileName, ModInfo>, mods_requested: &[ModID], sync_data: &HashMap<ModID, ModSyncInfo>) -> Vec<Install> {
+pub fn gather_missing_dependencies<V: AsRef<[ModID]>>(installed_mods: &HashMap<ModFileName, ModInfo>, mods_requested: V, sync_data: &HashMap<ModID, ModSyncInfo>) -> Vec<Install> {
     // if there are reports of slowness is this section .values().par_bridge()...flat_map_iter() could be used to speed it up
     // this is prob not an issue even with a lot of mods as the data is all in memory at this point
     let id_vec: Vec<ModID> = sync_data.keys().cloned().collect();
+    
+    let mods_requested = mods_requested.as_ref();
 
     installed_mods
         .values()
@@ -281,10 +301,11 @@ pub fn gather_missing_dependencies(installed_mods: &HashMap<ModFileName, ModInfo
 }
 
 
-pub fn parse_json_file<T>(file_path: &PathBuf) -> Result<T, RustiqueError>
+pub fn parse_json_file<T>(file_path: impl PathRef) -> Result<T, RustiqueError>
 where
     T: for<'de> serde::Deserialize<'de>
 {
+    let file_path = file_path.as_ref();
     let filename = file_path.file_name().unwrap().to_string_lossy().to_string();
 
     let mut file = File::open(file_path).map_err(|e| RustiqueError::IoError {
@@ -314,7 +335,8 @@ where
     Ok(json)
 }
 
-pub async fn write_json_file(file_path: &PathBuf, json: String, config_dir: &PathBuf) -> Result<(), RustiqueError> {
+pub async fn write_json_file(file_path: impl PathRef, json: String, config_dir: impl PathRef) -> Result<(), RustiqueError> {
+    let (file_path , config_dir)= (file_path.as_ref(),config_dir.as_ref());
     let mut open_file = tokio::fs::File::create(file_path).await.map_err(|e|
         RustiqueError::IoError {
             context: format!("Error writing sync mod search file to config dir: {}", config_dir.to_string_lossy()),
@@ -371,7 +393,8 @@ pub fn sorted_game_versions() -> Vec<String> {
     versions
 }
 
-pub fn find_mod_id(mod_name: &String, mod_filename: &ModFileName, mods_search_data: &Vec<ModApi>) -> Result<String, RustiqueError> {
+pub fn find_mod_id<V: AsRef<[ModApi]>>(mod_name: &String, mod_filename: &ModFileName, mods_search_data: V) -> Result<String, RustiqueError> {
+    let mods_search_data = mods_search_data.as_ref();
     info!("{} has an empty mod id, attempting locate mod id...", mod_filename);
     let res: Vec<ModApi> = mods_search_data.iter().filter(|mod_search| {
         match &mod_search.name {

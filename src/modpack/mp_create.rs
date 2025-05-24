@@ -41,7 +41,7 @@ pub fn collect_mp_create_args(args: &MPCreateArgs) -> Result<ModPackToml, Rustiq
 }
 
 
-pub async fn mp_create(mod_dir: &PathBuf, mod_pack: &mut ModPackToml) -> Result<(), RustiqueError> {
+pub async fn mp_create<P: AsRef<Path>>(mod_dir: P, mod_pack: &mut ModPackToml) -> Result<(), RustiqueError> {
     
     let config = get_config().read().await;
     

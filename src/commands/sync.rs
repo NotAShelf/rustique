@@ -15,9 +15,11 @@ use std::time::{Instant};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error, info, warn};
+use owo_colors::OwoColorize;
 use crate::commands::search::SEARCH_FILE_NAME;
 use crate::config::config_manager::{get_config, Config};
 use crate::information_utils::{elapsed_footer, notice};
+use crate::traits::ref_ext::PathRef;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct RustiqueSyncJson {
@@ -76,8 +78,8 @@ impl GameVersionSync {
 // list will still show latest version but with (pinned @v0.2.3) with different text color
 
 #[allow(unused)]
-pub async fn handle_sync_call(mod_dir: &PathBuf) {
-    match sync(mod_dir).await {
+pub async fn handle_sync_call(mod_dir: impl PathRef) {
+    match sync(mod_dir.as_ref()).await {
         Ok(()) => {}
         Err(e) => {
            error!("{}", e.to_string());
@@ -93,8 +95,8 @@ pub const GAME_VERSION_SYNC_FILE_NAME: &str = "game-versions.json";
 
 // This contains all the data from the api/mods request. This is used to located mod_IDs
 // and for searching for new mods. This is synced once a day or manually
-pub async fn get_sync_data(mod_dir: &PathBuf) -> Result<RustiqueSyncJson, RustiqueError> {
-
+pub async fn get_sync_data(mod_dir: impl PathRef) -> Result<RustiqueSyncJson, RustiqueError> {
+    let mod_dir = mod_dir.as_ref();
     let fp = mod_dir.join(PathBuf::from(SYNC_FILE_NAME));
     if !fp.exists() {
         sync(mod_dir).await?;
@@ -105,8 +107,8 @@ pub async fn get_sync_data(mod_dir: &PathBuf) -> Result<RustiqueSyncJson, Rustiq
 
 
 
-pub async fn sync(mod_dir: &PathBuf) -> Result<(), RustiqueError> {
-
+pub async fn sync(mod_dir: impl PathRef) -> Result<(), RustiqueError> {
+    let mod_dir = mod_dir.as_ref();
     let start_time = Instant::now();
     let config = get_config().read().await;
     daily_file_syncs(false).await?;
@@ -183,7 +185,7 @@ pub async fn sync(mod_dir: &PathBuf) -> Result<(), RustiqueError> {
             mod_info.version.clone().unwrap_or_default()
         };
 
-        info!("VERSION Parsed: {} for {}", version, mod_info.mod_id);
+        info!("{} {} for {}", "VERSION Parsed:".green(), version.magenta(), mod_info.mod_id.yellow());
 
         // check here for bad mod_id
         let mod_id = if mod_info.mod_id.is_empty() {
@@ -281,7 +283,7 @@ pub async fn daily_file_syncs(force: bool) -> Result<ModsSearchFile, RustiqueErr
     // Sync game versions
 
     let search_file = config_dir.join(SEARCH_FILE_NAME);
-    info!("Search file path: {}", search_file.to_string_lossy());
+    info!("{} {}","Search file path:".green(), search_file.to_string_lossy().yellow());
 
     let mut file_data = if search_file.exists() {
         match parse_json_file::<ModsSearchFile>(&search_file) {
@@ -332,7 +334,7 @@ pub async fn game_version_sync(force: bool) -> Result<GameVersionSync, RustiqueE
     let config = get_config().read().await;
     
     let file = Config::get_path().join(GAME_VERSION_SYNC_FILE_NAME);
-    info!("Game version sync file path: {}", file.to_string_lossy());
+    info!("{} {}","Game version sync file path:".green(), file.to_string_lossy().yellow());
     // if the file doesn't exit, create it 
     // otherwise check if its time to do update
     

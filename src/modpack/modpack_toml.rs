@@ -8,16 +8,19 @@ use comfy_table::{Attribute, Color};
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use zip::write::SimpleFileOptions;
-use crate::aliases::{FileName, ModID};
+use crate::aliases::{FileName, ModID, ModName};
 use crate::api::api_structs::ModInfo;
 use crate::information_utils::{command_output, display_table, notice, CellData};
 use crate::rustique_errors::RustiqueError;
+use crate::traits::ref_ext::PathRef;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ModPackToml {
-    
+   
+    #[serde(default)]
     pub modpack: ModPack,
-    pub mods: HashMap<ModID,MPMods>,
+    #[serde(default)]
+    pub mods: HashMap<ModName,MPMods>,
 }
 
 impl ModPackToml {
@@ -50,10 +53,10 @@ impl ModPackToml {
         Ok(mod_info)
     }
     
-    pub fn build_modpack(&self, save_path: PathBuf, modpack_id: FileName) -> Result<(), RustiqueError> {
+    pub fn build_modpack(&self, save_path: impl PathRef, modpack_id: FileName) -> Result<(), RustiqueError> {
         // config dir should all be setup by this point
        
-        let zip_path = save_path.join("mypacks").join(modpack_id +".zip");
+        let zip_path = save_path.as_ref().join("mypacks").join(modpack_id +".zip");
         let zip_archive = File::create(&zip_path)?;
         let mut zip = ZipWriter::new(zip_archive);
        
@@ -62,7 +65,7 @@ impl ModPackToml {
             .compression_method(CompressionMethod::Deflated);
 
         let toml_content = toml::to_string_pretty(self)
-            .map_err(|e| RustiqueError::SimpleError(format!("Failed to make pretty modpack toml: {}", e.to_string())))?;
+            .map_err(|e| RustiqueError::SimpleError(format!("Failed to make pretty modpack toml: {e}")))?;
         self.add_file_to_zip(&mut zip, "modpack.toml", &toml_content, options).inspect_err(|_| {
             let _ = self.delete_zip(&zip_path);
         })?;
@@ -91,8 +94,8 @@ impl ModPackToml {
         Ok(())
     }
     
-    fn delete_zip(&self, save_path: &PathBuf) -> Result<(), RustiqueError> {
-        fs::remove_file(save_path)
+    fn delete_zip(&self, save_path: impl PathRef) -> Result<(), RustiqueError> {
+        fs::remove_file(save_path.as_ref())
             .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
         
         Ok(())
