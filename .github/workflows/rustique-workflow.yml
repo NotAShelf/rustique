@@ -33,6 +33,12 @@ jobs:
             binary_name: Rustique
             asset_name: rustique-macos-x86_64
             rustflags: ""
+            
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            binary_name: Rustique
+            asset_name: rustique-macos-arm64
+            rustflags: ""
 
     steps:
     - uses: actions/checkout@v4
