@@ -1,4 +1,3 @@
-use std::fmt::Display;
 use std::path::Path;
 
 /// Trait for  AsRef\<Path\>

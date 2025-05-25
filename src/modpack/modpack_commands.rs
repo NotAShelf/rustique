@@ -5,13 +5,13 @@ use owo_colors::OwoColorize;
 use crate::commands::arg_structs::modpack_args::{ModpackCommands, ModpackSubCommands};
 use crate::commands::info::info;
 use crate::commands::list::new_list;
-use crate::commands::update::update_mods;
 use crate::config::config_manager::get_config;
 use crate::information_utils::notice;
 use crate::modpack::mp_create::{collect_mp_create_args, mp_create};
 use crate::modpack::mp_disable::mp_disable;
 use crate::modpack::mp_enable::mp_enable;
 use crate::modpack::mp_install::mp_install;
+use crate::modpack::mp_update::mp_update;
 use crate::traits::ref_ext::PathRef;
 
 pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl PathRef) {
@@ -25,9 +25,9 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
                 }
             }
         }
-        ModpackSubCommands::Delete(args) => {}
+        ModpackSubCommands::Delete(_args) => {}
         ModpackSubCommands::Install(args) => {
-            match mp_install(args.clone()).await {
+            match mp_install(args.mod_id.clone(), args.mod_version.clone()).await {
                 Ok(installed) => {
                     // We update the config AFTER the installation so we know the lock on the config file is up
                     let mut config = get_config().write().await;
@@ -100,7 +100,12 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
             }
         }
         ModpackSubCommands::Update(args) => {
-            todo!();
+            match mp_update(args.clone()).await {
+                Ok(()) => {}
+                Err(e) => {
+                    error!("{}", e.to_string().red().bold());
+                }
+            }
             // let config = get_config().read().await;
             // match update_mods(Path::new(&config.modpacks.modpack_dir).join("packs"), vec![args.mpk_id.clone()], false).await {
             //     Ok(()) => {}

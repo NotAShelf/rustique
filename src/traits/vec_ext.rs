@@ -2,8 +2,6 @@
 
 // This trait to add helper functions to Vec<String> for ease of use in searching ignoring case
 
-use crate::information_utils::CellData;
-
 #[allow(unused_variables)]
 pub trait VecStringExt {
     fn contains_ignore_case(&self, query: &str) -> bool;

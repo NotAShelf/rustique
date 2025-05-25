@@ -2,7 +2,7 @@ use crate::aliases::{ModFileName, ModID, ModName, ModVersion};
 use crate::api::api_structs::{Mod, ModsSearchFile};
 use crate::api::client::{ApiClient};
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{delete_file, extract_all_mods_metadata, find_mod_id, get_current_time, parse_json_file, timestamp_older_than, write_json_file};
+use crate::utils::{extract_all_mods_metadata, find_mod_id, get_current_time, parse_json_file, timestamp_older_than, write_json_file};
 use crate::version_management::{parse_latest_version, parse_pinned_version, parse_version};
 use comfy_table::Attribute;
 use serde::{Deserialize, Serialize};
@@ -10,13 +10,15 @@ use serde_json::to_string_pretty;
 use std::collections::HashMap;
 use std::default::Default;
 use std::path::PathBuf;
+use std::pin::pin;
 use std::process::exit;
 use std::time::{Instant};
+use owo_colors::colors::Magenta;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error, info, warn};
 use owo_colors::OwoColorize;
-use crate::config::config_manager::{get_config, Config};
+use crate::config::config_manager::{get_config, Config, Package};
 use crate::consts::{FILE_GAME_VERSION_SYNC, FILE_MOD_SEARCH_SYNC, FILE_RUSTIQUE_SYNC};
 use crate::information_utils::{elapsed_footer, notice};
 use crate::modpack::symlink_manager::SymlinkManager;
@@ -81,17 +83,6 @@ impl GameVersionSync {
 // and responds accordingly
 // list will still show latest version but with (pinned @v0.2.3) with different text color
 
-#[allow(unused)]
-pub async fn handle_sync_call(mod_dir: impl PathRef) {
-    match sync(mod_dir.as_ref()).await {
-        Ok(()) => {}
-        Err(e) => {
-           error!("{}", e.to_string());
-            exit(1);
-        }
-    }
-}
-
 
 
 // This contains all the data from the api/mods request. This is used to located mod_IDs
@@ -100,7 +91,7 @@ pub async fn get_sync_data(mod_dir: impl PathRef) -> Result<RustiqueSyncJson, Ru
     let mod_dir = mod_dir.as_ref();
     let fp = mod_dir.join(PathBuf::from(FILE_RUSTIQUE_SYNC));
     if !fp.exists() {
-        sync(mod_dir).await?;
+        sync(mod_dir, false, vec![]).await?;
     }
 
     parse_json_file::<RustiqueSyncJson>(&fp)
@@ -108,14 +99,15 @@ pub async fn get_sync_data(mod_dir: impl PathRef) -> Result<RustiqueSyncJson, Ru
 
 
 
-pub async fn sync(mod_dir: impl PathRef) -> Result<(), RustiqueError> {
+pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_versions: V) -> Result<(), RustiqueError> {
     let mod_dir = mod_dir.as_ref();
     let start_time = Instant::now();
     let config = get_config().read().await;
     daily_file_syncs(false).await?;
     game_version_sync(false).await?;
 
-    notice("Syncing...", Option::from(comfy_table::Color::Yellow), vec![Attribute::Bold]);
+    notice(format!("Syncing {}...", mod_dir.display().fg::<Magenta>()), Option::from(comfy_table::Color::Yellow), vec![Attribute::Bold]);
+    
 
     // check if rustique-sync.json exists
     // if so, parse the file for updating
@@ -224,9 +216,14 @@ pub async fn sync(mod_dir: impl PathRef) -> Result<(), RustiqueError> {
     
     for (mod_id, res_mod) in &result {
 
-        let pkg = config.pkg.iter().find(|p| p.mod_id.eq(mod_id)).cloned().unwrap_or_default();
+        let pkg = if pin_versions.as_ref().is_empty() {
+            config.pkg.iter().find(|p| p.mod_id.eq(mod_id)).cloned().unwrap_or_default()
+        } else {
+            pin_versions.as_ref().iter().find(|p| p.mod_id.eq(mod_id)).cloned().unwrap_or_default()
+        };
+        
         let (mod_version, download_url, game_versions) = if !pkg.mod_id.is_empty() || !config.pinned_game_version.is_empty() {
-            parse_pinned_version(&res_mod.mod_json.releases, pkg, config.pinned_game_version.clone())
+            parse_pinned_version(&res_mod.mod_json.releases, &pkg, config.pinned_game_version.clone())
         } else {
             parse_latest_version(&res_mod.mod_json.releases)
         };
@@ -262,7 +259,7 @@ pub async fn sync(mod_dir: impl PathRef) -> Result<(), RustiqueError> {
 
     AsyncWriteExt::write_all(&mut file, json.as_bytes()).await?;
 
-    if config.show_execution_time {
+    if config.show_execution_time && !quiet {
         elapsed_footer(start_time, "Sync");
     }
 

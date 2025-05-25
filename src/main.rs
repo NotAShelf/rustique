@@ -107,7 +107,7 @@ async fn async_main() {
                     }
                 }
             } else {
-                handle_sync_call(&mod_dir).await;
+                handle_sync_call(&mod_dir, false).await;
             }
         }
         Commands::List(args) => {
@@ -133,7 +133,7 @@ async fn async_main() {
         Commands::Update(args) => {
             match update_mods(&mod_dir, args.mod_ids.clone(), args.keep_old_files).await {
                 Ok(()) => {
-                    handle_sync_call(&mod_dir).await;
+                    handle_sync_call(&mod_dir, false).await;
                 }
                 Err(e) => {
                     warn!("{}\n\r", e.to_string().red().bold());
@@ -158,7 +158,7 @@ async fn async_main() {
             if !args.mod_ids.is_empty() {
                 match install_cmd(&mod_dir, args.mod_ids.clone(), args.missing_dependencies).await {
                     Ok(()) => {
-                        handle_sync_call(&mod_dir).await;
+                        handle_sync_call(&mod_dir, false).await;
                     }
                     Err(e) => {
                         error!("{}", e);
@@ -169,7 +169,7 @@ async fn async_main() {
             if args.missing_dependencies {
                 match install_missing_deps(&mod_dir, args.mod_ids.clone()).await {
                     Ok(()) => {
-                        handle_sync_call(&mod_dir).await;
+                        handle_sync_call(&mod_dir, false).await;
                     },
                     Err(e) => {
                         error!("{}", e);
@@ -209,8 +209,8 @@ async fn async_main() {
 }
 
 // Update this function to be async
-async fn handle_sync_call(mod_dir: impl PathRef) {
-    match sync(mod_dir.as_ref()).await {
+async fn handle_sync_call(mod_dir: impl PathRef, quiet: bool) {
+    match sync(mod_dir.as_ref(), quiet, vec![]).await {
         Ok(()) => {},
         Err(e) => {
             error!("{}", e.to_string().red().bold());

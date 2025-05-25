@@ -2,7 +2,7 @@ use std::time::Instant;
 use comfy_table::{Attribute, Cell, CellAlignment, Color, Row, Table};
 use comfy_table::ContentArrangement::Dynamic;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
-use comfy_table::presets::{UTF8_BORDERS_ONLY, UTF8_FULL_CONDENSED};
+use comfy_table::presets::{UTF8_BORDERS_ONLY, UTF8_FULL_CONDENSED, UTF8_HORIZONTAL_ONLY};
 use crate::config::config_structs::{CellAttr, CellColor};
 use crate::install_manager::Installed;
 use crate::traits::ref_ext::StrRef;
@@ -208,7 +208,7 @@ impl CellData {
 pub fn elapsed_footer(start_time: Instant, operation: impl StrRef + std::fmt::Display) {
     let mut table = Table::new();
     table
-        .load_preset(UTF8_BORDERS_ONLY)
+        .load_preset(UTF8_HORIZONTAL_ONLY)
         .apply_modifier(UTF8_ROUND_CORNERS)
         .set_content_arrangement(Dynamic);
 

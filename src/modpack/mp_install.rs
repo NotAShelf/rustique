@@ -9,19 +9,21 @@ use std::time::Instant;
 use comfy_table::{Attribute, Color};
 use owo_colors::OwoColorize;
 use tracing::{debug, info, warn};
+use crate::aliases::{ModID, ModVersion};
 use crate::api::api_structs::ModInfo;
 use crate::api::client::ApiClient;
 use crate::api::download::download_requested_mods;
-use crate::commands::arg_structs::modpack_args::MPInstallArgs;
-use crate::config::config_manager::{get_config, Config};
+use crate::commands::sync::sync;
+use crate::config::config_manager::{get_config, Package};
 use crate::consts::FILE_MODINFO_JSON;
+use crate::handle_sync_call;
 use crate::information_utils::{command_output, display_table, elapsed_footer, notice};
 use crate::install_manager::{install_manager, Install};
 use crate::rustique_errors::RustiqueError;
 use crate::utils::extract_zip_metadata;
-use crate::version_management::{parse_download_url_from_version, parse_latest_version};
+use crate::version_management::{parse_download_url_from_version, parse_latest_version, parse_pinned_version};
 
-pub async fn mp_install(args: MPInstallArgs) -> Result<String, RustiqueError> {
+pub async fn mp_install(mp_id: ModID, mp_version: Option<ModVersion>) -> Result<String, RustiqueError> {
     let start_time = Instant::now();
     // installing the modpack with this function will do the following:
     // Save the modpack.zip (the modpack from the mods website) to modpacks/packs
@@ -31,22 +33,32 @@ pub async fn mp_install(args: MPInstallArgs) -> Result<String, RustiqueError> {
    
     let client = ApiClient::new();
     
-    let mod_info = client.fetch_mod(&args.mod_id).await?;
+    let mod_info = client.fetch_mod(&mp_id).await?;
 
     let installed_dir = Path::new(&config.modpacks.modpack_dir).join("installed");
     
-    let (version, download_url, _) = parse_latest_version(&mod_info.mod_json.releases);
-    
-    let install_modpack = Install {
-        mod_id: mod_info.mod_json.mod_id.clone().to_string(),
-        mod_name: mod_info.mod_json.name.clone().unwrap_or_default(),
-        version_to_install: version,
-        download_url,
-        current_file_path: None,
+    let (version, download_url, _) = if let Some(pin_version) = mp_version  {
+        let pkg = Package {
+            mod_id: mp_id.clone(),
+            pinned_version: Some(pin_version),
+        };
+        parse_pinned_version(&mod_info.mod_json.releases, &pkg, String::new())
+    } else {
+        parse_latest_version(&mod_info.mod_json.releases)
     };
     
+    
+    let install_modpack = Install {
+            mod_id: mod_info.mod_json.mod_id.clone().to_string(),
+            mod_name: mod_info.mod_json.name.clone().unwrap_or_default(),
+            version_to_install: version,
+            download_url,
+            current_file_path: None,
+    };
+    
+    notice(format!("Downloading Modpack {mp_id}..."), Some(Color::Green), vec![]);
+    
     // download the modpack first, then install the dependencies
-
     let packs_dir = Path::new(&config.modpacks.modpack_dir).join("packs");
     let Some(modpack) = download_requested_mods(&packs_dir, &mut vec![install_modpack], &client).await?.into_iter().next() else {
             return Err(RustiqueError::SimpleError("Modpack download failure..".into()));
@@ -68,6 +80,11 @@ pub async fn mp_install(args: MPInstallArgs) -> Result<String, RustiqueError> {
 
         // grab the mod ids from the modpack
         let mods = modpack_info.dependencies.keys().cloned().collect();
+        let mod_pkgs: Vec<Package> = modpack_info.dependencies.iter().map(|(id, version)| Package {
+            mod_id: id.clone(),
+            pinned_version: Some(version.clone()),
+        }).collect();
+        
         info!("MODS: {mods:?}");
         let deps = client.fetch_mods_parallel(mods).await?;
         
@@ -102,8 +119,14 @@ pub async fn mp_install(args: MPInstallArgs) -> Result<String, RustiqueError> {
         
         debug!("Successfully installed {installed:#?}");
         
+        sync(packs_dir, false, vec![]).await?;
+        sync(modpack_mod_path, false, mod_pkgs).await?;
+        
+        
         display_table(vec![command_output("Successfully installed Modpack:", modpack.mod_name)], None);
         elapsed_footer(start_time, "Modpack Install");
+        
+        
         
         return Ok(modpack_info.mod_id.clone());
     }

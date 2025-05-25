@@ -19,10 +19,10 @@ use crate::aliases::ModID;
 use crate::config::config_manager::get_config;
 use crate::consts::FILE_MODINFO_JSON;
 
-pub fn mp_create_interactive() -> Result<(), RustiqueError> {
-    todo!();
-    Ok(())
-}
+// pub fn mp_create_interactive() -> Result<(), RustiqueError> {
+//     todo!();
+//     // Ok(())
+// }
 
 pub fn collect_mp_create_args(args: &MPCreateArgs) -> Result<ModPackZip, RustiqueError> {
 

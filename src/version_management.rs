@@ -1,11 +1,12 @@
-use crate::aliases::{DownloadURL, ModID, ModVersion};
+use crate::aliases::{DownloadURL, ModID, ModVersion, PinnedVersionInfo};
 use crate::api::api_structs::{Releases};
 use crate::rustique_errors::RustiqueError;
 use semver::{Version};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use crate::config::config_manager::Package;
+use crate::traits::ref_ext::StrRef;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct RustiquePkgs {
@@ -26,7 +27,7 @@ pub struct LatestVersionFound {
     pub game_versions: Vec<String>,
 }
 
-pub fn parse_latest_version(releases: &[Releases]) -> (ModVersion, DownloadURL, Vec<String>) {
+pub fn parse_latest_version(releases: &[Releases]) -> PinnedVersionInfo {
     let mut errors :Vec<RustiqueError> = Vec::new();
 
     // TODO: Review for version pinning, the error needs to be handled better for that
@@ -71,10 +72,10 @@ pub fn parse_download_url_from_version<V: AsRef<[Releases]>>(releases: V, versio
         .iter()
         .find_map(|release| {
             release.mod_version.as_ref()
-                .filter(|mv| *mv == &version)
+                .filter(|mv| *mv == version)
                 .and_then(|_| release.main_file.clone())
         })
-        .ok_or_else(|| RustiqueError::SimpleError(format!("Version {} not found. Use [Rustique info -m modid] for valid versions", version)))
+        .ok_or_else(|| RustiqueError::SimpleError(format!("Version {version} not found. Use [Rustique info -m modid] for valid versions")))
 }
 
 
@@ -82,12 +83,13 @@ pub fn parse_version(mod_version: &str) -> Result<Version, RustiqueError> {
     lenient_semver::parse(mod_version).map_err(|e| RustiqueError::SimpleError(e.to_string()))
 }
 
-///
+
 /// retrieve a version based on version pinning information. 
-pub fn parse_pinned_version(releases: &Vec<Releases>, mod_pkg: Package, pinned_game_version: String) -> (ModVersion, DownloadURL, Vec<String>) {
+pub fn parse_pinned_version(releases: &Vec<Releases>, mod_pkg: &Package, pinned_game_version: impl StrRef) -> PinnedVersionInfo {
     // user should be using Rustique itself to set pinned_game_version so we trust that its valid, otherwise this function
     // will not return the correct version
 
+    let pinned_game_version = pinned_game_version.as_ref();
 
     // filter out versions that are not declared as compatible with the pinned game version
     let gres = if pinned_game_version.is_empty() {
@@ -98,7 +100,7 @@ pub fn parse_pinned_version(releases: &Vec<Releases>, mod_pkg: Package, pinned_g
         releases.iter().filter(|r| {
             let mut found = false;
             for tag in &r.tags {
-                match compare_versions(tag.as_str(), &pinned_game_version) {
+                match compare_versions(tag.as_str(), pinned_game_version) {
                     Ok(c) => match c {
                         std::cmp::Ordering::Less| std::cmp::Ordering::Equal => found = true,
                         std::cmp::Ordering::Greater => {},
@@ -114,7 +116,7 @@ pub fn parse_pinned_version(releases: &Vec<Releases>, mod_pkg: Package, pinned_g
         }).cloned().collect()
     };
 
-    info!("releases found for game version {:?}",gres);
+    debug!("releases found for game version {:?}",gres);
 
     // filter out any version that doesnt match the pinned mod version
     let mres = if mod_pkg.pinned_version.is_some() {

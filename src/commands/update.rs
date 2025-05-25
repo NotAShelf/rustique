@@ -2,14 +2,14 @@ use crate::aliases::ModID;
 use crate::commands::sync::{ModSyncInfo, RustiqueSyncJson};
 use crate::install_manager::{install_manager, Install, Installed};
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{delete_file, parse_json_file};
+use crate::utils::{parse_json_file, remove_older_files};
 use owo_colors::OwoColorize;
 use comfy_table::{Attribute, Color};
 use std::collections::HashMap;
 use std::path::{PathBuf};
 use std::process::exit;
 use std::time::Instant;
-use tracing::{debug, info};
+use tracing::debug;
 use crate::config::config_manager::get_config;
 use crate::consts::FILE_RUSTIQUE_SYNC;
 use crate::information_utils::{display_installation_results, elapsed_footer, notice};
@@ -83,16 +83,7 @@ pub async fn update_mods<V: AsRef<[ModID]>>(mod_dir: impl PathRef, update_mod_id
         let mods_processed: Vec<Installed> = install_manager(mod_dir, final_mod_update_list.clone(), all_installed_mods).await?;
 
         if !keep_old_files {
-            for mod_processed in &mods_processed {
-                if let (Some(old), Some(new) )= (&mod_processed.old_file_path, &mod_processed.installed_file_path) {
-                    if old == new {
-                        info!("Old file and new file have the same name, **NOT DELETING**");
-                    } else {
-                        info!("Cleaning up mod file for {}", old.display());
-                        delete_file(old).await?;
-                    }
-                }
-            }
+            remove_older_files(&mods_processed).await?;
         }
 
         display_installation_results(mods_processed);

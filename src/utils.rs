@@ -2,7 +2,7 @@ use crate::config::config_manager::Config;
 use crate::aliases::{ModFileName, ModID};
 use crate::api::api_structs::{ModApi, ModInfo};
 use crate::commands::sync::{GameVersionSync, ModSyncInfo};
-use crate::install_manager::Install;
+use crate::install_manager::{Install, Installed};
 use crate::rustique_errors::RustiqueError;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use owo_colors::OwoColorize;
@@ -279,9 +279,10 @@ pub fn gather_missing_dependencies<V: AsRef<[ModID]>>(installed_mods: &HashMap<M
     let mods_requested = mods_requested.as_ref();
 
     installed_mods
-        .values()
-        .filter(|mod_info| mods_requested.is_empty() || mods_requested.contains(&mod_info.mod_id))
-        .flat_map(|mod_info| {
+        // .values()
+        .iter()
+        .filter(|(_,mod_info)| mods_requested.is_empty() || mods_requested.contains(&mod_info.mod_id))
+        .flat_map(|(mod_filename, mod_info)| {
             mod_info.dependencies.iter()
                 .filter_map(|(mod_id, version)|
                     if !mod_id.contains("game")
@@ -293,7 +294,7 @@ pub fn gather_missing_dependencies<V: AsRef<[ModID]>>(installed_mods: &HashMap<M
                             mod_name: String::new(),
                             version_to_install: version.clone(),
                             download_url: String::new(),
-                            current_file_path: None,
+                            current_file_path: Some(PathBuf::from(mod_filename)),
                         })
                     } else {
                         None
@@ -419,4 +420,18 @@ pub fn find_mod_id<V: AsRef<[ModApi]>>(mod_name: &String, mod_filename: &ModFile
     } else {
         Ok(res[0].mod_id.to_string())
     } 
+}
+
+pub async fn remove_older_files(processed_install: &[Installed]) -> Result<(), RustiqueError> {
+    for mod_installed in processed_install {
+        if let (Some(old), Some(new)) = (&mod_installed.old_file_path, &mod_installed.installed_file_path) {
+            if old == new {
+                info!("Old file and new file have the same name, **NOT DELETING**");
+            } else {
+                info!("Cleaning up mod file for {}", old.display());
+                delete_file(old).await?;
+            }
+        }
+    }
+    Ok(())
 }

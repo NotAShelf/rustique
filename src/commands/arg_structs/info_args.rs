@@ -4,7 +4,6 @@ use crate::aliases::ModID;
 #[derive(Args, Debug, Clone)]
 pub struct ModInfoArgs {
     
-    #[arg(short, long, value_name = "MODID")]
     pub mod_id: ModID,
    
     /// Shows the description of the mod, Note: This can take a lot of space in the terminal

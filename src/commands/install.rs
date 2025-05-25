@@ -1,4 +1,3 @@
-use std::clone;
 use crate::aliases::ModID;
 use crate::api::client::ApiClient;
 use crate::commands::sync::{get_sync_data};
@@ -7,15 +6,14 @@ use crate::rustique_errors::RustiqueError;
 use crate::rustique_errors::RustiqueError::SimpleError;
 use crate::utils::{extract_all_mods_metadata, gather_missing_dependencies};
 use crate::version_management::{parse_latest_version};
-use std::path::PathBuf;
 use tracing::{debug, info};
-use crate::information_utils::{display_installation_results, notice};
+use crate::information_utils::{display_installation_results};
 use crate::traits::ref_ext::PathRef;
 
 // Report if trying install a mod that already exists
 // Use -f to force an installation
 // add way to set the version you want to download
-pub async fn install_cmd(mod_dir: impl PathRef, mods_requested: Vec<ModID>, force: bool) -> Result<(), RustiqueError> {
+pub async fn install_cmd(mod_dir: impl PathRef, mods_requested: Vec<ModID>, _force: bool) -> Result<(), RustiqueError> {
     let mod_dir = mod_dir.as_ref();
     info!("install_cmd: {mods_requested:?}");
     // get sync data

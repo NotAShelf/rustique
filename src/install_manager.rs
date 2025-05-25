@@ -8,8 +8,8 @@ use crate::utils::extract_zip_metadata;
 use crate::version_management::{parse_latest_version, parse_pinned_version};
 use rayon::prelude::*;
 use std::collections::{HashMap};
-use std::path::{Path, PathBuf};
-use tracing::{error, info};
+use std::path::PathBuf;
+use tracing::{debug, error, info};
 use crate::config::config_manager::get_config;
 use crate::consts::FILE_MODINFO_JSON;
 use crate::traits::ref_ext::PathRef;
@@ -89,7 +89,7 @@ pub async fn install_manager(
         // after the dependencies check
        let recently_installed: Vec<Installed> =  match download_requested_mods(mod_dir, &mut mods_requested, &client).await {
             Ok(processed_mods) => {
-                info!("Successfully installed mods: {:?}", processed_mods);
+                debug!("Successfully installed mods: {:?}", processed_mods);
                 // update recently installed so we can get the dependencies
                 mods_processed.extend(processed_mods.clone());
                 processed_mods
@@ -163,10 +163,10 @@ pub async fn install_manager(
         for mod_to_install in &mut needed_dependencies {
             if let Some(res_mod) =  result.get(mod_to_install.mod_id.as_str()) {
                 mod_to_install.mod_name = res_mod.mod_json.name.clone().unwrap_or_default();
-                // TODO: version pinning here??
+                
                 let pkg = config.pkg.iter().find(|p| p.mod_id.eq(&res_mod.mod_json.mod_id.to_string()));
                 let (mod_version, download_url, _) = if let Some(mod_pkg) = pkg {
-                    parse_pinned_version(&res_mod.mod_json.releases, mod_pkg.clone(), config.pinned_game_version.clone())
+                    parse_pinned_version(&res_mod.mod_json.releases, &mod_pkg.clone(), config.pinned_game_version.clone())
                 } else {
                     parse_latest_version(&res_mod.mod_json.releases)
                 };
