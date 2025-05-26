@@ -21,7 +21,7 @@ mod consts;
 use crate::cli_commands::{Cli, Commands, ShellType};
 use config::config::parse_config_args;
 use crate::commands::install::{install_cmd, install_missing_deps};
-use crate::commands::list::new_list;
+use crate::commands::list::cmd_list;
 use crate::commands::sync::{daily_file_syncs, game_version_sync};
 use crate::logging::{init_logging, VerboseLevel};
 use crate::utils::{get_expanded_path, sorted_game_versions, RustiqueOptions};
@@ -120,7 +120,7 @@ async fn async_main() {
                notice(format!("[{}]",versions.join("], [").as_str()), Some(Color::Yellow), vec![]); 
                 
             } else {
-                match new_list(&mod_dir, args.updates, false).await {
+                match cmd_list(&mod_dir, args.updates, false, false).await {
                     Ok(()) => {
 
                     },

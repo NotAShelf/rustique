@@ -1,5 +1,6 @@
 use clap::{Args, Subcommand};
 use crate::commands::arg_structs::info_args::ModInfoArgs;
+use crate::commands::arg_structs::list_args::ListArgs;
 
 #[derive(Args, Debug)]
 pub struct ModpackCommands {
@@ -40,18 +41,21 @@ pub enum ModpackSubCommands {
     Delete(MPDeleteArgs),
     
     /// Show all modpacks that are currently installed
-    List(MPListArgs),
+    List(ListArgs),
     
     /// Displays a nice table showing informatio about the modpack, including descriptions of each mod.
-    Info(ModInfoArgs)
+    Info(ModInfoArgs),
+    
+    /// Manipulate the modpacks you created
+    Local(MPLocalArgs)
 }
 
 #[derive(Args, Debug, Clone)]
 pub struct MPCreateArgs {
     
-    /// There are a lot of options, this flag will ask you all the questions to create a new mod pack
-    #[arg(short, long, default_value = "false")]
-    pub interactive: bool,
+    // /// There are a lot of options, this flag will ask you all the questions to create a new mod pack
+    // #[arg(short, long, default_value = "false")]
+    // pub interactive: bool,
     
     /// *Required* This is the long form name of your modpack, "Theysa magic mod pack"
     #[arg(short, long)]
@@ -90,6 +94,12 @@ pub struct MPCreateArgs {
     /// *Optional* Location to save modpack, default is ~/.config/rustique/modpacks/mypacks
     #[arg(short, long, value_name = "PATH")]
     pub save_path: Option<String>,
+    
+    /// *Optional* By default, when you create a modpack it will grab ALL mods in the specified dir, including mods from other modpacks you have enabled. If you want to ignore the installed modpacks, just set this to true.
+    /// 
+    /// This is false be default so you can make modpacks from other modpacks with ease. You can also just disable the modpacks first, but this option is available
+    #[arg(short = 'I', long, default_value = "false")]
+    pub ignore_other_modpacks: bool,
 }
 
 
@@ -129,11 +139,55 @@ pub struct MPEnableArgs{
     pub force: bool,
 }
 
-#[derive(Args, Debug, Clone)]
-pub struct MPListArgs {
-    #[arg(short, long, default_value = "false")]
-    pub show_only_updates: bool,
-}
 
 #[derive(Args, Debug, Clone)]
 pub struct MPInfo {}
+
+
+#[derive(Args, Debug, Clone)]
+pub struct MPLocalArgs {
+    #[command(subcommand)]
+    pub subcommands: MPLocalSubCommands
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum MPLocalSubCommands {
+    /// List all locally created modpacks. It ONLY shows the modpacks you've created, use `Rustique modpack list` to see the modpacks you installed.
+    List,
+    /// Install a new mod into your modpack. 
+    Install(MPLocalInstallArgs),
+    /// Update lets you manually update either all your mods (default) or a specific set of mods. If you want to install a specific version of the mod, use `Rustique modpack local install` instead. 
+    Update(MPLocalUpdateArgs),
+    /// Enable your own modpack. This command will create a symlink to the mods in your modpack into your default mod directory.
+    Enable(MPEnableArgs),
+    /// Disable your own modpack. See `Rustique modpack local list` for which ones are enabled.
+    Disable(MPDisableArgs),
+   
+    /// This feature is being worked on...
+    Delete,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct MPLocalInstallArgs {
+    /// The ID of your locally created modpack
+    pub mpk_id: String,
+    
+    /// The mod you want to install into this modpack. This command will update your modpack.zip as well
+    #[arg(short = 'm', long)]
+    pub mod_id: Option<String>,
+    
+    /// Install a specific version of the mod. You can use `Rustique info mod_id` to see versions for that mod. 
+    #[arg(short = 'v', long)]
+    pub mod_version: Option<String>
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct MPLocalUpdateArgs {
+    
+    /// The ID of your locally created modpack
+    pub mpk_id: String,
+    
+    /// Update a specific set of mods. You can specify any number of mods with this command.
+    #[arg(short = 'm', long)]
+    pub mod_id: Option<String>,
+}

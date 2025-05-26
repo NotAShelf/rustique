@@ -1,5 +1,8 @@
 # Version 0.4.0-alpha
-* Added check during the install command to verify if the requested ID is even valid.
+* Implemented modpack functions! Create, Install, Enable/Disable, List, Info
+* The modpack functionality has a lot to it. See the wiki for usage examples
+* There are now builds for Intel and Arm based Macs! I used Github Actions, so it *should* work. Its untested though..
+* Various bug fixes and tweaks
 
 # Version 0.3.2-alpha
 * Implemented the `Rustique download` command to download versions of the Vintage Story game itself. You can specify where its saved via the command line or the config. Default save location is your Downloads folder.

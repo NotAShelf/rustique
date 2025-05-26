@@ -3,9 +3,9 @@ use std::process::exit;
 use comfy_table::{Attribute, Color};
 use tracing::{error, info};
 use owo_colors::OwoColorize;
-use crate::commands::arg_structs::modpack_args::{ModpackCommands, ModpackSubCommands};
+use crate::commands::arg_structs::modpack_args::{MPLocalSubCommands, ModpackCommands, ModpackSubCommands};
 use crate::commands::info::info;
-use crate::commands::list::new_list;
+use crate::commands::list::cmd_list;
 use crate::config::config_manager::get_config;
 use crate::information_utils::notice;
 use crate::modpack::mp_create::{collect_mp_create_args, mp_create};
@@ -21,11 +21,11 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
             let mut parse_args = match collect_mp_create_args(args) {
                 Ok(m) => {m}
                 Err(e) => {
-                    error!("Failed collecting modpack commands.. {}", e.to_string());
+                    error!("(THIS IS A BUG, Please report it) - Failed collecting modpack commands.. {}", e.to_string());
                     exit(1);
                 }
             };
-            match mp_create(mod_dir, &mut parse_args, args.save_path.clone()).await {
+            match mp_create(mod_dir, &mut parse_args, args.save_path.clone(), args.ignore_other_modpacks).await {
                 Ok(_) => {},
                 Err(e) => {
                     error!("{}", e.to_string().red().bold());
@@ -99,7 +99,7 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
         ModpackSubCommands::List(args) => {
             let config = get_config().read().await;
             let packs_path = Path::new(&config.modpacks.modpack_dir).join("packs");
-            match new_list(&packs_path, args.show_only_updates, true).await {
+            match cmd_list(&packs_path, args.updates, true, false).await {
                 Ok(()) => {}
                 Err(e) => {
                     error!("{}", e.to_string().red().bold());
@@ -120,6 +120,27 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
                 Err(e) => {
                     error!("{}", e.to_string().red().bold());
                 }
+            }
+        }
+        
+        ModpackSubCommands::Local(args) => {
+            match &args.subcommands {
+                MPLocalSubCommands::List => {
+                    let config = get_config().read().await;
+                    let packs_path = Path::new(&config.modpacks.modpack_dir).join("mypacks");
+                    match cmd_list(&packs_path, false, true, true).await {
+                        Ok(()) => {}
+                        Err(e) => {
+                            error!("{}", e.to_string().red().bold());
+                        }
+                    }
+                }
+                MPLocalSubCommands::Install(install_args) => {}
+                MPLocalSubCommands::Update(update_args) => {}
+                MPLocalSubCommands::Enable(enable_args) => {}
+                MPLocalSubCommands::Disable(disable_args) => {}
+                MPLocalSubCommands::Delete => {}
+                
             }
         }
     }

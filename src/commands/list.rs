@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use crate::aliases::{ModFileName, ModID};
 use crate::api::api_structs::{ModInfo};
-use crate::commands::sync::{get_sync_data, ModSyncInfo, RustiqueSyncJson};
+use crate::commands::sync::{get_sync_data, sync, ModSyncInfo, RustiqueSyncJson};
 use crate::rustique_errors::RustiqueError;
 use crate::utils::{extract_all_mods_metadata, gather_dependencies, gather_missing_dependencies, parse_json_file, sanitize_string};
 use crate::version_management::parse_version;
@@ -30,7 +30,7 @@ fn grab_this_mod_deps(mod_info: &ModInfo, dep_list: &[Install]) -> String {
 }
 
 #[allow(clippy::filter_map_next)]
-pub async fn new_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: bool) -> Result<(), RustiqueError> {
+pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: bool, local_mp_call: bool) -> Result<(), RustiqueError> {
     let mod_dir = mod_dir.as_ref();
     let start_time = Instant::now();
     let config = get_config().read().await;
@@ -66,17 +66,27 @@ pub async fn new_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
             _ => "N/A"
         };
         
-        if modpack_call && matches!(ListColumn::from_str(column), Ok(ListColumn::MissingDeps)) {
+        if (local_mp_call || modpack_call) && matches!(ListColumn::from_str(column), Ok(ListColumn::MissingDeps)) {
             debug!("modpack_call on missingDeps");
             return None;
-        } 
+        }
+        
+        if local_mp_call && matches!(ListColumn::from_str(column), Ok(ListColumn::LatestVersion)) {
+            debug!("local modpack_call on LatestVersio");
+            return None; 
+        }
         
         Some(prep_cell(col_txt, color, attr, None, None))
     }).collect();
     table.set_header(Row::from(header_cells));
 
     // Unfortunately we need all this data to get accurate information for list
-    let sync_data = get_sync_data(mod_dir).await?;
+    let sync_data = if local_mp_call {
+        None
+    } else {
+        Some(get_sync_data(mod_dir).await?)
+    };
+    
     let installed_mods = extract_all_mods_metadata(mod_dir, false).await?;
     
     let mut sorted_mods: Vec<(ModFileName, ModInfo)> = installed_mods.clone().into_iter().collect();
@@ -84,7 +94,15 @@ pub async fn new_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
     
     let all_deps = gather_dependencies(&installed_mods);
     
-    let missing_deps = gather_missing_dependencies(&installed_mods, &[], &sync_data.rustique_sync);
+    // If modpack local is called, we ignore sync data for the mod_dir as they will only be local modpacks, there is no sync data
+    // So we set to an empty hashmap 
+    let sync_hashmap = if let Some(sd) = &sync_data {
+        &sd.rustique_sync
+    } else {
+        &HashMap::new()
+    };
+    
+    let missing_deps = gather_missing_dependencies(&installed_mods, &[], &sync_hashmap);
    
     
     let mut enabled_modpacks: HashMap<ModID, Vec<ModID>> = config.modpacks.enabled.iter().map(|m| (m.clone(), Vec::new())).collect();
@@ -103,7 +121,7 @@ pub async fn new_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
     let rows: Vec<Row> = sorted_mods
         .iter()
         .filter(|(_, mod_info)| {
-            !only_updated || sync_data.rustique_sync.values()
+            !local_mp_call || !only_updated || sync_hashmap.values()
                 .find(|sync| sync.mod_name == mod_info.name)
                 .is_some_and(|sync| sync.latest_known_version != sync.installed_version)
         })
@@ -115,7 +133,7 @@ pub async fn new_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                 let color = properties.color.clone();
                 let attr = properties.attribute.clone();
 
-                let (mod_sync_id, mod_sync_data): (ModID, ModSyncInfo) = sync_data.rustique_sync
+                let (mod_sync_id, mod_sync_data): (ModID, ModSyncInfo) = sync_hashmap
                     .iter()
                     .filter_map(|(mod_id, mod_sync)| {
                     if **mod_id == mod_info.mod_id
@@ -130,7 +148,6 @@ pub async fn new_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                 match <ListColumn as FromStr>::from_str(column) {
                     Ok(ListColumn::Name) => {
                         Some(prep_cell(&mod_info.name, color, attr, None, None))
-
                     },
                     Ok(ListColumn::ModId) => {
                         
@@ -166,6 +183,11 @@ pub async fn new_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                         Some(prep_cell(txt.to_string(), color, attr, None, Some(CellAlignment::Right)))
                     },
                     Ok(ListColumn::LatestVersion) => {
+                        // No need to show LatestVersion for local modpack, they are always the latest version
+                        if local_mp_call {
+                            return None    
+                        }
+                        
                         let latest = mod_sync_data.latest_known_version.clone();
                         let mut pinned = String::new(); 
                         if pkg.is_some() {

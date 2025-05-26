@@ -44,13 +44,14 @@ pub fn collect_mp_create_args(args: &MPCreateArgs) -> Result<ModInfo, RustiqueEr
 }
 
 
-pub async fn mp_create<P: AsRef<Path>>(mod_dir: P, mod_pack: &mut ModInfo, save_location: Option<impl PathRef>) -> Result<(), RustiqueError> {
+pub async fn mp_create<P: AsRef<Path>>(mod_dir: P, mod_pack: &mut ModInfo, save_location: Option<impl PathRef>, ignore_other_mp: bool) -> Result<(), RustiqueError> {
     
     let config = get_config().read().await;
     
     let mods_search_data = parse_search_file().await?.mods;
-    
-    let all_mods = extract_all_mods_metadata(mod_dir, false).await?;
+   
+    // We DO want to ignore all the symlinks when creating a new modpack
+    let all_mods = extract_all_mods_metadata(mod_dir, ignore_other_mp).await?;
     let mp_mods: HashMap<ModID, ModVersion> = all_mods.iter().filter_map(|(mod_filename, mod_info)| {
         let mod_id = if mod_info.mod_id.is_empty() {
             find_mod_id(&mod_info.name, mod_filename, &mods_search_data).unwrap_or_default()
