@@ -1,6 +1,6 @@
 #![warn(clippy::perf, clippy::pedantic)]
 #![warn(clippy::manual_string_new)]
-#![allow(clippy::redundant_closure_for_method_calls, clippy::struct_field_names, clippy::doc_markdown)]
+#![allow(clippy::redundant_closure_for_method_calls, clippy::struct_field_names, clippy::doc_markdown, clippy::unnecessary_wraps)]
 
 mod utils;
 mod api;
@@ -11,20 +11,18 @@ mod aliases;
 mod version_management;
 mod commands;
 mod logging;
-mod config_manager;
 mod install_manager;
 mod traits;
-mod config_structs;
-mod flatten_map;
 mod information_utils;
+mod modpack;
+mod config;
+mod consts;
 
 use crate::cli_commands::{Cli, Commands, ShellType};
-use crate::commands::arg_structs::modpack_args::ModpackCommands;
-use crate::commands::config::parse_config_args;
+use config::config::parse_config_args;
 use crate::commands::install::{install_cmd, install_missing_deps};
 use crate::commands::list::new_list;
 use crate::commands::sync::{daily_file_syncs, game_version_sync};
-use crate::config_manager::{get_config, init_config};
 use crate::logging::{init_logging, VerboseLevel};
 use crate::utils::{get_expanded_path, sorted_game_versions, RustiqueOptions};
 use clap::{CommandFactory, Parser};
@@ -41,7 +39,10 @@ use tracing::{debug, error, info, warn};
 use crate::commands::download::download;
 use crate::commands::info::info;
 use crate::commands::search::search;
+use crate::config::config_manager::{get_config, init_config};
 use crate::information_utils::{elapsed_footer, notice};
+use crate::modpack::modpack_commands::parse_modpack_commands;
+use crate::traits::ref_ext::PathRef;
 use crate::traits::string_ext::StrLowerExt;
 
 fn main() {
@@ -106,7 +107,7 @@ async fn async_main() {
                     }
                 }
             } else {
-                handle_sync_call(&mod_dir).await;
+                handle_sync_call(&mod_dir, false).await;
             }
         }
         Commands::List(args) => {
@@ -116,10 +117,10 @@ async fn async_main() {
                 
                 let versions: Vec<String> = sorted_versions.into_iter().filter(|v| v.lower_contains(filter_by)).collect();
                 
-               notice(&format!("[{}]",versions.join("], [").as_str()), Some(Color::Yellow), vec![]); 
+               notice(format!("[{}]",versions.join("], [").as_str()), Some(Color::Yellow), vec![]); 
                 
             } else {
-                match new_list(&mod_dir, args.updates).await {
+                match new_list(&mod_dir, args.updates, false).await {
                     Ok(()) => {
 
                     },
@@ -132,7 +133,7 @@ async fn async_main() {
         Commands::Update(args) => {
             match update_mods(&mod_dir, args.mod_ids.clone(), args.keep_old_files).await {
                 Ok(()) => {
-                    handle_sync_call(&mod_dir).await;
+                    handle_sync_call(&mod_dir, false).await;
                 }
                 Err(e) => {
                     warn!("{}\n\r", e.to_string().red().bold());
@@ -152,28 +153,30 @@ async fn async_main() {
             let start_time = Instant::now();
             let config = get_config().read().await;
 
+            
+
+            if !args.mod_ids.is_empty() {
+                match install_cmd(&mod_dir, args.mod_ids.clone(), args.missing_dependencies).await {
+                    Ok(()) => {
+                        handle_sync_call(&mod_dir, false).await;
+                    }
+                    Err(e) => {
+                        error!("{}", e);
+                    }
+                }
+            }
+            
             if args.missing_dependencies {
                 match install_missing_deps(&mod_dir, args.mod_ids.clone()).await {
                     Ok(()) => {
-                        handle_sync_call(&mod_dir).await;
+                        handle_sync_call(&mod_dir, false).await;
                     },
                     Err(e) => {
                         error!("{}", e);
                     }
                 }
             }
-
-            if !args.mod_ids.is_empty() {
-                match install_cmd(&mod_dir, args.mod_ids.clone(), args.missing_dependencies).await {
-                    Ok(()) => {
-                        handle_sync_call(&mod_dir).await;
-                    }
-                    Err(e) => {
-                        error!("{}", e);
-                    }
-                }
-            }
-
+            
             if config.show_execution_time {
                 elapsed_footer(start_time, "Install");
             }
@@ -186,7 +189,7 @@ async fn async_main() {
         }
         Commands::Info(args) => {
             match info(args).await {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(e) => {
                     error!("{}", e.to_string().red().bold());
                 }
@@ -198,23 +201,16 @@ async fn async_main() {
                 error!("{}", e.to_string().red().bold());
             }
         },
-        Commands::ModPack{command} => {
-            match command {
-                ModpackCommands::Create(args) => {
-                    if args.mod_dir.is_some() {
-                        println!("Creating mod pack from {}", mod_dir.as_path().display());
-                    }
-                    println!("creating modpack with name: {}", &args.name);
-                }
-            }
+        Commands::Modpack(cmds) => {
+           parse_modpack_commands(cmds, &mod_dir).await;
         }
        Commands::Misc{ .. }=> {},
     }
 }
 
 // Update this function to be async
-async fn handle_sync_call(mod_dir: &PathBuf) {
-    match sync(mod_dir).await {
+async fn handle_sync_call(mod_dir: impl PathRef, quiet: bool) {
+    match sync(mod_dir.as_ref(), quiet, vec![]).await {
         Ok(()) => {},
         Err(e) => {
             error!("{}", e.to_string().red().bold());

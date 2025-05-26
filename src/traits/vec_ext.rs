@@ -20,4 +20,3 @@ impl VecStringExt for Vec<String> {
         self.iter().any(|q| self.contains_ignore_case(q))
     }
 }
-

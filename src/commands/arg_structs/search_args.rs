@@ -1,6 +1,6 @@
 use clap::{Args};
 use crate::commands::search::{Field, SortBy, SortOrder};
-use crate::config_structs::CellColor;
+use crate::config::config_structs::CellColor;
 
 #[derive(Args)]
 pub struct SearchArgs {
@@ -26,9 +26,7 @@ pub struct SearchArgs {
     #[arg(short,long)]
     pub author: Option<String>,
 
-
-
-
+    
     /// Search by a specific type of tag, example: Weapons or Technology
     #[arg(short, long)]
     pub tag: Option<String>,

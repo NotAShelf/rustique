@@ -1,5 +1,5 @@
 use crate::aliases::{DownloadURL, ModID, ModName, ModVersion};
-use crate::api::api_structs::Mod;
+use crate::api::api_structs::{Mod, ModInfo};
 use crate::api::client::{ApiClient};
 use crate::api::download::download_requested_mods;
 use crate::commands::sync::ModSyncInfo;
@@ -8,13 +8,15 @@ use crate::utils::extract_zip_metadata;
 use crate::version_management::{parse_latest_version, parse_pinned_version};
 use rayon::prelude::*;
 use std::collections::{HashMap};
-use std::path::{Path, PathBuf};
-use tracing::{error, info};
-use crate::config_manager::get_config;
+use std::path::PathBuf;
+use tracing::{debug, error, info};
+use crate::config::config_manager::get_config;
+use crate::consts::FILE_MODINFO_JSON;
+use crate::traits::ref_ext::PathRef;
 use crate::traits::string_ext::StrLowerExt;
 
 // install & update both will obtain the info needed to fill this struct
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Install {
     pub mod_id: ModID,
     pub mod_name: ModName,
@@ -38,13 +40,32 @@ pub struct Installed {
     pub success: bool,
 }
 
+impl Default for Installed {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Installed {
+    pub fn new() -> Self {
+        Self {
+            mod_id: "".to_string(),
+            mod_name: "".to_string(),
+            installed_file_path: None,
+            old_file_path: None,
+            install_version: "".to_string(),
+            success: false,
+        }
+    }
+}
 
 
 pub async fn install_manager(
-    mod_dir: &Path,
+    mod_dir: impl PathRef,
     mods_requested: Vec<Install>,
     installed_mods: HashMap<ModID, ModSyncInfo>) -> Result<Vec<Installed>, RustiqueError> {
 
+    let mod_dir = mod_dir.as_ref(); 
     // this is the combined list of all mods installed, once download is completed, now mods will be
     // added here
     let mut total_mods_seen: HashMap<ModID, Installed> = HashMap::with_capacity(installed_mods.len());
@@ -86,7 +107,7 @@ pub async fn install_manager(
         // after the dependencies check
        let recently_installed: Vec<Installed> =  match download_requested_mods(mod_dir, &mut mods_requested, &client).await {
             Ok(processed_mods) => {
-                info!("Successfully installed mods: {:?}", processed_mods);
+                debug!("Successfully installed mods: {:?}", processed_mods);
                 // update recently installed so we can get the dependencies
                 mods_processed.extend(processed_mods.clone());
                 processed_mods
@@ -112,10 +133,9 @@ pub async fn install_manager(
         let mut needed_dependencies: Vec<Install> = recently_installed.par_iter()
             .filter_map(|installed_mod| {
                 let path = installed_mod.installed_file_path.clone()?;
-                match extract_zip_metadata(&path) {
+                match extract_zip_metadata::<ModInfo>(&path, FILE_MODINFO_JSON) {
                     Ok(mod_info) =>  {
                         Some(mod_info.dependencies
-                            .unwrap_or_default()
                             .into_iter()
                             .filter(|(dep_id, _)|{
                                     !dep_id.lower_contains("game")
@@ -161,10 +181,10 @@ pub async fn install_manager(
         for mod_to_install in &mut needed_dependencies {
             if let Some(res_mod) =  result.get(mod_to_install.mod_id.as_str()) {
                 mod_to_install.mod_name = res_mod.mod_json.name.clone().unwrap_or_default();
-                // TODO: version pinning here??
+                
                 let pkg = config.pkg.iter().find(|p| p.mod_id.eq(&res_mod.mod_json.mod_id.to_string()));
                 let (mod_version, download_url, _) = if let Some(mod_pkg) = pkg {
-                    parse_pinned_version(&res_mod.mod_json.releases, mod_pkg.clone(), config.pinned_game_version.clone())
+                    parse_pinned_version(&res_mod.mod_json.releases, &mod_pkg.clone(), config.pinned_game_version.clone())
                 } else {
                     parse_latest_version(&res_mod.mod_json.releases)
                 };

@@ -1,8 +1,16 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
-
-use crate::aliases::{ModID, ModVersion};
+use std::fs;
+use std::fs::File;
+use std::io::Write;
+use zip::{CompressionMethod, ZipWriter};
+use zip::write::SimpleFileOptions;
+use crate::aliases::{FileName, ModID, ModVersion};
+use crate::consts::FILE_MODINFO_JSON;
+use crate::information_utils::{command_output, display_table};
+use crate::rustique_errors::RustiqueError;
+use crate::traits::ref_ext::PathRef;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, Hash, PartialEq)]
 #[serde(untagged)]
@@ -52,7 +60,7 @@ impl Display for StringOrBool {
 
 // Due to mod authors not following the modinfo.json spec for mods, we have to
 // put an alias for all fields found in modinfo.json file.
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Default)]
 pub struct ModInfo {
     #[serde(default, alias = "Name")]
     pub name: String,
@@ -75,9 +83,9 @@ pub struct ModInfo {
     #[serde(default, alias = "Website")]
     pub website: Option<String>,
     #[serde(default, alias = "Authors")]
-    pub authors: Option<Vec<String>>,
+    pub authors: Vec<String>,
     #[serde(default, alias = "Contributors")]
-    pub contributors: Option<Vec<String>>,
+    pub contributors: Vec<String>,
     #[serde(default, alias = "Side")]
     pub side: Option<String>,
     #[serde(default, rename = "requiredOnClient", alias = "RequiredOnClient", alias = "RequiredonClient", alias = "Requiredonclient", alias = "requiredonclient")]
@@ -85,7 +93,60 @@ pub struct ModInfo {
     #[serde(default, rename = "requiredOnServer", alias = "RequiredOnServer", alias = "RequiredonServer", alias = "Requiredonserver", alias = "requiredonserver")]
     pub required_on_server: Option<StringOrBool>,
     #[serde(default, alias = "Dependencies")]
-    pub dependencies: Option<HashMap<ModID, ModVersion>>,
+    pub dependencies: HashMap<ModID, ModVersion>,
+}
+
+impl ModInfo {
+   pub fn build_modpack(&self, save_path: impl PathRef, mpk_id: FileName) -> Result<(), RustiqueError> {
+        // config dir should all be setup by this point
+       
+        let zip_path = save_path.as_ref().join(mpk_id +".zip");
+        let zip_archive = File::create(&zip_path)?;
+        let mut zip = ZipWriter::new(zip_archive);
+       
+        // Compression needs to be set to Deflated to make it the most compatible
+        let options = SimpleFileOptions::default()
+            .compression_method(CompressionMethod::Deflated);
+       
+       
+        let mod_info = serde_json::to_string_pretty(&self)
+            .map_err(|e|RustiqueError::SimpleError(e.to_string()))?;
+        self.add_file_to_zip(&mut zip, FILE_MODINFO_JSON, &mod_info, options).inspect_err(|_| {
+            let _ = self.delete_zip(&zip_path);
+        })?;
+        
+        
+        zip.finish().map_err(|e| {
+            let _ = self.delete_zip(&zip_path);
+            RustiqueError::ZipError {
+                context: "Failed creating modpack zip".into(),
+                source: e
+            }
+        })?;
+        
+        
+        display_table(
+            vec![command_output("Your Modpack has been created and saved to", zip_path.to_string_lossy())], 
+            None);
+
+        Ok(())
+    } 
+    
+     fn delete_zip(&self, save_path: impl PathRef) -> Result<(), RustiqueError> {
+        fs::remove_file(save_path.as_ref())
+            .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
+        
+        Ok(())
+    }
+    
+    fn add_file_to_zip(&self, zip: &mut ZipWriter<File>, filename: &str, content: &str, options: SimpleFileOptions) -> Result<(), RustiqueError> {
+        zip.start_file(filename, options)
+            .map_err(|e| RustiqueError::ZipError { context: format!("create: {filename}"), source: e })?;
+        zip.write_all(content.as_bytes())
+            .map_err(|e| RustiqueError::SimpleError(format!("Failed to write to zip archive {}",e.to_string())))?;
+        Ok(())
+    } 
+    
 }
 
 // Used for endpoint /api/mods

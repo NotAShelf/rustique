@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 use comfy_table::{Attribute, Color};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -7,7 +7,7 @@ use tokio::io::AsyncWriteExt;
 use tracing::info;
 use crate::api::client::{ApiClient, VSMirrorType};
 use crate::commands::arg_structs::download_args::DownloadArgs;
-use crate::config_manager::get_config;
+use crate::config::config_manager::get_config;
 use crate::information_utils::notice;
 use crate::rustique_errors::RustiqueError;
 use crate::traits::string_ext::StrLowerExt;
@@ -17,7 +17,17 @@ pub async fn download(args: &DownloadArgs) -> Result<(), RustiqueError> {
     args.validate()?;
 
     let config = get_config().read().await;
-    let download_dir = &args.save_dir.clone().unwrap_or(config.game_download_dir.clone());
+    let mut download_dir = match &args.save_dir.clone() {
+        Some(dir) => dir.clone(),
+        None => {
+            config.game_download_dir.clone()
+        }
+    };
+
+    if !Path::new(&download_dir).exists() {
+        download_dir = String::new();
+    }
+
 
     info!("Saving vintage story executable to: {}", &download_dir);
 
@@ -42,13 +52,13 @@ pub async fn download(args: &DownloadArgs) -> Result<(), RustiqueError> {
     }
 
     if !found {
-        notice(&format!("The version you provided [{user_version}] is not valid. The following are all valid versions.."), Some(Color::Red), vec![Attribute::Bold]);
-        notice(&format!("[{}]",game_versions.join("], [").as_str()), Some(Color::Magenta), vec![]);
+        notice(format!("The version you provided [{user_version}] is not valid. The following are all valid versions.."), Some(Color::Red), vec![Attribute::Bold]);
+        notice(format!("[{}]",game_versions.join("], [").as_str()), Some(Color::Magenta), vec![]);
         exit(1);
     }
 
 
-    notice(&format!("Downloading Vintage Story v{user_version}"), Some(Color::Yellow), vec![Attribute::Bold]);
+    notice(format!("Downloading Vintage Story v{user_version}"), Some(Color::Yellow), vec![Attribute::Bold]);
 
     let (url,filename) = client.download_uri(&args.os_type, &args.exe_type, &mirror_type, &user_version, Option::from(&args.windows_installer_type))?;
 
@@ -72,7 +82,7 @@ pub async fn download(args: &DownloadArgs) -> Result<(), RustiqueError> {
 
     // download the game
     let mut res = client.get_request(&url).await?;
-    let mut file = File::create(PathBuf::from(download_dir).join(&filename)).await?;
+    let mut file = File::create(PathBuf::from(&download_dir).join(&filename)).await?;
     let mut downloaded = 0;
 
     while let Some(chunk) = res.chunk().await.map_err(|e| RustiqueError::SimpleError(e.to_string()))? {
@@ -83,7 +93,7 @@ pub async fn download(args: &DownloadArgs) -> Result<(), RustiqueError> {
 
     pb.finish();
     
-    notice(&format!("Vintage Story has been saved to {download_dir}/{filename}"), Some(Color::Green), vec![Attribute::Bold]);
+    notice(format!("Vintage Story has been saved to {download_dir}/{filename}"), Some(Color::Green), vec![Attribute::Bold]);
     
     Ok(())
 }

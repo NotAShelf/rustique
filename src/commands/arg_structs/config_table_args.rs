@@ -1,6 +1,6 @@
 use clap::{ArgGroup, ValueEnum};
 use clap::{Args, Subcommand};
-use crate::config_structs::{CellAttr, CellColor, ListColumn, SearchColumn};
+use crate::config::config_structs::{CellAttr, CellColor, ListColumn, SearchColumn};
 
 #[derive(Args)]
 pub struct TableArgs {
