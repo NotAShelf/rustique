@@ -11,7 +11,7 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::OnceLock;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 use crate::config::config_structs::Tables;
 use crate::information_utils::{rustique_message, CellData, RustiqueMessage};
 use crate::traits::ref_ext::PathRef;
@@ -109,6 +109,14 @@ impl Default for Config {
         // let backup_mods_dir = get_expanded_path(PathBuf::from(CONFIG_DEFAULT_DIR).join("mod_backups"));
         let backup_mods_dir = Self::get_path().join("mod_backups");
         let modpack_dir = Self::get_path().join("modpacks");
+        
+        match Self::setup_modpack_dir("modpacks") {
+            Ok(_) => {},
+            Err(e) => {
+                warn!("Failed to setup modpack dir: {}", e);
+            }
+        }
+    
         info!("modpack_dir {}", modpack_dir.display());
 
         Self {

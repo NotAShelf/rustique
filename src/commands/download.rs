@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 use comfy_table::{Attribute, Color};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -17,7 +17,17 @@ pub async fn download(args: &DownloadArgs) -> Result<(), RustiqueError> {
     args.validate()?;
 
     let config = get_config().read().await;
-    let download_dir = &args.save_dir.clone().unwrap_or(config.game_download_dir.clone());
+    let mut download_dir = match &args.save_dir.clone() {
+        Some(dir) => dir.clone(),
+        None => {
+            config.game_download_dir.clone()
+        }
+    };
+
+    if !Path::new(&download_dir).exists() {
+        download_dir = String::new();
+    }
+
 
     info!("Saving vintage story executable to: {}", &download_dir);
 
@@ -72,7 +82,7 @@ pub async fn download(args: &DownloadArgs) -> Result<(), RustiqueError> {
 
     // download the game
     let mut res = client.get_request(&url).await?;
-    let mut file = File::create(PathBuf::from(download_dir).join(&filename)).await?;
+    let mut file = File::create(PathBuf::from(&download_dir).join(&filename)).await?;
     let mut downloaded = 0;
 
     while let Some(chunk) = res.chunk().await.map_err(|e| RustiqueError::SimpleError(e.to_string()))? {
