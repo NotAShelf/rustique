@@ -218,7 +218,7 @@ pub async fn parse_search_file() -> Result<ModsSearchFile, RustiqueError> {
         warn!("{}","Running daily sync to build search table, this is normal!".green());
         daily_file_syncs(true).await?;
     }
-    parse_json_file::<ModsSearchFile>(&file_path)
+    parse_json_file::<ModsSearchFile>(&file_path).await
 }
 
 pub async fn search(args: &SearchArgs) -> Result<(), RustiqueError> {

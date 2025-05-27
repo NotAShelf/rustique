@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tracing::{error, info};
 use std::fmt::Write;
+use std::process::exit;
 use clap::ValueEnum;
 use reqwest::Response;
 use crate::traits::ref_ext::StrRef;
@@ -112,17 +113,31 @@ impl ApiClient {
             .send()
             .await
             .map_err(|e| RustiqueError::ApiError {
-                context: format!("fetch_mod (get) [{mod_id}]"),
+                context: format!("fetch_mod (get) [{mod_id}]", ),
                 source: e
             })?;
 
+        let headers = response.headers().clone();
+        let status_code = response.status();
+        // let res_text = response.text().map_err(|e| RustiqueError::ApiError {
+        //     context: format!("fetch_mod (json) [{mod_id}]: failed to get response text"),
+        //     source: e,
+        // })?;
 
-        response.json::<Mod>()
-            .await
-            .map_err(|e| RustiqueError::ApiError {
-                context: format!("fetch_mod (json) [{mod_id}] - They may have provided the wrong mod_id or the api is not responding. Retry, if it fails you will need to manually update the mod."),
-                source: e
-            })
+        
+
+        info!("fetch_mod ({}): Status Code: {}", mod_id.magenta(), status_code.magenta());
+        info!("fetch_mod ({}): Headers: {:?}", mod_id.magenta(), headers.bright_blue());
+
+        let text = response.text().await
+        .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
+        
+        
+        
+        let parsed: Mod = serde_json::from_str(&text).map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
+        info!("{:?}", parsed);
+
+        Ok(parsed)
     }
 
     pub async fn fetch_mods_parallel(&self, mod_list: Vec<ModID>) -> Result<HashMap<ModID, Mod>, RustiqueError> {
@@ -161,7 +176,7 @@ impl ApiClient {
         for task in tasks {
             // Handle any JoinError from the task itself
             if let Ok(Some((mod_id, the_mod))) = task.await {
-                results.insert(mod_id.into(), the_mod);
+                results.insert(mod_id, the_mod);
             }
         }
 

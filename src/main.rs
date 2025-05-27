@@ -112,7 +112,7 @@ async fn async_main() {
         }
         Commands::List(args) => {
             if args.game_versions.is_some() {
-                let sorted_versions = sorted_game_versions();
+                let sorted_versions = sorted_game_versions().await;
                 let filter_by = &args.game_versions.clone().unwrap_or("1.20".into());
                 
                 let versions: Vec<String> = sorted_versions.into_iter().filter(|v| v.lower_contains(filter_by)).collect();

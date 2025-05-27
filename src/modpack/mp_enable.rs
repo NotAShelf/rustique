@@ -21,7 +21,7 @@ pub async fn mp_enable(args: MPEnableArgs, mod_dir: impl PathRef) -> Result<Stri
     let mod_pack_install_dir = Path::new(&config.modpacks.modpack_dir).join("installed").join(&args.mpk_id);
     
     if !mod_pack_install_dir.exists() {
-        return Err(RustiqueError::SimpleError("Modpack {} doesn't exist. Run 'Rustique modpack list' to view installed modpacks.".into()));
+        return Err(RustiqueError::SimpleError("Modpack {} doesn't exist. Run 'Rustique modpack list' or 'Rustique modpack local list' to view your installed modpacks.".into()));
     }
     
     // check if a modpack already exists

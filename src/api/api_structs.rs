@@ -2,10 +2,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::fs;
-use std::fs::File;
-use std::io::Write;
-use zip::{CompressionMethod, ZipWriter};
-use zip::write::SimpleFileOptions;
+use std::path::PathBuf;
+// use std::fs::File;
+use tokio::fs::File;
+use async_zip::tokio::write::ZipFileWriter;
 use crate::aliases::{FileName, ModID, ModVersion};
 use crate::consts::FILE_MODINFO_JSON;
 use crate::information_utils::{command_output, display_table};
@@ -96,54 +96,55 @@ pub struct ModInfo {
     pub dependencies: HashMap<ModID, ModVersion>,
 }
 
-impl ModInfo {
-   pub fn build_modpack(&self, save_path: impl PathRef, mpk_id: FileName) -> Result<(), RustiqueError> {
+impl ModInfo { 
+    pub async fn build_modpack(&self, save_path: impl PathRef, mpk_id: FileName) -> Result<PathBuf, RustiqueError> {
         // config dir should all be setup by this point
-       
+        
         let zip_path = save_path.as_ref().join(mpk_id +".zip");
-        let zip_archive = File::create(&zip_path)?;
-        let mut zip = ZipWriter::new(zip_archive);
+        let zip_archive = File::create(&zip_path).await?;
+        let mut zip = ZipFileWriter::with_tokio(zip_archive);
+       
        
         // Compression needs to be set to Deflated to make it the most compatible
-        let options = SimpleFileOptions::default()
-            .compression_method(CompressionMethod::Deflated);
-       
        
         let mod_info = serde_json::to_string_pretty(&self)
-            .map_err(|e|RustiqueError::SimpleError(e.to_string()))?;
-        self.add_file_to_zip(&mut zip, FILE_MODINFO_JSON, &mod_info, options).inspect_err(|_| {
-            let _ = self.delete_zip(&zip_path);
-        })?;
+           .map_err(|e|RustiqueError::SimpleError(e.to_string()))?;
         
+        if let Err(e) = self.add_file_to_zip(&mut zip, FILE_MODINFO_JSON, &mod_info, async_zip::Compression::Deflate).await {
+            let _ = self.delete_zip(&zip_path).await;
+           return Err(RustiqueError::SimpleError("Unable to add file to zip archive".into()));
+        }
         
-        zip.finish().map_err(|e| {
-            let _ = self.delete_zip(&zip_path);
-            RustiqueError::ZipError {
+        if let Err(e) = zip.close().await { 
+            let _ = self.delete_zip(&zip_path).await;
+            return Err(RustiqueError::ZipError {
                 context: "Failed creating modpack zip".into(),
                 source: e
-            }
-        })?;
+            });
+        }
         
         
-        display_table(
-            vec![command_output("Your Modpack has been created and saved to", zip_path.to_string_lossy())], 
-            None);
-
-        Ok(())
+       Ok(zip_path) 
     } 
     
-     fn delete_zip(&self, save_path: impl PathRef) -> Result<(), RustiqueError> {
-        fs::remove_file(save_path.as_ref())
+    async fn delete_zip(&self, save_path: impl PathRef) -> Result<(), RustiqueError> { 
+        tokio::fs::remove_file(save_path.as_ref()).await
             .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
         
         Ok(())
     }
     
-    fn add_file_to_zip(&self, zip: &mut ZipWriter<File>, filename: &str, content: &str, options: SimpleFileOptions) -> Result<(), RustiqueError> {
-        zip.start_file(filename, options)
-            .map_err(|e| RustiqueError::ZipError { context: format!("create: {filename}"), source: e })?;
-        zip.write_all(content.as_bytes())
-            .map_err(|e| RustiqueError::SimpleError(format!("Failed to write to zip archive {}",e.to_string())))?;
+    async fn add_file_to_zip(&self, zip: &mut ZipFileWriter<File>, filename: &str, content: &str, compression: async_zip::Compression) -> Result<(), RustiqueError> {
+        use async_zip::ZipEntryBuilder;
+        
+        let entry_builder = ZipEntryBuilder::new(filename.into(), compression);
+        
+        zip.write_entry_whole(entry_builder, content.as_bytes()).await
+            .map_err(|e| RustiqueError::ZipError { 
+                context: format!("Unable to create: {filename}"),
+                source: e 
+            })?;
+        
         Ok(())
     } 
     
@@ -258,7 +259,7 @@ pub struct ApiModJson {
     #[serde(default)]
     pub follows: u32,
     
-    #[serde(default)]
+    #[serde(default, rename = "trendingpoints")]
     pub trending_points: u32,
     
     #[serde(default)]
@@ -296,7 +297,7 @@ pub struct Releases {
     pub filename: Option<StringOrInt>,
     // mod awearablelight has null for a fileid on a release
     #[serde(default, rename = "fileid")]
-    pub file_id: Option<u32>,
+    pub file_id: u64,
 
     #[serde(default)]
     pub downloads: u32,

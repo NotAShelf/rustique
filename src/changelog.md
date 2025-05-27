@@ -1,3 +1,8 @@
+# Version 0.4.1-alpha
+* Fully switched to the tokio-async library, swapped from synchronous zip lib to async-zip. This shows a slight increase in performance when using Rustique on a lot of mods at once.
+* A flag for `modpack create --ignore-modpacks` was added to let you choose to ignore enabled modpacks. Its set to false by default so you can create new modpacks out of existing ones.
+* A flag for `modpack create --copy-mods` was added for choosing to copy the mods made by the command instead of moving them. By default when you create a modpack, the mods are moved into the ~/.config/rustique/modpacks/installed/yourpack folder. If you set --copy-mods, the orignal mods will stay in place and a copy will be created into the installed dir.
+
 # Version 0.4.0-alpha
 * Implemented modpack functions! Create, Install, Enable/Disable, List, Info
 * The modpack functionality has a lot to it. See the wiki for usage examples

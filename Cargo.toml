@@ -10,7 +10,6 @@ dev = []
 
 [dependencies]
 clap = { version = "4.5.37", features = ["color", "suggestions", "derive"] }
-rayon = "1.10.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 dirs = { version = "6.0.0" }
@@ -24,13 +23,15 @@ toml = "0.8.22"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 reqwest = { version = "0.12.15", features = ["json", "rustls-tls"], default-features = false }
-tokio = { version = "1.44.2", features = ["fs", "rt-multi-thread", "macros"] }
+tokio = { version = "1.44.2", features = ["fs","rt-multi-thread", "macros", "io-util"] }
 clap_complete = "4.5.50"
 owo-colors = { version = "4.2.0", features = ["supports-colors"] }
-indexmap = { version = "2.9.0", features = ["rayon", "serde"] }
+indexmap = { version = "2.9.0", features = ["serde"] }
 html2text = "0.15.0"
-indicatif = { version = "0.17.11", features = ["rayon", "tokio"] }
-zip = "3.0.0"
+indicatif = { version = "0.17.11", features = ["tokio"] }
+async_zip = { version = "0.0.17", features = ["tokio", "tokio-fs", "deflate"] }
+futures = "0.3.31"
+num_cpus = "1.16.0"
 
 [profile.dev]
 opt-level = 1

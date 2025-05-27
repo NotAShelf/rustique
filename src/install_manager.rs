@@ -6,9 +6,9 @@ use crate::commands::sync::ModSyncInfo;
 use crate::rustique_errors::RustiqueError;
 use crate::utils::extract_zip_metadata;
 use crate::version_management::{parse_latest_version, parse_pinned_version};
-use rayon::prelude::*;
 use std::collections::{HashMap};
 use std::path::PathBuf;
+use futures::stream::{self, StreamExt};
 use tracing::{debug, error, info};
 use crate::config::config_manager::get_config;
 use crate::consts::FILE_MODINFO_JSON;
@@ -129,34 +129,56 @@ pub async fn install_manager(
         // extract the modinfojson from recently_installed and gather the dependencies.
         // subtract any dependency which already resides in total seen mods
 
+        let concurrent_limit = num_cpus::get();
+
+        // clone the keys we need as the async functions won't work with our hashmap, and its cheap to clone hashsets
+        let seen_mod_ids: std::collections::HashSet<String> = total_mods_seen.keys().map(|k| k.to_lowercase()).collect();
+
         #[allow(clippy::redundant_closure)]
-        let mut needed_dependencies: Vec<Install> = recently_installed.par_iter()
-            .filter_map(|installed_mod| {
-                let path = installed_mod.installed_file_path.clone()?;
-                match extract_zip_metadata::<ModInfo>(&path, FILE_MODINFO_JSON) {
-                    Ok(mod_info) =>  {
-                        Some(mod_info.dependencies
-                            .into_iter()
-                            .filter(|(dep_id, _)|{
+        let dep_map: Vec<HashMap<String, String>> = stream::iter(recently_installed.iter())
+            .map( |installed_mod| {
+                let seen_mod_ids = seen_mod_ids.clone(); // this cheaper than cloning the entire hashmap, logic stays the same
+                async move {
+                    let path = installed_mod.installed_file_path.clone()?;
+                    match extract_zip_metadata::<ModInfo>(&path, FILE_MODINFO_JSON).await {
+                        Ok(mod_info) => {
+                            let filtered_deps: HashMap<_, _> = mod_info.dependencies
+                                .into_iter()
+                                .filter(|(dep_id, _)| {
                                     !dep_id.lower_contains("game")
-                                    && !dep_id.lower_contains("creative")
-                                    && !dep_id.lower_contains("survival")
-                                    && !total_mods_seen.contains_key(dep_id.to_lowercase().as_str())
-                            }).collect::<HashMap<_, _>>())
-                    },
-                    Err(err) => {
-                        error!("Failed to extract zip metadata: {:?}", err);
-                        None
+                                        && !dep_id.lower_contains("creative")
+                                        && !dep_id.lower_contains("survival")
+                                        && !seen_mod_ids.contains(dep_id.to_lowercase().as_str())
+                                }).collect();
+
+                            if filtered_deps.is_empty() {
+                                None
+                            } else {
+                                Some(filtered_deps)
+                            }
+                        },
+                        Err(err) => {
+                            error!("Failed to extract zip metadata: {:?}", err);
+                            None
+                        }
                     }
                 }
             })
-            .flat_map_iter(|deps| deps.into_iter())
-            .map(|(mod_id, mod_version)| Install {
-                mod_id,
-                mod_name: String::new(),
-                version_to_install: mod_version,
-                download_url: String::new(),
-                current_file_path: None,
+            .buffer_unordered(concurrent_limit)
+            .filter_map(|res| futures::future::ready(res))
+            .collect()
+            .await;
+
+
+            let mut needed_dependencies: Vec<Install> = dep_map
+                .into_iter()
+                .flat_map(|deps| deps.into_iter())
+                .map(|(mod_id, mod_version)| Install {
+                    mod_id,
+                    mod_name: String::new(),
+                    version_to_install: mod_version,
+                    download_url: String::new(),
+                    current_file_path: None,
             }).collect();
 
         passes += 1;

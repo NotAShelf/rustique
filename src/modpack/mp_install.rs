@@ -76,7 +76,7 @@ pub async fn mp_install(mp_id: ModID, mp_version: Option<ModVersion>) -> Result<
 
     if let Some(modpack_packs_path) = modpack.installed_file_path {
         // Modpack is just a normal mod but we treat it differently when used with modpack
-        let modpack_info = extract_zip_metadata::<ModInfo>(&modpack_packs_path, FILE_MODINFO_JSON).inspect_err(|_| {
+        let modpack_info = extract_zip_metadata::<ModInfo>(&modpack_packs_path, FILE_MODINFO_JSON).await.inspect_err(|_| {
             notice(format!("The requested modpack has a malformed {FILE_MODINFO_JSON} file and Rustique is unable to parse it."), Some(Color::Red), vec![Attribute::Bold]);
         })?;
         

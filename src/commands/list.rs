@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use crate::aliases::{ModFileName, ModID};
 use crate::api::api_structs::{ModInfo};
-use crate::commands::sync::{get_sync_data, sync, ModSyncInfo, RustiqueSyncJson};
+use crate::commands::sync::{get_sync_data, ModSyncInfo, RustiqueSyncJson};
 use crate::rustique_errors::RustiqueError;
 use crate::utils::{extract_all_mods_metadata, gather_dependencies, gather_missing_dependencies, parse_json_file, sanitize_string};
 use crate::version_management::parse_version;
@@ -110,7 +110,7 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
     for (mid, v) in &mut enabled_modpacks {
         let mpath = Path::new(&config.modpacks.modpack_dir).join("installed").join(mid);
         if mpath.exists() {
-            let mp_sync_file = parse_json_file::<RustiqueSyncJson>(&mpath.join(FILE_RUSTIQUE_SYNC))?;
+            let mp_sync_file = parse_json_file::<RustiqueSyncJson>(&mpath.join(FILE_RUSTIQUE_SYNC)).await?;
             v.extend(mp_sync_file.rustique_sync.into_keys());
         }
     }

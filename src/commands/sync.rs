@@ -14,7 +14,7 @@ use std::time::{Instant};
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 use owo_colors::OwoColorize;
 use crate::config::config_manager::{get_config, Config, Package};
 use crate::consts::{FILE_GAME_VERSION_SYNC, FILE_MOD_SEARCH_SYNC, FILE_RUSTIQUE_SYNC};
@@ -92,7 +92,7 @@ pub async fn get_sync_data(mod_dir: impl PathRef) -> Result<RustiqueSyncJson, Ru
         sync(mod_dir, false, vec![]).await?;
     }
 
-    parse_json_file::<RustiqueSyncJson>(&fp)
+    parse_json_file::<RustiqueSyncJson>(&fp).await
 }
 
 
@@ -118,7 +118,7 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
     debug!("sync file: {}", sync_file_path.display());
 
     let mut sync_data = if sync_file_path.exists() {
-        match parse_json_file::<RustiqueSyncJson>(&sync_file_path) {
+        match parse_json_file::<RustiqueSyncJson>(&sync_file_path).await {
             Ok(json) => json,
             Err(e) => {
                 info!("{}",e);
@@ -135,7 +135,7 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
     let config_path = Config::get_path();
 
     let mods_search_file = config_path.join(FILE_MOD_SEARCH_SYNC);
-    let mods_search_data = match parse_json_file::<ModsSearchFile>(&mods_search_file) {
+    let mods_search_data = match parse_json_file::<ModsSearchFile>(&mods_search_file).await {
         Ok(json) => json,
         Err(e) => {
             // this shouldn't fail, but if it does, rerun the mod_id_sync()
@@ -152,7 +152,7 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
     }
     
     let game_version_sync_file = config_path.join(FILE_GAME_VERSION_SYNC);
-    let game_version_sync_data = match parse_json_file::<GameVersionSync>(&game_version_sync_file) {
+    let game_version_sync_data = match parse_json_file::<GameVersionSync>(&game_version_sync_file).await {
         Ok(json) => json,
         Err(e) => {
             info!("game version sync Error: {e}");
@@ -187,7 +187,13 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
 
         // check here for bad mod_id
         let mod_id = if mod_info.mod_id.is_empty() {
-            find_mod_id(&mod_info.name, mod_filename, &mods_search_data.mods)?
+            match find_mod_id(&mod_info.name, mod_filename, &mods_search_data.mods) {
+                Ok(mod_id) => mod_id,
+                Err(e) => {
+                    error!("{}", e);
+                    continue;
+                }
+            }
         } else {
             mod_info.mod_id.clone()
         };
@@ -282,7 +288,7 @@ pub async fn daily_file_syncs(force: bool) -> Result<ModsSearchFile, RustiqueErr
     info!("{} {}","Search file path:".green(), search_file.to_string_lossy().yellow());
 
     let mut file_data = if search_file.exists() {
-        match parse_json_file::<ModsSearchFile>(&search_file) {
+        match parse_json_file::<ModsSearchFile>(&search_file).await {
             Ok(json) => json,
             Err(e) => {
                 // delete the file and try again
@@ -335,7 +341,7 @@ pub async fn game_version_sync(force: bool) -> Result<GameVersionSync, RustiqueE
     // otherwise check if its time to do update
     
     let mut file_data = if file.exists() {
-        match parse_json_file::<GameVersionSync>(&file) {
+        match parse_json_file::<GameVersionSync>(&file).await {
             Ok(json) => json,
             Err(e) => {
                 info!("Game version sync file parse error: {}", e);
@@ -351,7 +357,7 @@ pub async fn game_version_sync(force: bool) -> Result<GameVersionSync, RustiqueE
     let sync_time = i64::from(config.sync_latest_game_version_file_every);
     
     if file_data.game_versions.is_empty() || force || timestamp_older_than(sync_time, &file_data.last_sync){
-        notice("Syncing latest game versions..", Some(comfy_table::Color::Yellow), vec![Attribute::Bold]);
+        notice("Syncing latest game versions..", Some(Color::Yellow), vec![Attribute::Bold]);
         
         let client = ApiClient::new();
         let gvs = client.fetch_game_versions().await?;

@@ -12,7 +12,15 @@ pub struct ModpackCommands {
 #[derive(Subcommand, Debug, Clone)]
 pub enum ModpackSubCommands {
     
-    /// Create a new mod pack.  
+    /// Create a new mod pack. 
+    ///
+    /// When you create a new modpack, the pack file itself will be save to ~/.config/rustique/modpacks/mypacks/yourmod.zip
+    /// 
+    /// The mods found in the mod_dir you are creating from, will be MOVED into ~/.config/rustique/modpacks/installed/yourmod.
+    /// If you want to COPY the files instead, pass the --copy-mods flag with create. 
+    /// 
+    /// Once your mod has been created, you can use modpack local commands to manage your modpacks, see `Rustique modpack help local`
+    /// 
     #[command(about = "Create a new modpack")]
     Create(MPCreateArgs),
 
@@ -99,7 +107,11 @@ pub struct MPCreateArgs {
     /// 
     /// This is false be default so you can make modpacks from other modpacks with ease. You can also just disable the modpacks first, but this option is available
     #[arg(short = 'I', long, default_value = "false")]
-    pub ignore_other_modpacks: bool,
+    pub ignore_modpacks: bool,
+    
+    /// *Optional* Copy the mods in your pack instead of moving them. By default, when you create a new modpack, the mods themselves will be moved into a new folder associated with your modpack. 
+    #[arg(short = 'C', long, default_value = "false")]
+    pub copy_mods: bool,
 }
 
 
@@ -158,11 +170,7 @@ pub enum MPLocalSubCommands {
     Install(MPLocalInstallArgs),
     /// Update lets you manually update either all your mods (default) or a specific set of mods. If you want to install a specific version of the mod, use `Rustique modpack local install` instead. 
     Update(MPLocalUpdateArgs),
-    /// Enable your own modpack. This command will create a symlink to the mods in your modpack into your default mod directory.
-    Enable(MPEnableArgs),
-    /// Disable your own modpack. See `Rustique modpack local list` for which ones are enabled.
-    Disable(MPDisableArgs),
-   
+    
     /// This feature is being worked on...
     Delete,
 }

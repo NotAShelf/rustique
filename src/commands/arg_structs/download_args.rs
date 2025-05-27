@@ -1,4 +1,3 @@
-use crate::utils::latest_stable;
 use clap::ArgGroup;
 use clap::Args;
 use crate::api::client::{VSExecutabletype, VSOSType, VSWinInstallerType};
@@ -12,7 +11,7 @@ pub struct DownloadArgs {
     pub save_dir: Option<String>,
     
     /// To see valid game versions use `Rustique list --game-versions`, default is latest stable version
-    #[arg(short, long, value_name = "VERSION", default_value_t = latest_stable())]
+    #[arg(short, long, value_name = "VERSION")]
     pub game_version: String,
     
     /// Choose the os type to download

@@ -7,16 +7,14 @@ use crate::rustique_errors::RustiqueError;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use owo_colors::OwoColorize;
 use dirs::home_dir;
-use rayon::prelude::*;
 use std::collections::HashMap;
-use std::fs::{DirEntry, File};
-use std::io::{Read};
 use std::path::PathBuf;
-use std::fs;
 use std::process::exit;
-use tokio::io::AsyncWriteExt;
+use async_zip::tokio::read::fs::ZipFileReader;
+use futures::{stream, StreamExt};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::fs::File;
 use tracing::{debug, error, info, warn};
-use zip::ZipArchive;
 use crate::config::config_manager::get_config;
 use crate::consts::{FILE_GAME_VERSION_SYNC, FILE_MODINFO_JSON, FILE_RUSTIQUE_SYNC};
 use crate::modpack::symlink_manager::SymlinkManager;
@@ -130,7 +128,7 @@ pub fn get_expanded_path(dir: impl PathRef) -> PathBuf {
     dir.to_path_buf()
 }
 
-pub fn extract_zip_metadata<T>(entry: impl PathRef, inner_file: &str) -> Result<T, RustiqueError>
+pub async fn extract_zip_metadata<T>(entry: impl PathRef, inner_file: &str) -> Result<T, RustiqueError>
 where T: for<'de> serde::Deserialize<'de>
 {
     let entry = entry.as_ref(); 
@@ -141,33 +139,44 @@ where T: for<'de> serde::Deserialize<'de>
     if entry.extension().is_some_and(|x| !x.eq_ignore_ascii_case("zip")) {
         return Err(RustiqueError::SimpleError(format!("Skipping non-zip file: {}", entry.display())));
     }
-    let file = File::open(entry)
-        .map_err(|e| RustiqueError::IoError {
-            context: format!("Failed to open {:?}: {}", entry.file_name(), e),
-            source: e,
-        })?;
-    let mut archive = ZipArchive::new(file)
+
+    let mut archive = ZipFileReader::new(entry).await
         .map_err(|e| RustiqueError::ZipError {
             context: format!("Failed to open zip archive {:?}: {}", entry.file_name(),e),
             source: e
         })?;
-    let mut mod_info_file = archive.by_name(inner_file)
-        .map_err(|e| RustiqueError::ZipError {
-            context: format!("Failed to find {} in {:?}: {}", inner_file, entry.file_name(), e),
-            source: e
+
+    // Locate the file we want
+    let entry_index = archive.file().entries().iter()
+        .position(|e| e.filename().as_str().unwrap().eq_ignore_ascii_case(inner_file))
+        .ok_or_else(|| RustiqueError::ZipError {
+            context: format!("Failed to find {} in {:?}", inner_file, entry.file_name()),
+            source: async_zip::error::ZipError::UnableToLocateEOCDR
         })?;
-    let mut mod_info_contents = String::new();
-    mod_info_file.read_to_string(&mut mod_info_contents)
-        .map_err(|e| RustiqueError::IoError {
+
+    let mut entry_reader = archive.reader_with_entry(entry_index).await
+        .map_err(|e| RustiqueError::ZipError {
             context: format!("Failed to read {} in {:?}", inner_file, entry.file_name()),
             source: e,
         })?;
+
+
+    // read the content of the file inner_file
+    let mut mod_info_contents = String::new();
+    entry_reader.read_to_string_checked(&mut mod_info_contents).await
+        .map_err(|e| RustiqueError::ZipError {
+            context: format!("Failed to read {} in {:?}", inner_file, entry.file_name()),
+            source: e,
+        })?;
+
+
     let mod_info = if inner_file.to_lowercase().ends_with(".json") {
         serde_json5::from_str::<T>(&mod_info_contents)
             .map_err(|e: serde_json5::Error| RustiqueError::JsonError {
                 context: format!("Failed to parse json in {}", entry.file_name().unwrap_or_default().to_string_lossy()),
                 source: e
             })?
+
     } else if inner_file.to_lowercase().ends_with(".toml") {
         toml::from_str::<T>(&mod_info_contents)
             .map_err(|e| RustiqueError::TomlError {
@@ -184,54 +193,64 @@ where T: for<'de> serde::Deserialize<'de>
 /// 
 pub async fn extract_all_mods_metadata(mod_dir: impl PathRef, ignore_symlink: bool) -> Result<HashMap<ModFileName, ModInfo>, RustiqueError> {
     let mod_dir = mod_dir.as_ref();
-    let dir = fs::read_dir(mod_dir)
+    let mut dir = tokio::fs::read_dir(mod_dir).await
         .map_err(|e| RustiqueError::IoError {
             context: format!("Can't read mod_dir: {}", mod_dir.to_string_lossy()),
             source: e,
         })?;
-    let entries_vec: Vec<DirEntry> = dir.filter_map(|e| e.ok()).collect();
-    // let mods = Arc::new(Mutex::new(HashMap::<ModFileName, ModInfo>::new()));
+    let mut entries = Vec::new();
 
-    let config = get_config().read().await;
+    while let Some(entry) = dir.next_entry().await? {
+        entries.push(entry);
+    }
     
-    // Use Rayon for CPU-bound tasks (zip processing is CPU-bound)
-    let results:Vec<(ModFileName, ModInfo)> = entries_vec
-        .par_iter()
+    let concurrent_limit = num_cpus::get();
+    
+    let config = get_config().read().await;
+    // Create a local copy of the data needed so we can drop the config
+    let notif_unzipped_mods = config.notify_of_unzipped_mods;
+    drop(config); // manually drop the config, we don't actually need it anymore
+    
+    
+    let results:Vec<(ModFileName, ModInfo)> = stream::iter(entries)
         // This is to ignore modpack mods when using normal rustique commands while a modpack is enabled
-        .filter(|e| !(ignore_symlink && SymlinkManager::exists(e.path())))
-        .filter_map(|entry| {
-            let filename = entry.file_name().to_string_lossy().to_string();
-            extract_zip_metadata::<ModInfo>(&entry.path(), FILE_MODINFO_JSON)
-                .map(|mod_info| (filename, mod_info))
-                .inspect_err(|e| {
-                    if matches!(e, RustiqueError::ModNotZipped(_)) && config.notify_of_unzipped_mods { 
-                        println!("{}",e.to_string().yellow());
-                    } else {
-                        debug!("{}", e.to_string().yellow());
-                    } 
-                }).ok()
-        }).collect();
+        .filter(|e| {
+            futures::future::ready(!(ignore_symlink && SymlinkManager::exists(e.path()))) 
+        })
+        .map(|entry| {
+            async move {
+                let filename = entry.file_name().to_string_lossy().to_string();
+                extract_zip_metadata::<ModInfo>(&entry.path(), FILE_MODINFO_JSON).await
+                    .map(|mod_info| (filename, mod_info))
+                    .inspect_err(|e| {
+                        if matches!(e, RustiqueError::ModNotZipped(_)) && notif_unzipped_mods {
+                            println!("{}",e.to_string().yellow());
+                        } else {
+                            debug!("{}", e.to_string().yellow());
+                        }
+                    }).ok()
+            }
+        })
+        .buffer_unordered(concurrent_limit)
+        .filter_map(|result| futures::future::ready(result))
+        .collect()
+        .await;
 
       Ok(results.into_iter().collect())
 }
 
-pub fn verify_zip_file(file_path: impl PathRef) -> Result<(), RustiqueError> {
+pub async fn verify_zip_file(file_path: impl PathRef) -> Result<(), RustiqueError> {
     // Open and verify the zip file integrity
     let file_path = file_path.as_ref();
-    let file = File::open(file_path)
-        .map_err(|e| RustiqueError::IoError {
-            context: format!("Failed to open file for verification: {}", file_path.to_string_lossy()),
-            source: e,
-        })?;
 
-    let archive = ZipArchive::new(file)
+    let archive = ZipFileReader::new(file_path).await
         .map_err(|e| RustiqueError::ZipError {
             context: format!("Invalid zip file: {}", file_path.to_string_lossy()),
             source: e
         })?;
 
     // Check that the archive contains at least one file
-    if archive.is_empty() {
+    if archive.file().entries().is_empty() {
         return Err(RustiqueError::SimpleError(format!("Zip file is empty: {}", file_path.to_string_lossy())));
     }
 
@@ -306,20 +325,22 @@ pub fn gather_missing_dependencies<V: AsRef<[ModID]>>(installed_mods: &HashMap<M
 }
 
 
-pub fn parse_json_file<T>(file_path: impl PathRef) -> Result<T, RustiqueError>
+pub async fn parse_json_file<T>(file_path: impl PathRef) -> Result<T, RustiqueError>
 where
     T: for<'de> serde::Deserialize<'de>
 {
     let file_path = file_path.as_ref();
     let filename = file_path.file_name().unwrap_or_default().to_string_lossy().to_string();
 
-    let mut file = File::open(file_path).map_err(|e| RustiqueError::IoError {
+    let mut file = File::open(file_path).await
+        .map_err(|e| RustiqueError::IoError {
         context: format!("Unable to open {filename}"),
         source: e,
     })?;
 
     let mut file_contents = String::new();
-    file.read_to_string(&mut file_contents).map_err(|e| RustiqueError::IoError {
+    file.read_to_string(&mut file_contents).await
+        .map_err(|e| RustiqueError::IoError {
         context: format!("Failure while reading from file {filename}"),
         source: e
     })?;
@@ -342,7 +363,7 @@ where
 
 pub async fn write_json_file(file_path: impl PathRef, json: String, config_dir: impl PathRef) -> Result<(), RustiqueError> {
     let (file_path , config_dir)= (file_path.as_ref(),config_dir.as_ref());
-    let mut open_file = tokio::fs::File::create(file_path).await.map_err(|e|
+    let mut open_file = File::create(file_path).await.map_err(|e|
         RustiqueError::IoError {
             context: format!("Error writing sync mod search file to config dir: {}", config_dir.to_string_lossy()),
             source: e,
@@ -354,7 +375,7 @@ pub async fn write_json_file(file_path: impl PathRef, json: String, config_dir: 
 }
 
 
-pub fn latest_stable() -> String {
+pub async fn latest_stable() -> String {
    
     // Have to check if the file even exists first or we get weird behavior 
     // this function is called during the process in which clap creates the cli args,
@@ -364,7 +385,7 @@ pub fn latest_stable() -> String {
         return "0.0.0".into()
     }
     
-    let version = sorted_game_versions();
+    let version = sorted_game_versions().await;
    
     // filter out all the unstable version which end with -rc.xx
     let out: Vec<String> = version.iter().filter(|v| !v.lower_contains("-rc")).cloned().collect();
@@ -372,11 +393,11 @@ pub fn latest_stable() -> String {
     out.first().unwrap_or(&String::new()).to_string()
 }
 
-pub fn sorted_game_versions() -> Vec<String> {
+pub async fn sorted_game_versions() -> Vec<String> {
     let version_file_path = Config::get_path().join(FILE_GAME_VERSION_SYNC);
 
     let mut versions = if version_file_path.exists() {
-        match parse_json_file::<GameVersionSync>(&version_file_path) {
+        match parse_json_file::<GameVersionSync>(&version_file_path).await {
             Ok(file_data) => file_data.game_versions,
             Err(e) => {
                 eprintln!("Error: {e}");

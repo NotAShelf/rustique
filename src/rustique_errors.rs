@@ -28,7 +28,7 @@ pub enum RustiqueError {
     ModNotZipped(String),
     ZipError {
         context: String,
-        source: zip::result::ZipError
+        source: async_zip::error::ZipError
     },
     ConfigFileError(String),
     MalformedModInfoJson(String),

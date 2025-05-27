@@ -61,7 +61,7 @@ async fn set(args: &CommonArgs) {
     if let Some(version) = &args.pin_game_version {
 
         let gv_sync_file = Config::get_path().join(FILE_GAME_VERSION_SYNC);
-        let mut game_versions = match parse_json_file::<GameVersionSync>(&gv_sync_file) {
+        let mut game_versions = match parse_json_file::<GameVersionSync>(&gv_sync_file).await {
             Ok(game_versions) => game_versions,
             Err(err) => {
                 warn!("{}", err);

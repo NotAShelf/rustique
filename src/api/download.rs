@@ -168,7 +168,7 @@ async fn download_and_verify(url: &Url, file_path: impl PathRef, api_client: &Ap
     drop(file);
 
     // Pre-verify the zip file
-    verify_zip_file(&temp_file_path)?;
+    verify_zip_file(&temp_file_path).await?;
 
     // Rename temp file to final file
     tokio::fs::rename(&temp_file_path, file_path).await

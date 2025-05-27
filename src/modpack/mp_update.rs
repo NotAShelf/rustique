@@ -28,12 +28,12 @@ pub async fn mp_update(args: MPUpdateArgs) -> Result<(), RustiqueError> {
     let modpack_base_dir = Path::new(&config.modpacks.modpack_dir);
     let pack_dir = modpack_base_dir.join("packs");
     // first check if the sync file in the modpack dir exists, if not, run sync on this location
-    let modpack_sync_file = match parse_json_file::<RustiqueSyncJson>(&pack_dir.join(FILE_RUSTIQUE_SYNC)) {
+    let modpack_sync_file = match parse_json_file::<RustiqueSyncJson>(&pack_dir.join(FILE_RUSTIQUE_SYNC)).await {
         Ok(sync_data) => sync_data,
         Err(e) => {
             info!("Failed getting sync file for packs, {}", e.to_string().red());
             sync(&pack_dir,false, vec![]).await?;
-            parse_json_file::<RustiqueSyncJson>(&pack_dir)?
+            parse_json_file::<RustiqueSyncJson>(&pack_dir).await?
         }
     };
 
@@ -85,7 +85,7 @@ pub async fn mp_update(args: MPUpdateArgs) -> Result<(), RustiqueError> {
         return Err(RustiqueError::SimpleError(format!("Unable to get updated file path for {}", &args.mpk_id)));
     };
     
-    let mp_mod_pkgs: Vec<Package> = extract_zip_metadata::<ModInfo>(&updated_mp_filepath, FILE_MODINFO_JSON)?.dependencies.iter().map(|(mod_id, mod_version)| Package {
+    let mp_mod_pkgs: Vec<Package> = extract_zip_metadata::<ModInfo>(&updated_mp_filepath, FILE_MODINFO_JSON).await?.dependencies.iter().map(|(mod_id, mod_version)| Package {
         mod_id: mod_id.clone(),
         pinned_version: Some(mod_version.clone()),
     }).collect();

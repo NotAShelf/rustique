@@ -20,7 +20,7 @@ pub async fn update_mods<V: AsRef<[ModID]>>(mod_dir: impl PathRef, update_mod_id
     let (mod_dir, update_mod_ids) = (mod_dir.as_ref(), update_mod_ids.as_ref());
     let start_time = Instant::now();
     let config = get_config().read().await;
-    let sync_data = parse_json_file::<RustiqueSyncJson>(&PathBuf::from(mod_dir).join(FILE_RUSTIQUE_SYNC));
+    let sync_data = parse_json_file::<RustiqueSyncJson>(&PathBuf::from(mod_dir).join(FILE_RUSTIQUE_SYNC)).await;
     
     if sync_data.is_ok() {
         notice("Updating mods...", Option::from(Color::Yellow), vec![Attribute::Bold]);
