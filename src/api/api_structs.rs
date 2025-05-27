@@ -297,7 +297,7 @@ pub struct Releases {
     pub filename: Option<StringOrInt>,
     // mod awearablelight has null for a fileid on a release
     #[serde(default, rename = "fileid")]
-    pub file_id: i64,
+    pub file_id: Option<i64>,
 
     #[serde(default)]
     pub downloads: i64,

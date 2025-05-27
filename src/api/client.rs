@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use std::fmt::Write;
 use std::process::exit;
 use clap::ValueEnum;
@@ -134,7 +134,7 @@ impl ApiClient {
         
         
         let parsed: Mod = serde_json::from_str(&text).map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
-        info!("{:?}", parsed);
+        debug!("{:?}", parsed);
 
         Ok(parsed)
     }

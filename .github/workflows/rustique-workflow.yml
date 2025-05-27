@@ -4,6 +4,7 @@ name: Rustique Workflow
 on:
   push:
     branches: [ omega ]
+    tags: ['v*']
   pull_request:
     branches: [ omega ]
   workflow_dispatch:  # Allows manual triggering
@@ -43,6 +44,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Get version
+      id: version
+      shell: bash
+      run: |
+        # Extract version from Cargo.toml
+        VERSION=$(grep '^version =' Cargo.toml | head -1 | sed 's/.*= *"\([^"]*\)".*/\1/')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
       with:
@@ -58,13 +68,38 @@ jobs:
       env:
         RUSTFLAGS: ${{ matrix.rustflags }}
       run: cargo build --release --target ${{ matrix.target }}
+      
+      # Create versioned filename and copy binary
+    - name: Prepare versioned binary
+      shell: bash
+      run: |
+        # Create a directory for the versioned binary
+        mkdir -p versioned-binary
+        
+        # Determine file extension
+        if [[ "${{ matrix.binary_name }}" == *.exe ]]; then
+          EXT=".exe"
+          BASE_NAME="${{ matrix.binary_name%%.exe }}"
+        else
+          EXT=""
+          BASE_NAME="${{ matrix.binary_name }}"
+        fi
+        
+        # Create versioned filename
+        VERSIONED_NAME="${BASE_NAME}-v${{ steps.version.outputs.version }}-${{ matrix.asset_name }}${EXT}"
+        
+        # Copy binary with versioned name
+        cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "versioned-binary/${VERSIONED_NAME}"
+        
+        echo "Created versioned binary: ${VERSIONED_NAME}"
+        echo "versioned_name=${VERSIONED_NAME}" >> $GITHUB_ENV
     
-    # Upload the ZIP artifacts only
-    - name: Upload ZIP artifact
+        
+    - name: Upload versioned artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.asset_name }}
-        path: target/${{ matrix.target }}/release/${{ matrix.binary_name }}
+        name: ${{ matrix.asset_name }}-v${{ steps.version.outputs.version }}
+        path: versioned-binary/${{ env.versioned_name }}
         if-no-files-found: error
 
   release:
@@ -81,7 +116,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release-artifacts/*
+          files: release-artifacts/*/*
           draft: true
           prerelease: false
         env:

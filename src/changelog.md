@@ -1,7 +1,13 @@
+# Version 0.4.2-alpha
+* Fixed regression bug #11 that fails to decode api json data when the file_id for a release is null
+
 # Version 0.4.1-alpha
 * Fully switched to the tokio-async library, swapped from synchronous zip lib to async-zip. This shows a slight increase in performance when using Rustique on a lot of mods at once.
+* `modpack create` now sets your own mods up in a way that will let you enable/disable them. 
+* Added `modpack local list` to view your locally created modpacks. Enable/disable work like normal. 
 * A flag for `modpack create --ignore-modpacks` was added to let you choose to ignore enabled modpacks. Its set to false by default so you can create new modpacks out of existing ones.
 * A flag for `modpack create --copy-mods` was added for choosing to copy the mods made by the command instead of moving them. By default when you create a modpack, the mods are moved into the ~/.config/rustique/modpacks/installed/yourpack folder. If you set --copy-mods, the orignal mods will stay in place and a copy will be created into the installed dir.
+* All integer api_arg values are now i64 instead of u32. The api changed how game versions are handled and now show a large negative i64 value. 
 
 # Version 0.4.0-alpha
 * Implemented modpack functions! Create, Install, Enable/Disable, List, Info
