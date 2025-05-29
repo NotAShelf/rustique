@@ -6,7 +6,6 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use futures::future::err;
 use semver::Version;
 use tracing::{info, warn};
 use crate::commands::arg_structs::modpack_args::MPCreateArgs;
@@ -22,10 +21,7 @@ use crate::config::config_manager::get_config;
 use crate::consts::FILE_MODINFO_JSON;
 use crate::modpack::symlink_manager::SymlinkManager;
 use crate::traits::ref_ext::PathRef;
-// pub fn mp_create_interactive() -> Result<(), RustiqueError> {
-//     todo!();
-//     // Ok(())
-// }
+
 
 pub fn collect_mp_create_args(args: &MPCreateArgs) -> Result<ModInfo, RustiqueError> {
     Ok(ModInfo {

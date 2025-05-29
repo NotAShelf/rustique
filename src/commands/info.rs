@@ -1,7 +1,6 @@
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::UTF8_FULL_CONDENSED;
 use comfy_table::{CellAlignment, Color, ContentArrangement, Row, Table};
-use crate::api;
 use crate::api::api_structs::Releases;
 use crate::api::client::ApiClient;
 use crate::commands::arg_structs::info_args::ModInfoArgs;

@@ -2,7 +2,7 @@ use crate::aliases::ModID;
 use crate::commands::sync::{ModSyncInfo, RustiqueSyncJson};
 use crate::install_manager::{install_manager, Install, Installed};
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{parse_json_file, remove_older_files};
+use crate::utils::{backup_older_files, parse_json_file, remove_older_files};
 use owo_colors::OwoColorize;
 use comfy_table::{Attribute, Color};
 use std::collections::HashMap;
@@ -81,11 +81,15 @@ pub async fn update_mods<V: AsRef<[ModID]>>(mod_dir: impl PathRef, update_mod_id
 
 
         let mods_processed: Vec<Installed> = install_manager(mod_dir, final_mod_update_list.clone(), all_installed_mods).await?;
-
+        
+        if config.backup_mods {
+            backup_older_files(&mods_processed).await?;        
+        }
+        
         if !keep_old_files {
             remove_older_files(&mods_processed).await?;
         }
-
+        
         display_installation_results(mods_processed);
 
     } else {

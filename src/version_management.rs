@@ -122,7 +122,18 @@ pub fn parse_pinned_version(releases: &Vec<Releases>, mod_pkg: &Package, pinned_
     // filter out any version that doesnt match the pinned mod version
     let mres = if mod_pkg.pinned_version.is_some() {
         gres.iter().filter(|r| {
-            match compare_versions(r.mod_version.clone().unwrap_or_default().as_str(), mod_pkg.pinned_version.clone().unwrap_or_default().as_str()) {
+            // if its 0.0.0, just return true, this means the version parsed failed, prob invalid semver 
+            let ver = if let Some(v) = &mod_pkg.pinned_version {
+                if v == "0.0.0" {
+                    return true
+                }
+                
+                v.to_string()
+            } else {
+                return true
+            };
+            
+            match compare_versions(r.mod_version.clone().unwrap_or_default().as_str(), &ver) {
                 Ok(c) => match c {
                     std::cmp::Ordering::Less | std::cmp::Ordering::Equal => true,
                     std::cmp::Ordering::Greater => false,

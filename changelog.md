@@ -3,7 +3,8 @@
 * Fixed `list --updates` showing all mods instead of only ones that need updates. This fixes issue #12.
 * `list` now runs sync automatically if the sync file is missing from an installed modpack. This through an error before.
 * Added `--with-mpk` to the base `Rustique` flags as a shortcut to handling modpack mods. You'll be able to use the base commands, `list`,`update`,`install`, on the packpack mods dir.  `Rustique -w tmmv update -a` -- this will update all the individual mods in the tmmv modpack.
-
+* You can now install a mod of a specific version with the `install` command, use mod-id@version. Example `Rustique install alchemy@1.6.50`. 
+* Mod backups have been implemented! It's disabled by default, you can turn it on with `Rustique config set --backup-mods true`. You can also choose where they are stored with `Rustique config set --backup-mods-dir /path/to/dir`
 
 # Version 0.4.2-alpha
 * Fixed regression bug #11 that fails to decode api json data when the file_id for a release is null

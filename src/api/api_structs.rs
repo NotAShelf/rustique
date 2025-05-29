@@ -1,14 +1,11 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::fs;
 use std::path::PathBuf;
-// use std::fs::File;
 use tokio::fs::File;
 use async_zip::tokio::write::ZipFileWriter;
 use crate::aliases::{FileName, ModID, ModVersion};
 use crate::consts::FILE_MODINFO_JSON;
-use crate::information_utils::{command_output, display_table};
 use crate::rustique_errors::RustiqueError;
 use crate::traits::ref_ext::PathRef;
 
@@ -112,7 +109,7 @@ impl ModInfo {
         
         if let Err(e) = self.add_file_to_zip(&mut zip, FILE_MODINFO_JSON, &mod_info, async_zip::Compression::Deflate).await {
             let _ = self.delete_zip(&zip_path).await;
-           return Err(RustiqueError::SimpleError("Unable to add file to zip archive".into()));
+           return Err(RustiqueError::SimpleError(format!("Unable to add file to zip archive {e}")));
         }
         
         if let Err(e) = zip.close().await { 

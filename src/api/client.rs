@@ -9,7 +9,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, error, info};
 use std::fmt::Write;
-use std::process::exit;
 use clap::ValueEnum;
 use reqwest::Response;
 use crate::traits::ref_ext::StrRef;

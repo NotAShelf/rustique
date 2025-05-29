@@ -51,6 +51,18 @@ async fn set(args: &CommonArgs) {
             warn!("{} is not a valid directory", dir.to_string_lossy());
         }
     }
+    
+    if let Some(path) = &args.modpacks_dir {
+        let dir = get_expanded_path(PathBuf::from(path));
+        if dir.exists() {
+            config.modpacks.modpack_dir = dir.to_string_lossy().to_string();
+            save = true;
+            
+            display_vec.push(command_output("config.modpacks_dir".to_string(), path.to_string()));
+        } else {
+            warn!("{} is not a valid directory", dir.to_string_lossy());
+        }
+    }
 
     if let Some(notif) = &args.notify_of_unzipped_mods {
         config.notify_of_unzipped_mods = *notif;
@@ -184,6 +196,12 @@ async fn del(args: &BoolArgs) {
         save = true;
         display_vec.push(command_output("config.backup_mods_dir", defaults.backup_mods_dir));
     }
+    
+    if args.modpack_dir {
+        config.modpacks.modpack_dir.clone_from(&defaults.modpacks.modpack_dir);
+        save = true;
+        display_vec.push(command_output("config.modpacks.modpack_dir", defaults.modpacks.modpack_dir));
+    }
 
     if args.zip_mod_dirs {
         config.zip_mod_files = defaults.zip_mod_files;
@@ -245,6 +263,7 @@ async fn list() {
     let config = get_config().read().await;
     let display_vec: Vec<(CellData, CellData)> = vec![
         command_output("config.mod_dir",                 config.mod_dir.to_string()),
+        command_output("config.modpacks.modpack_dir",    config.modpacks.modpack_dir.to_string()),
         command_output("config.backup_mods_dir",         config.backup_mods_dir.to_string()),
         command_output("config.game_download_dir",       config.game_download_dir.to_string()),
         command_output("config.backup_mods",             config.backup_mods.to_string()),

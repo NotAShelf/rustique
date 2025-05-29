@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
+use crate::aliases::ModVersion;
 use crate::config::config_structs::Tables;
 use crate::information_utils::{rustique_message, CellData, RustiqueMessage};
 use crate::traits::ref_ext::PathRef;
@@ -81,7 +82,7 @@ impl Default for ModPacks {
 pub struct Package {
     pub mod_id: String,
     #[serde(default)]
-    pub pinned_version: Option<String>,
+    pub pinned_version: Option<ModVersion>,
 }
 
 fn default_sync_time() -> i64 {

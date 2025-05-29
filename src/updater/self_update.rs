@@ -1,11 +1,9 @@
 use std::env;
 use std::ffi::OsStr;
 use std::path::PathBuf;
-use std::process::Command;
 use async_zip::tokio::read::fs::ZipFileReader;
 use comfy_table::{Attribute, Color};
 use futures::AsyncReadExt;
-use indicatif::{ProgressBar, ProgressStyle};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tracing::info;

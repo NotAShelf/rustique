@@ -85,11 +85,11 @@ impl GameVersionSync {
 
 // This contains all the data from the api/mods request. This is used to located mod_IDs
 // and for searching for new mods. This is synced once a day or manually
-pub async fn get_sync_data(mod_dir: impl PathRef) -> Result<RustiqueSyncJson, RustiqueError> {
+pub async fn get_sync_data(mod_dir: impl PathRef, quiet: bool) -> Result<RustiqueSyncJson, RustiqueError> {
     let mod_dir = mod_dir.as_ref();
     let fp = mod_dir.join(PathBuf::from(FILE_RUSTIQUE_SYNC));
     if !fp.exists() {
-        sync(mod_dir, false, vec![]).await?;
+        sync(mod_dir, quiet, vec![]).await?;
     }
 
     parse_json_file::<RustiqueSyncJson>(&fp).await
@@ -105,10 +105,12 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
     game_version_sync(false).await?;
 
     // notice(format!("Syncing {}...", mod_dir.display().fg::<Magenta>()), Option::from(comfy_table::Color::Yellow), vec![Attribute::Bold]);
-    display_table(vec![(
-        CellData::new("Syncing...".into(), Some(Color::Yellow), vec![Attribute::Bold], None),
-        CellData::new(mod_dir.to_string_lossy().to_string(), Some(Color::Magenta), vec![], None)
-    )], Some(UTF8_HORIZONTAL_ONLY));
+    if !quiet {
+        display_table(vec![(
+            CellData::new("Syncing...".into(), Some(Color::Yellow), vec![Attribute::Bold], None),
+            CellData::new(mod_dir.to_string_lossy().to_string(), Some(Color::Magenta), vec![], None)
+        )], Some(UTF8_HORIZONTAL_ONLY));
+    }
     
 
     // check if rustique-sync.json exists
@@ -144,7 +146,7 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
         }
     };
 
-    let search_sync_time = i64::from(config.sync_mod_search_file_every);
+    let search_sync_time = config.sync_mod_search_file_every;
     
     if timestamp_older_than(search_sync_time, &mods_search_data.last_sync) {
         // update the database
@@ -160,7 +162,7 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
         }
     };
     
-    let game_version_time = i64::from(config.sync_latest_game_version_file_every);
+    let game_version_time = config.sync_latest_game_version_file_every;
     if timestamp_older_than(game_version_time, &game_version_sync_data.last_sync) {
         // update the database
         game_version_sync(true).await?;

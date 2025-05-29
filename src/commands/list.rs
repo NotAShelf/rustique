@@ -84,7 +84,7 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
     let sync_data = if local_mp_call {
         None
     } else {
-        Some(get_sync_data(mod_dir).await?)
+        Some(get_sync_data(mod_dir, false).await?)
     };
     
     let installed_mods = extract_all_mods_metadata(mod_dir, false).await?;

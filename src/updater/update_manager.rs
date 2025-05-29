@@ -3,7 +3,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use comfy_table::{Attribute, CellAlignment, Color};
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
-use indicatif::ProgressStyle;
 use reqwest::Client;
 use reqwest::header::ACCEPT;
 use tracing::{debug, info};

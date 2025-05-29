@@ -1,4 +1,3 @@
-use std::mem;
 use std::path::Path;
 use std::process::exit;
 use comfy_table::{Attribute, Color};
@@ -7,7 +6,6 @@ use tracing::{error, info};
 use owo_colors::OwoColorize;
 use crate::commands::arg_structs::modpack_args::{MPLocalSubCommands, ModpackCommands, ModpackSubCommands};
 use crate::commands::info::info;
-use crate::commands::install::install_cmd;
 use crate::commands::list::cmd_list;
 use crate::config::config_manager::get_config;
 use crate::information_utils::{command_output, display_table, notice};

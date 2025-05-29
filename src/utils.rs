@@ -8,19 +8,20 @@ use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use owo_colors::OwoColorize;
 use dirs::home_dir;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 use async_zip::tokio::read::fs::ZipFileReader;
+use comfy_table::Color;
+use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use futures::{stream, StreamExt};
-use semver::Version;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::fs::File;
 use tracing::{debug, error, info, warn};
 use crate::config::config_manager::get_config;
 use crate::consts::{FILE_GAME_VERSION_SYNC, FILE_MODINFO_JSON, FILE_RUSTIQUE_SYNC};
+use crate::information_utils::{display_table, notice, CellData};
 use crate::modpack::symlink_manager::SymlinkManager;
 use crate::traits::ref_ext::{PathRef, StrRef};
-use crate::traits::string_ext::StrLowerExt;
 use crate::version_management::parse_version;
 
 #[derive(Clone, Debug)]
@@ -142,7 +143,7 @@ where T: for<'de> serde::Deserialize<'de>
         return Err(RustiqueError::SimpleError(format!("Skipping non-zip file: {}", entry.display())));
     }
 
-    let mut archive = ZipFileReader::new(entry).await
+    let archive = ZipFileReader::new(entry).await
         .map_err(|e| RustiqueError::ZipError {
             context: format!("Failed to open zip archive {:?}: {}", entry.file_name(),e),
             source: e
@@ -443,10 +444,41 @@ pub async fn remove_older_files(processed_install: &[Installed]) -> Result<(), R
     Ok(())
 }
 
-pub fn get_version_from_modid(mod_id_str: impl StrRef) -> Result<(ModID, Option<Version>), RustiqueError> {
+pub async fn backup_older_files(processed_install: &[Installed]) -> Result<(), RustiqueError> {
+    let config = get_config().read().await;
+    let backup_dir = Path::new(&config.backup_mods_dir);
+
+    if !backup_dir.exists() {
+        tokio::fs::create_dir_all(backup_dir).await?;
+    }
+
+    for m in processed_install {
+        if let Some(old_file_name) = &m.old_file_path.clone().unwrap_or(PathBuf::new()).file_name() {
+            tokio::fs::copy(&m.old_file_path.clone().unwrap_or(PathBuf::new()), backup_dir.join(old_file_name)).await?;
+        }
+    }
+
+    display_table(vec![
+        (
+            CellData::new("Updated mods have been backed up to:".into(), Some(Color::Green), vec![], None),
+            CellData::new(format!("{}",backup_dir.display()), Some(Color::Magenta), vec![], None),
+            
+        )
+    ], Some(UTF8_HORIZONTAL_ONLY));
+
+    Ok(())
+}
+
+pub fn get_version_from_modid(mod_id_str: impl StrRef) -> (ModID, Option<ModVersion>) {
     if let Some((modid, version)) = mod_id_str.as_ref().split_once('@') {
-       return Ok((modid.to_string(), Some(parse_version(version)?)));
+
+        let Ok(p_ver) = parse_version(version) else {
+                // version was bad, return error and quit
+                notice(format!("Failed to parse {}, invalid version. Needs to be in the format [1.2.3] (MAJOR.MINOR.PATCH)", mod_id_str.as_ref()), Some(Color::Red), vec![]);
+                exit(1);
+            };
+        return (modid.to_string(), Some(p_ver.to_string()));
     }
     
-    Ok((mod_id_str.as_ref().to_string(), None))
+    (mod_id_str.as_ref().to_string(), None)
 }

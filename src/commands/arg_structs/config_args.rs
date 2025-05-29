@@ -47,6 +47,15 @@ pub struct CommonArgs {
     #[arg(short, long)]
     pub mods_dir: Option<String>,
 
+
+    /// Default modpack directory. 
+    ///
+    /// Directory structure:
+    ///     ~/.config/rustique/modpacks/{mypacks, packs, installed}
+    #[arg(short = 'M', long)] 
+    pub modpacks_dir: Option<String>,
+
+
     /// Setting this to 'true' will show a message if you have unzipped mods in your mod dir
     #[arg(short, long)]
     pub notify_of_unzipped_mods: Option<bool>,
@@ -85,6 +94,8 @@ pub struct CommonArgs {
     #[arg(short = 'g', long)]
     pub game_download_dir: Option<String>,
 
+
+
     /// Displays how long a command takes to complete
     ///
     /// Default: true
@@ -111,9 +122,13 @@ pub struct SetArgs {
 #[allow(clippy::struct_excessive_bools)]
 pub struct BoolArgs {
 
-    // Default mod directory 
+    /// Default mod directory
     #[arg(short, long)]
     pub mod_dir: bool,
+
+    /// Default modpack dir
+    #[arg(short = 'M', long)]
+    pub modpack_dir: bool,
 
     /// The highest game version Rustique will use to download mods
     #[arg(short, long)]
