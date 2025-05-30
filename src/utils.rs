@@ -193,7 +193,7 @@ where T: for<'de> serde::Deserialize<'de>
     Ok(mod_info)
 }
 
-/// 
+ 
 pub async fn extract_all_mods_metadata(mod_dir: impl PathRef, ignore_symlink: bool) -> Result<HashMap<ModFileName, ModInfo>, RustiqueError> {
     let mod_dir = mod_dir.as_ref();
     let mut dir = tokio::fs::read_dir(mod_dir).await

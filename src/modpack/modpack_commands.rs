@@ -2,7 +2,7 @@ use std::path::Path;
 use std::process::exit;
 use comfy_table::{Attribute, Color};
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use owo_colors::OwoColorize;
 use crate::commands::arg_structs::modpack_args::{MPLocalSubCommands, ModpackCommands, ModpackSubCommands};
 use crate::commands::info::info;
@@ -94,7 +94,7 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
                     }
                 }
                 Err(e) => {
-                    info!("Failed to enable modpack.. :{}", e.to_string().red().bold());
+                    warn!("Failed to enable modpack.. Make sure there are no lingering symlinks in your default mods dir. :{}", e.to_string().red().bold());
                 }
             }
         }

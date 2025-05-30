@@ -76,7 +76,7 @@ async fn async_main() {
     // ideally this *could* be setup by the user on where they want the config to be loaded from,
     // but for now it will always be in .config/rustique
     // this will need to be modified to work with windows using %appdata%
-    handle_err_result(init_config(None), "init_config: ", ErrorMsgFn::Debug);
+    handle_err_result(init_config(None), "init_config: ", false, ErrorMsgFn::Debug);
     
     if cli.verbose {
         debug!("Verbose logging enabled");
@@ -117,12 +117,14 @@ async fn async_main() {
                 handle_err_result(
                     daily_file_syncs(args.sync_search_db).await,
                     "Failed calling sync_search_db",
+                    true,
                     ErrorMsgFn::Error
                 ); 
             } else if args.sync_game_versions {
                 handle_err_result(
                     game_version_sync(args.sync_game_versions).await, 
                     "Failed calling sync_game_version",
+                    true,
                     ErrorMsgFn::Error
                 ); 
             } else {
@@ -141,6 +143,7 @@ async fn async_main() {
                 handle_err_result(
                     cmd_list(&mod_dir, args.updates, false, false).await, 
                     "Failed to display list",
+                    true,
                     ErrorMsgFn::Error
                 );
             }
@@ -157,7 +160,7 @@ async fn async_main() {
             }
         }
         Commands::Download(args) => {
-            handle_err_result(download(args).await, "Failed download:", ErrorMsgFn::Error);
+            handle_err_result(download(args).await, "Failed download:", true, ErrorMsgFn::Error);
         }
         Commands::Install(args) => {
             let start_time = Instant::now();
@@ -196,10 +199,19 @@ async fn async_main() {
             generate_completion(shell.clone());
         }
         Commands::Info(args) => {
-            handle_err_result(info(args).await, "Failed to call Info:", ErrorMsgFn::Error);
+            handle_err_result(
+                info(args).await, 
+                "Failed to call Info:", 
+                true,
+                ErrorMsgFn::Info
+            );
         },
         Commands::Search(args) => {
-            handle_err_result(search(args).await, "Search failed:", ErrorMsgFn::Error ); 
+            handle_err_result(
+                search(args).await, 
+                "Search failed:", 
+                true,
+                ErrorMsgFn::Error ); 
         },
         Commands::Modpack(cmds) => {
            parse_modpack_commands(cmds, &mod_dir).await;
@@ -211,6 +223,7 @@ async fn async_main() {
                 handle_err_result(
                     check_for_update(false, false).await,
                     "Update check failed:",
+                    true,
                     ErrorMsgFn::Error
                 );
             }
@@ -219,6 +232,7 @@ async fn async_main() {
                 handle_err_result(
                     update_manager::self_update_binary(args.force).await,
                     "Rustique update failed",
+                    true,
                     ErrorMsgFn::Error
                 ); 
             }
@@ -229,6 +243,7 @@ async fn async_main() {
                 handle_err_result(
                     delete_cmd(&mod_dir, args.mod_id.clone(), args.mod_backups).await,
                     "Unable to delete mod(s)",
+                    true,
                     ErrorMsgFn::Error
                 );
             }
@@ -238,6 +253,7 @@ async fn async_main() {
                     handle_err_result(
                         delete_all(&mod_dir, which).await,
                         &format!("Unable to delete all mod(s) in {}", mod_dir.display()),
+                        true,
                         ErrorMsgFn::Error
                     );
                 }

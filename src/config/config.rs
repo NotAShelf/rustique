@@ -1,4 +1,4 @@
-use crate::commands::arg_structs::config_args::{BoolArgs, CommonArgs, ConfigCommand, ConfigSubCommand};
+use crate::commands::arg_structs::config_args::{DelArgs, CommonArgs, ConfigCommand, ConfigSubCommand};
 use crate::utils::{get_expanded_path, parse_json_file};
 use std::path::PathBuf;
 use std::process::exit;
@@ -46,7 +46,7 @@ async fn set(args: &CommonArgs) {
             config.mod_dir = dir.to_string_lossy().to_string();
             save = true;
 
-           display_vec.push(command_output("config.mods_dir".to_string(), path.to_string()));
+           display_vec.push(command_output("config.mods_dir", path));
         } else {
             warn!("{} is not a valid directory", dir.to_string_lossy());
         }
@@ -58,7 +58,7 @@ async fn set(args: &CommonArgs) {
             config.modpacks.modpack_dir = dir.to_string_lossy().to_string();
             save = true;
             
-            display_vec.push(command_output("config.modpacks_dir".to_string(), path.to_string()));
+            display_vec.push(command_output("config.modpacks_dir", path));
         } else {
             warn!("{} is not a valid directory", dir.to_string_lossy());
         }
@@ -67,7 +67,7 @@ async fn set(args: &CommonArgs) {
     if let Some(notif) = &args.notify_of_unzipped_mods {
         config.notify_of_unzipped_mods = *notif;
         save = true;
-        display_vec.push(command_output("config.show_mod_dir_warning".to_string(), notif.to_string()));
+        display_vec.push(command_output("config.show_mod_dir_warning", notif.to_string()));
     }
 
     if let Some(version) = &args.pin_game_version {
@@ -98,10 +98,10 @@ async fn set(args: &CommonArgs) {
         if game_versions.game_versions.contains(&v) {
             config.pinned_game_version.clone_from(&v);
             save = true;
-            display_vec.push(command_output("config.pinned_game_version".to_string(), v));
+            display_vec.push(command_output("config.pinned_game_version", v));
         } else {
             notice("Invalid game version. The version must be one of the following: ", Some(Color::Yellow), vec![Attribute::Bold]);
-            notice(&format!("[{}]",game_versions.game_versions.join("], [").as_str()), Some(Color::Magenta), vec![]);
+            notice(format!("[{}]",game_versions.game_versions.join("], [").as_str()), Some(Color::Magenta), vec![]);
         }
     }
     
@@ -123,7 +123,7 @@ async fn set(args: &CommonArgs) {
                 });
             }
             save = true;
-            display_vec.push(command_output(format!("Pinned: {with_mod}"), version.to_string()));
+            display_vec.push(command_output(format!("Pinned: {with_mod}"), version));
         }
     }
 
@@ -132,14 +132,14 @@ async fn set(args: &CommonArgs) {
         config.show_execution_time = *val;
         save = true;
 
-        display_vec.push(command_output("config.show_execution_time".to_string(), val.to_string()));
+        display_vec.push(command_output("config.show_execution_time", val.to_string()));
     }
     
     if let Some(backup) = &args.backup_mods {
         config.backup_mods = *backup;
         save = true;
 
-        display_vec.push(command_output("config.backup_mods".to_string(), backup.to_string()));
+        display_vec.push(command_output("config.backup_mods", backup.to_string()));
     }
 
     if let Some(backup_dir) = &args.backup_mods_dir {
@@ -148,7 +148,7 @@ async fn set(args: &CommonArgs) {
             config.backup_mods_dir = dir.to_string_lossy().to_string();
             save = true;
 
-            display_vec.push(command_output("config.backup_mods_dir".to_string(), dir.to_string_lossy().to_string()));
+            display_vec.push(command_output("config.backup_mods_dir", dir.to_string_lossy().to_string()));
         } else {
             warn!("{} is not a valid directory", dir.to_string_lossy());
         }
@@ -160,19 +160,42 @@ async fn set(args: &CommonArgs) {
             config.game_download_dir = dir.to_string_lossy().to_string();
             save = true;
             
-            display_vec.push(command_output("config.game_download_dir".to_string(), download_dir.to_string()));
+            display_vec.push(command_output("config.game_download_dir", download_dir));
         } else {
             warn!("{} is not a valid directory", dir.to_string_lossy());
         }
     }
+    
+    if let Some(mpk_id)  = &args.modpack_enabled {
+        if config.modpacks.enabled.contains(mpk_id) {
+            display_vec.push(command_output("This modpack ID is already part of config.modpacks.enabled", mpk_id));
+        } else {
+            config.modpacks.enabled.push(mpk_id.clone());
+            save = true;
+            display_vec.push(command_output("config.modpacks.enabled", config.modpacks.enabled.join(", ")));
+        }
+    }
+    
+    if let Some(mpk_id)  = &args.modpack_disabled {
+        if config.modpacks.disabled.contains(mpk_id) {
+            display_vec.push(command_output("This modpack ID is already part of config.modpacks.disabled", mpk_id));
+        } else {
+            config.modpacks.disabled.push(mpk_id.clone());
+            save = true;
+            display_vec.push(command_output("config.modpacks.disabled", config.modpacks.disabled.join(", ")));
+        }
+    } 
+    
+    if !display_vec.is_empty() {
+        display_table(display_vec, None);
+    }
 
     if save {
         config.save(None).unwrap();
-        display_table(display_vec, None);
     }
 }
 
-async fn del(args: &BoolArgs) {
+async fn del(args: &DelArgs) {
 
     let mut config = get_config().write().await;
     let defaults = Config::default();
@@ -234,10 +257,32 @@ async fn del(args: &BoolArgs) {
         save = true;
         display_vec.push(command_output("config.game_download_dir", defaults.game_download_dir));
     }
-
-
-    if save {
+    
+    if let Some(mpk_id) = &args.modpack_enabled {
+        if config.modpacks.enabled.contains(mpk_id) {
+            config.modpacks.enabled.retain(|m| m != mpk_id);
+            save = true;
+            display_vec.push(command_output("config.modpacks.enabled", config.modpacks.enabled.join(", ")));
+        } else {
+            display_vec.push(command_output("This modpack id is not in the enabled list", mpk_id)); 
+        }
+    }
+    
+    if let Some(mpk_id) = &args.modpack_disabled {
+        if config.modpacks.disabled.contains(mpk_id) {
+            config.modpacks.disabled.retain(|m| m != mpk_id);
+            save = true;
+            display_vec.push(command_output("config.modpacks.disabled", config.modpacks.disabled.join(", ")));
+        } else {
+            display_vec.push(command_output("This modpack id is not in the disabled list", mpk_id)); 
+        }
+    }
+    
+    if !display_vec.is_empty() { 
         display_table(display_vec, None);
+    }
+    
+    if save {
         config.save(None).unwrap();
     }
 }
@@ -246,13 +291,16 @@ async fn list() {
     let config = get_config().read().await;
     let display_vec: Vec<(CellData, CellData)> = vec![
         command_output("config.mod_dir",                 config.mod_dir.to_string()),
-        command_output("config.modpacks.modpack_dir",    config.modpacks.modpack_dir.to_string()),
         command_output("config.backup_mods_dir",         config.backup_mods_dir.to_string()),
         command_output("config.game_download_dir",       config.game_download_dir.to_string()),
         command_output("config.backup_mods",             config.backup_mods.to_string()),
         command_output("config.show_execution_time",     config.show_execution_time.to_string()),
         command_output("config.notify_of_unzipped_mods", config.notify_of_unzipped_mods.to_string()),
         command_output("config.pinned_game_version",     config.pinned_game_version.to_string()),
+        command_output("",""),
+        command_output("config.modpacks.modpack_dir",    config.modpacks.modpack_dir.to_string()),
+        command_output("config.modpacks.enabled",        config.modpacks.enabled.join(",")),
+        command_output("config.modpacks.disabled",       config.modpacks.disabled.join(",")),
     ];
     
     display_table(display_vec, None);
@@ -269,8 +317,8 @@ async fn list() {
 
         let mut rows: Vec<Row> = Vec::with_capacity(config.pkg.len());
         for pkg in &config.pkg {
-            let mod_name = prep_cell(&pkg.mod_id.clone(), Some(CellColor::Yellow), None, None, None);
-            let pinned_version = prep_cell(&pkg.pinned_version.clone().unwrap_or(String::new()), Some(CellColor::Magenta), None, None, Some(CellAlignment::Right));
+            let mod_name = prep_cell(pkg.mod_id.clone(), Some(CellColor::Yellow), None, None, None);
+            let pinned_version = prep_cell(pkg.pinned_version.clone().unwrap_or(String::new()), Some(CellColor::Magenta), None, None, Some(CellAlignment::Right));
             rows.push(Row::from(vec![mod_name, pinned_version]));
         }
 

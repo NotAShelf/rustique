@@ -20,7 +20,7 @@ pub enum ConfigSubCommand {
 
     /// Deletes an option, returning it to the default value.
     /// You can set multiple values at the same time: Rustique config del -mzB
-    Del(BoolArgs),
+    Del(DelArgs),
     
     /// Configure the tables for `List` and `Search` 
     Table(TableArgs),
@@ -90,8 +90,6 @@ pub struct CommonArgs {
     #[arg(short = 'g', long)]
     pub game_download_dir: Option<String>,
 
-
-
     /// Displays how long a command takes to complete
     ///
     /// Default: true
@@ -107,6 +105,14 @@ pub struct CommonArgs {
     ///Note: Rustique does not validate the version being set here. 
     #[arg(short = 'P', long, requires = "with_mod", value_name = "VERSION")]
     pub pin_version: Option<String>,
+
+    /// If for some reason your rustique config gets messed and you have modpacks installed, but not enabled, use this command to add it back to the disabled list so you can enable it again.
+    #[arg(long, value_name = "MPK_ID")]
+    pub modpack_disabled: Option<String>,
+
+    /// If your rustique config gets messed up and you had modpack(s) enabled, use this to readd it to the config. This will allow you to properly manage the modpack again.
+    #[arg(long, value_name = "MPK_ID")]
+    pub modpack_enabled: Option<String>,
 }
 #[derive(Args, Debug)]
 pub struct SetArgs {
@@ -116,7 +122,7 @@ pub struct SetArgs {
 
 #[derive(Args, Debug)]
 #[allow(clippy::struct_excessive_bools)]
-pub struct BoolArgs {
+pub struct DelArgs {
 
     /// Default mod directory
     #[arg(short, long)]
@@ -147,5 +153,13 @@ pub struct BoolArgs {
     /// Specify a pinned mod. Use `Rustique config list` to see all set mods and their IDs
     #[arg(short = 'P', long, value_name = "MOD_ID")]
     pub pinned_mod: Option<ModID>,
+    
+    /// Remove a modpack id from the modpacks.disabled list. ONLY do this if rustique and the config are out of sync and your modpack doesn't exist anymore.
+    #[arg(long, value_name = "MPK_ID")]
+    pub modpack_disabled: Option<String>,
+    
+    /// Remove a modpack id from the modpacks.enabled list. ONLY do this if rustique and the config are out of sync and your modpack doesn't exist anymore.
+    #[arg(long, value_name = "MPK_ID")] 
+    pub modpack_enabled: Option<String>,
 }
 

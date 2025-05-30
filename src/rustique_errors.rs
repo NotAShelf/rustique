@@ -1,7 +1,9 @@
 use owo_colors::OwoColorize;
 use std::fmt;
+use comfy_table::{Attribute, Color};
 use tracing::{debug, error, info, warn};
 use crate::consts::FILE_MODINFO_JSON;
+use crate::information_utils::notice;
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -78,14 +80,38 @@ impl From<url::ParseError> for RustiqueError {
 }
 
 /// Helper function for Results that discards Ok() value if not needed.
-pub fn handle_err_result<T>(result: Result<T, RustiqueError>, context: &str, msg_fn: ErrorMsgFn) {
+pub fn handle_err_result<T>(result: Result<T, RustiqueError>, context: &str, nice_error: bool, msg_fn: ErrorMsgFn) {
     if let Err(e) = result {
-        let msg = format!("{} :{}", context.yellow().bold(), e.to_string().red());
-        match msg_fn {
-            ErrorMsgFn::Debug => debug!(msg),
-            ErrorMsgFn::Error => error!(msg),
-            ErrorMsgFn::Info => info!(msg),
-            ErrorMsgFn::Warn => warn!(msg),
+       
+       let color =  match msg_fn {
+            ErrorMsgFn::Debug => {
+                if !nice_error {
+                    debug!("{} :{}", context.yellow().bold(), e.to_string().red())
+                }
+                Color::DarkYellow
+            },
+            ErrorMsgFn::Error => {
+                if !nice_error {
+                    error!("{} :{}", context.yellow().bold(), e.to_string().red())
+                }
+                Color::Red
+            },
+            ErrorMsgFn::Info => {
+                if !nice_error {
+                    info!("{} :{}", context.yellow().bold(), e.to_string().red())
+                }
+                Color::Blue
+            },
+            ErrorMsgFn::Warn => {
+                if !nice_error {
+                    warn!("{} :{}", context.yellow().bold(), e.to_string().red())
+                }
+                Color::Yellow
+            },
+        };
+        
+        if nice_error {
+            notice(format!("{context}: {e}"), Some(color), vec![Attribute::Bold]);
         }
     }
 }
