@@ -84,10 +84,6 @@ pub struct CommonArgs {
     #[arg(short = 'B', long, value_name = "DIR")]
     pub backup_mods_dir: Option<String>,
 
-    /// Rustique will attempt to identify mods that are not zipped and zip them for you. (WIP)
-    #[arg(short, long)]
-    pub zip_mod_dirs: Option<bool>,
-    
     /// Set the default download directory to save vintage story when you use the download command.
     /// 
     /// By default, this is set to your Downloads directory in your home folder.
@@ -147,11 +143,7 @@ pub struct BoolArgs {
 
     #[arg(short, long)]
     pub notify_of_unzipped_mods: bool,
-
-    /// Rustique will attempt to identify mods that are not zipped and zip them for you.
-    #[arg(short, long)]
-    pub zip_mod_dirs: bool,
-   
+    
     /// Specify a pinned mod. Use `Rustique config list` to see all set mods and their IDs
     #[arg(short = 'P', long, value_name = "MOD_ID")]
     pub pinned_mod: Option<ModID>,

@@ -9,3 +9,5 @@ pub mod info_args;
 pub mod sync_args;
 pub mod config_table_args;
 pub mod download_args;
+pub mod updater_args;
+pub mod delete_args;

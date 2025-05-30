@@ -33,6 +33,7 @@ async_zip = { version = "0.0.17", features = ["tokio", "tokio-fs", "deflate"] }
 futures = "0.3.31"
 num_cpus = "1.16.0"
 uuid = { version = "1.17.0", features = ["v4"] }
+log = "0.4.27"
 
 [profile.dev]
 opt-level = 1

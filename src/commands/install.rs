@@ -1,15 +1,17 @@
 use std::collections::HashMap;
+use clap::command;
+use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use crate::aliases::{ModID, ModVersion};
 use crate::api::client::ApiClient;
 use crate::commands::sync::{get_sync_data};
 use crate::install_manager::{install_manager, Install};
 use crate::rustique_errors::RustiqueError;
 use crate::rustique_errors::RustiqueError::SimpleError;
-use crate::utils::{extract_all_mods_metadata, gather_missing_dependencies, get_version_from_modid};
+use crate::utils::{extract_all_mods_metadata, gather_missing_dependencies, split_modid_version};
 use crate::version_management::{parse_latest_version, parse_pinned_version};
 use tracing::{debug, info};
 use crate::config::config_manager::{get_config, Package};
-use crate::information_utils::{display_installation_results};
+use crate::information_utils::{command_output, display_installation_results, display_table};
 use crate::traits::ref_ext::PathRef;
 
 // Report if trying install a mod that already exists
@@ -19,8 +21,10 @@ pub async fn install_cmd(mod_dir: impl PathRef, mods_requested: Vec<ModID>, _for
     let mod_dir = mod_dir.as_ref();
     info!("install_cmd: {mods_requested:?}");
     
+    display_table(vec![command_output("Installing..", mods_requested.join(", "))], Some(UTF8_HORIZONTAL_ONLY));
+    
     // do this first as we need to strip the @ if it exists
-    let mod_map: HashMap<ModID, Option<ModVersion>> = mods_requested.iter().map(get_version_from_modid).collect();
+    let mod_map: HashMap<ModID, Option<ModVersion>> = mods_requested.iter().map(split_modid_version).collect();
     
     
     // get sync data
@@ -41,7 +45,18 @@ pub async fn install_cmd(mod_dir: impl PathRef, mods_requested: Vec<ModID>, _for
 
     let mods_requested: Vec<Install> =
         result.into_iter().map(|(mod_id, mod_info)| {
-            let pin_ver = mod_map.get(&mod_id).unwrap();
+            let pin_ver = if let Some(e) =  mod_map.get(&mod_id) {
+                if e.is_some() {
+                    e.clone()
+                } else if let Some(p_v) = config.pkg.iter().find(|p| p.mod_id == mod_id) {
+                    p_v.pinned_version.clone()
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            
             
             let pkg = Package {
                 mod_id: mod_id.clone(),
@@ -84,7 +99,7 @@ pub async fn install_missing_deps<V: AsRef<[ModID]>>(mod_dir: impl PathRef, mods
     // silence the sync message because it happens too much during installation.
     let sync_data = get_sync_data(mod_dir, true).await?.rustique_sync.clone();
 
-    let mods_map: HashMap<ModID, Option<ModVersion>> = mods_requested.iter().map(get_version_from_modid).collect();
+    let mods_map: HashMap<ModID, Option<ModVersion>> = mods_requested.iter().map(split_modid_version).collect();
     let mods_id_vec: Vec<ModID> = mods_map.keys().cloned().collect();
     
     info!("install_missing_deps: mods_id_vec: {:?}", mods_id_vec);

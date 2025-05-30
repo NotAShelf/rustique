@@ -4,7 +4,7 @@ use crate::api::client::{ApiClient};
 use crate::api::download::download_requested_mods;
 use crate::commands::sync::ModSyncInfo;
 use crate::rustique_errors::RustiqueError;
-use crate::utils::extract_zip_metadata;
+use crate::utils::{extract_zip_metadata, split_modid_version};
 use crate::version_management::{parse_latest_version, parse_pinned_version};
 use std::collections::{HashMap};
 use std::path::PathBuf;
@@ -73,6 +73,7 @@ pub async fn install_manager(
         // this is what is already on the system
         // the version doesn't really matter, we just need to know modid and filepath, which the
         // info from sync would provide that
+        let (mod_id, _) = split_modid_version(mod_id);
         total_mods_seen.insert(mod_id.clone(),Installed {
             mod_id: mod_id.clone(),
             mod_name: mod_sync_info.mod_name.clone(),

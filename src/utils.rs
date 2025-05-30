@@ -296,7 +296,10 @@ pub fn gather_dependencies(installed_mods: &HashMap<ModFileName, ModInfo>) -> Ve
 pub fn gather_missing_dependencies<V: AsRef<[ModID]>>(installed_mods: &HashMap<ModFileName, ModInfo>, mods_requested: V, sync_data: &HashMap<ModID, ModSyncInfo>) -> Vec<Install> {
     // if there are reports of slowness is this section .values().par_bridge()...flat_map_iter() could be used to speed it up
     // this is prob not an issue even with a lot of mods as the data is all in memory at this point
-    let id_vec: Vec<ModID> = sync_data.keys().cloned().collect();
+    let id_vec: Vec<ModID> = sync_data.keys().map(|m|{
+        let p = split_modid_version(m).0; // split the version from the mod_id
+        p.clone()
+    }).collect();
     
     let mods_requested = mods_requested.as_ref();
 
@@ -469,7 +472,7 @@ pub async fn backup_older_files(processed_install: &[Installed]) -> Result<(), R
     Ok(())
 }
 
-pub fn get_version_from_modid(mod_id_str: impl StrRef) -> (ModID, Option<ModVersion>) {
+pub fn split_modid_version(mod_id_str: impl StrRef) -> (ModID, Option<ModVersion>) {
     if let Some((modid, version)) = mod_id_str.as_ref().split_once('@') {
 
         let Ok(p_ver) = parse_version(version) else {
@@ -480,5 +483,5 @@ pub fn get_version_from_modid(mod_id_str: impl StrRef) -> (ModID, Option<ModVers
         return (modid.to_string(), Some(p_ver.to_string()));
     }
     
-    (mod_id_str.as_ref().to_string(), None)
+    (mod_id_str.as_ref().to_string().to_lowercase(), None)
 }

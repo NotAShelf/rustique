@@ -1,3 +1,4 @@
+use std::env::args;
 use std::path::Path;
 use std::process::exit;
 use comfy_table::{Attribute, Color};
@@ -8,12 +9,15 @@ use crate::commands::arg_structs::modpack_args::{MPLocalSubCommands, ModpackComm
 use crate::commands::info::info;
 use crate::commands::list::cmd_list;
 use crate::config::config_manager::get_config;
+use crate::handle_sync_call;
 use crate::information_utils::{command_output, display_table, notice};
 use crate::modpack::mp_create::{collect_mp_create_args, mp_create};
+use crate::modpack::mp_delete::delete_mpk_cmd;
 use crate::modpack::mp_disable::mp_disable;
 use crate::modpack::mp_enable::mp_enable;
 use crate::modpack::mp_install::mp_install;
 use crate::modpack::mp_update::mp_update;
+use crate::rustique_errors::{handle_err_result, ErrorMsgFn};
 use crate::traits::ref_ext::PathRef;
 
 pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl PathRef) {
@@ -38,7 +42,9 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
                 }
             }
         }
-        ModpackSubCommands::Delete(_args) => {}
+        ModpackSubCommands::Delete(args) => {
+            handle_err_result(delete_mpk_cmd(args.mpk_id.clone()).await, "Failed in modpack: delete: ", ErrorMsgFn::Error);
+        }
         ModpackSubCommands::Install(args) => {
             match mp_install(args.mod_id.clone(), args.mod_version.clone()).await {
                 Ok(installed) => {
@@ -108,6 +114,7 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
             match cmd_list(&packs_path, args.updates, true, false).await {
                 Ok(()) => {}
                 Err(e) => {
+                    
                     error!("{}", e.to_string().red().bold());
                 }
             }
@@ -127,6 +134,10 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
                     error!("{}", e.to_string().red().bold());
                 }
             }
+        }
+        
+        ModpackSubCommands::Sync => {
+            handle_sync_call(&mod_dir, false).await;
         }
         
         ModpackSubCommands::Local(args) => {

@@ -1,5 +1,6 @@
 use owo_colors::OwoColorize;
 use std::fmt;
+use tracing::{debug, error, info, warn};
 use crate::consts::FILE_MODINFO_JSON;
 
 #[allow(dead_code)]
@@ -74,4 +75,25 @@ impl From<url::ParseError> for RustiqueError {
     fn from(e: url::ParseError) -> Self {
         RustiqueError::UrlParseError(e)
     }
+}
+
+/// Helper function for Results that discards Ok() value if not needed.
+pub fn handle_err_result<T>(result: Result<T, RustiqueError>, context: &str, msg_fn: ErrorMsgFn) {
+    if let Err(e) = result {
+        let msg = format!("{} :{}", context.yellow().bold(), e.to_string().red());
+        match msg_fn {
+            ErrorMsgFn::Debug => debug!(msg),
+            ErrorMsgFn::Error => error!(msg),
+            ErrorMsgFn::Info => info!(msg),
+            ErrorMsgFn::Warn => warn!(msg),
+        }
+    }
+}
+
+
+pub enum ErrorMsgFn {
+    Info,
+    Debug,
+    Warn,
+    Error,
 }

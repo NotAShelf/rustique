@@ -1,5 +1,5 @@
 use std::time::Instant;
-use comfy_table::{Attribute, Cell, CellAlignment, Color, Row, Table};
+use comfy_table::{Attribute, Cell, CellAlignment, Color, ContentArrangement, Row, Table};
 use comfy_table::ContentArrangement::Dynamic;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::{UTF8_BORDERS_ONLY, UTF8_FULL_CONDENSED, UTF8_HORIZONTAL_ONLY};
@@ -170,7 +170,7 @@ pub fn command_output(option: impl StrRef, val: impl StrRef) -> (CellData, CellD
 pub fn display_table(row_data: Vec<(CellData, CellData)>, table_style: Option<&str>) {
     let style = table_style.unwrap_or(UTF8_BORDERS_ONLY);
     let mut table = Table::new();
-    table.load_preset(style).apply_modifier(UTF8_ROUND_CORNERS);
+    table.load_preset(style).set_content_arrangement(ContentArrangement::Dynamic).apply_modifier(UTF8_ROUND_CORNERS);
 
     let mut rows: Vec<Row> = Vec::new();
 

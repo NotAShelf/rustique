@@ -8,7 +8,9 @@ use crate::commands::arg_structs::sync_args::SyncArgs;
 use crate::commands::arg_structs::update_args::UpdateArgs;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
+use crate::commands::arg_structs::delete_args::DeleteArgs;
 use crate::commands::arg_structs::download_args::DownloadArgs;
+use crate::commands::arg_structs::updater_args::UpdaterArgs;
 
 #[derive(Parser)]
 #[command(name = "Rustique")]
@@ -77,23 +79,12 @@ pub enum Commands {
     
     #[command(name = "self", about = "Manage the Rustique binary; Check for updates, perform updates.")]
     RustiqueSelf(UpdaterArgs),
+    
+    #[command(about = "Remove mods and backups")]
+    Delete(DeleteArgs)
 }
 
-#[derive(Args, Debug)]
-pub struct UpdaterArgs {
-    
-    /// Manually check if there is a new update for Rustique. 
-    #[arg(short, long, default_value = "false")]
-    pub check_updates: bool,
-    
-    /// Update your Rustique binary, if there is one available. 
-    #[arg(short, long, default_value = "false")]
-    pub update: bool,
-    
-    /// Force update to the latest version, regardless of current version
-    #[arg(short, long, default_value = "false")]
-    pub force: bool,
-}
+
 
 #[derive(Args, Debug)]
 pub struct ModIDSync {
@@ -107,22 +98,6 @@ pub struct LoadModsArgs {
     pub filename: String,
 }
 
-#[cfg(feature = "dev")]
-#[derive(Args)]
-pub struct TestArg {
-    #[arg(short, long)]
-    pub version_to_pin: String,
-}
-
-#[cfg(feature = "dev")]
-#[derive(Args)]
-pub struct BulkDownloadCommands {
-    /// Number of mods to download
-    #[arg(short, long, default_value = "100")]
-    pub(crate) num_to_download: usize,
-}
-
-
 #[derive(Clone, ValueEnum)]
 pub enum ShellType {
     Bash,
@@ -134,10 +109,10 @@ pub enum ShellType {
 impl From<ShellType> for Shell {
     fn from(shell: ShellType) -> Self {
         match shell {
-            ShellType::Bash => Shell::Bash,
-            ShellType::Fish => Shell::Fish,
-            ShellType::Zsh => Shell::Zsh,
-            ShellType::PowerShell => Shell::PowerShell,
+            ShellType::Bash         => Shell::Bash,
+            ShellType::Fish         => Shell::Fish,
+            ShellType::Zsh          => Shell::Zsh,
+            ShellType::PowerShell   => Shell::PowerShell,
         }
     }
 }

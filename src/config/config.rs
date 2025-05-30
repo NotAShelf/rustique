@@ -134,15 +134,7 @@ async fn set(args: &CommonArgs) {
 
         display_vec.push(command_output("config.show_execution_time".to_string(), val.to_string()));
     }
-
-    if let Some(zip_it) = &args.zip_mod_dirs {
-
-        config.zip_mod_files = *zip_it;
-        save = true;
-
-        display_vec.push(command_output("config.zip_mod_files".to_string(), zip_it.to_string()));
-    }
-
+    
     if let Some(backup) = &args.backup_mods {
         config.backup_mods = *backup;
         save = true;
@@ -178,10 +170,7 @@ async fn set(args: &CommonArgs) {
         config.save(None).unwrap();
         display_table(display_vec, None);
     }
-
-
 }
-
 
 async fn del(args: &BoolArgs) {
 
@@ -202,13 +191,7 @@ async fn del(args: &BoolArgs) {
         save = true;
         display_vec.push(command_output("config.modpacks.modpack_dir", defaults.modpacks.modpack_dir));
     }
-
-    if args.zip_mod_dirs {
-        config.zip_mod_files = defaults.zip_mod_files;
-        save = true;
-        display_vec.push(command_output("config.zip_mod_files", defaults.zip_mod_files.to_string()));
-    }
-
+    
     if args.backup_mods {
         config.backup_mods = defaults.backup_mods;
         save = true;
@@ -267,7 +250,6 @@ async fn list() {
         command_output("config.backup_mods_dir",         config.backup_mods_dir.to_string()),
         command_output("config.game_download_dir",       config.game_download_dir.to_string()),
         command_output("config.backup_mods",             config.backup_mods.to_string()),
-        command_output("config.zip_mod_files",           config.zip_mod_files.to_string()),
         command_output("config.show_execution_time",     config.show_execution_time.to_string()),
         command_output("config.notify_of_unzipped_mods", config.notify_of_unzipped_mods.to_string()),
         command_output("config.pinned_game_version",     config.pinned_game_version.to_string()),

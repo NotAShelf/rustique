@@ -1,13 +1,14 @@
-
+use std::collections::HashMap;
 use std::path::Path;
 use comfy_table::Color;
 use tracing::{debug, error, info};
 use owo_colors::OwoColorize;
+use crate::aliases::ModID;
 use crate::api::api_structs::ModInfo;
 use crate::api::client::ApiClient;
 use crate::api::download::download_requested_mods;
 use crate::commands::arg_structs::modpack_args::MPUpdateArgs;
-use crate::commands::sync::{sync, RustiqueSyncJson};
+use crate::commands::sync::{get_sync_data, sync, ModSyncInfo, RustiqueSyncJson};
 use crate::commands::update::update_mods;
 use crate::config::config_manager::{get_config, Package};
 use crate::consts::{FILE_MODINFO_JSON, FILE_RUSTIQUE_SYNC};
@@ -15,7 +16,7 @@ use crate::information_utils::notice;
 use crate::install_manager::{Install};
 use crate::modpack::mp_install::check_if_mp_enabled;
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{delete_file, extract_zip_metadata, parse_json_file};
+use crate::utils::{delete_file, extract_zip_metadata, parse_json_file, split_modid_version};
 
 pub async fn mp_update(args: MPUpdateArgs) -> Result<(), RustiqueError> {
 
@@ -27,22 +28,20 @@ pub async fn mp_update(args: MPUpdateArgs) -> Result<(), RustiqueError> {
     
     let modpack_base_dir = Path::new(&config.modpacks.modpack_dir);
     let pack_dir = modpack_base_dir.join("packs");
-    // first check if the sync file in the modpack dir exists, if not, run sync on this location
-    let modpack_sync_file = match parse_json_file::<RustiqueSyncJson>(&pack_dir.join(FILE_RUSTIQUE_SYNC)).await {
-        Ok(sync_data) => sync_data,
-        Err(e) => {
-            info!("Failed getting sync file for packs, {}", e.to_string().red());
-            sync(&pack_dir,false, vec![]).await?;
-            parse_json_file::<RustiqueSyncJson>(&pack_dir).await?
-        }
-    };
+    
+    let modpack_sync_file = get_sync_data(&pack_dir.join(FILE_RUSTIQUE_SYNC), false).await?;
 
+    let modpack_sync_file: HashMap<ModID, ModSyncInfo> = modpack_sync_file.rustique_sync
+        .into_iter()
+        .map(|(mod_id, mod_sync)| (split_modid_version(mod_id).0, mod_sync))
+        .collect();
+    
     // check if the requested modpack is in the sync file
-    if !modpack_sync_file.rustique_sync.contains_key(&args.mpk_id) {
+    if !modpack_sync_file.contains_key(&args.mpk_id) {
         notice(format!("{} doesn't appear to be installed. Use Rustique modpack install {} to download the modpack", &args.mpk_id, &args.mpk_id), Some(Color::Yellow), vec![]);
         return Err(RustiqueError::SimpleError("Modpack not installed, nothing to update".into()));
     }
-    let Some(modpack_info) = modpack_sync_file.rustique_sync.get(&args.mpk_id) else {
+    let Some(modpack_info) = modpack_sync_file.get(&args.mpk_id) else {
         return Err(RustiqueError::SimpleError("Unable to retrieve modpack info from sync file".into()));
     };
 

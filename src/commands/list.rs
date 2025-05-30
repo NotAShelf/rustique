@@ -4,7 +4,7 @@ use crate::aliases::{ModFileName, ModID};
 use crate::api::api_structs::{ModInfo};
 use crate::commands::sync::{get_sync_data, sync, ModSyncInfo, RustiqueSyncJson};
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{extract_all_mods_metadata, gather_dependencies, gather_missing_dependencies, parse_json_file, sanitize_string};
+use crate::utils::{extract_all_mods_metadata, gather_dependencies, gather_missing_dependencies, split_modid_version, parse_json_file, sanitize_string};
 use crate::version_management::parse_version;
 use owo_colors::OwoColorize;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
@@ -12,10 +12,11 @@ use comfy_table::presets::UTF8_FULL;
 use comfy_table::{Cell, CellAlignment, ContentArrangement, Row, Table};
 use std::str::FromStr;
 use std::time::Instant;
-use tracing::debug;
+use tracing::{debug, info};
 use crate::config::config_manager::get_config;
 use crate::config::config_structs::{CellAttr, CellColor, ListColumn};
 use crate::consts::FILE_RUSTIQUE_SYNC;
+use crate::handle_sync_call;
 use crate::information_utils::prep_cell;
 use crate::install_manager::Install;
 use crate::traits::ref_ext::PathRef;
@@ -29,7 +30,7 @@ fn grab_this_mod_deps(mod_info: &ModInfo, dep_list: &[Install]) -> String {
     res.join(", ")
 }
 
-#[allow(clippy::filter_map_next)]
+#[allow(clippy::filter_map_next, clippy::too_many_lines)]
 pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: bool, local_mp_call: bool) -> Result<(), RustiqueError> {
     let mod_dir = mod_dir.as_ref();
     let start_time = Instant::now();
@@ -84,7 +85,12 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
     let sync_data = if local_mp_call {
         None
     } else {
-        Some(get_sync_data(mod_dir, false).await?)
+        Some(match get_sync_data(mod_dir, false).await {
+            Ok(s) => s,
+            Err(e) => {
+                sync(mod_dir, false, vec![]).await
+            }?
+        })
     };
     
     let installed_mods = extract_all_mods_metadata(mod_dir, false).await?;
@@ -102,20 +108,27 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
         &HashMap::new()
     };
     
-    let missing_deps = gather_missing_dependencies(&installed_mods, &[], &sync_hashmap);
+    let missing_deps = gather_missing_dependencies(&installed_mods, &[], sync_hashmap);
    
     
     let mut enabled_modpacks: HashMap<ModID, Vec<ModID>> = config.modpacks.enabled.iter().map(|m| (m.clone(), Vec::new())).collect();
     
-    for (mid, v) in &mut enabled_modpacks {
-        let mpath = Path::new(&config.modpacks.modpack_dir).join("installed").join(mid);
+    for (pack_id, v) in &mut enabled_modpacks {
+        let (pack_id, _) = split_modid_version(pack_id);
+        let mpath = Path::new(&config.modpacks.modpack_dir).join("installed").join(pack_id);
         if mpath.exists() {
-            let mp_sync_file_path = &mpath.join(FILE_RUSTIQUE_SYNC);
-            if !mp_sync_file_path.exists() {
-                sync(&mpath, true, &[]).await?;
-            }
-            let mp_sync_file = parse_json_file::<RustiqueSyncJson>(&mpath.join(FILE_RUSTIQUE_SYNC)).await?;
-            v.extend(mp_sync_file.rustique_sync.into_keys());
+            let mp_sync_file = match get_sync_data(&mpath, true).await {
+                Ok(s) => {
+                    info!("Sync data found!");
+                    s
+                },
+                Err(e) => {
+                    info!("Sync data bad, repopulating");
+                    sync(mod_dir, true, vec![]).await?
+                }
+            };
+            let keys: Vec<ModID> = mp_sync_file.rustique_sync.into_keys().map(|k| split_modid_version(k).0).collect();
+            v.extend(keys);
         }
     }
     

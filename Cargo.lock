@@ -17,6 +17,7 @@ dependencies = [
  "indexmap",
  "indicatif",
  "lenient_semver",
+ "log",
  "num_cpus",
  "owo-colors",
  "reqwest",

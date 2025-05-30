@@ -1,8 +1,9 @@
+use std::clone;
 use crate::aliases::{ModFileName, ModID, ModName, ModVersion};
 use crate::api::api_structs::{Mod, ModsSearchFile};
 use crate::api::client::{ApiClient};
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{extract_all_mods_metadata, find_mod_id, get_current_time, parse_json_file, timestamp_older_than, write_json_file};
+use crate::utils::{extract_all_mods_metadata, find_mod_id, get_current_time, split_modid_version, parse_json_file, timestamp_older_than, write_json_file};
 use crate::version_management::{parse_latest_version, parse_pinned_version, parse_version};
 use comfy_table::{Attribute, Color};
 use serde::{Deserialize, Serialize};
@@ -10,6 +11,7 @@ use serde_json::to_string_pretty;
 use std::collections::HashMap;
 use std::default::Default;
 use std::path::PathBuf;
+use std::ptr::eq;
 use std::time::{Instant};
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use tokio::fs::File;
@@ -27,14 +29,37 @@ pub struct RustiqueSyncJson {
     #[serde(rename = "RustiqueSync")]
     pub rustique_sync: HashMap<ModID, ModSyncInfo>,
     pub last_sync: String,
+    
+    pub file_location: PathBuf,
 }
 
+
 impl RustiqueSyncJson {
-    pub fn new() -> RustiqueSyncJson {
+    pub fn new(file_path: impl PathRef) -> RustiqueSyncJson {
         Self {
             rustique_sync: HashMap::<ModID, ModSyncInfo>::new(),
             last_sync: get_current_time(),
+            file_location: file_path.as_ref().to_path_buf(),
         }
+    }
+    
+    pub async fn save(&self) -> Result<(), RustiqueError> {
+       
+        info!("Attempting to save {:?}", self);
+       
+        let json = prettify(self, "Sync")?;
+
+        // Use tokio's async file operations
+        let mut file = File::create(&self.file_location)
+            .await
+            .map_err(|e| RustiqueError::IoError {
+                context: format!("Error writing sync file to {}", &self.file_location.to_string_lossy()),
+                source: e,
+            })?;
+
+        AsyncWriteExt::write_all(&mut file, json.as_bytes()).await?;
+
+        Ok(())
     }
 }
 
@@ -76,15 +101,7 @@ impl GameVersionSync {
     }
 }
 
-
-// put pinned version in config file, sync checks for pinned versions
-// and responds accordingly
-// list will still show latest version but with (pinned @v0.2.3) with different text color
-
-
-
-// This contains all the data from the api/mods request. This is used to located mod_IDs
-// and for searching for new mods. This is synced once a day or manually
+/// Use this function to retrieve the sync file for mod_dir. 
 pub async fn get_sync_data(mod_dir: impl PathRef, quiet: bool) -> Result<RustiqueSyncJson, RustiqueError> {
     let mod_dir = mod_dir.as_ref();
     let fp = mod_dir.join(PathBuf::from(FILE_RUSTIQUE_SYNC));
@@ -95,9 +112,7 @@ pub async fn get_sync_data(mod_dir: impl PathRef, quiet: bool) -> Result<Rustiqu
     parse_json_file::<RustiqueSyncJson>(&fp).await
 }
 
-
-
-pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_versions: V) -> Result<(), RustiqueError> {
+pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_versions: V) -> Result<RustiqueSyncJson, RustiqueError> {
     let mod_dir = mod_dir.as_ref();
     let start_time = Instant::now();
     let config = get_config().read().await;
@@ -113,6 +128,9 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
     }
     
 
+    // This is THE section that creates a new sync file if one does not exist. 
+    // All functions should call get_sync_data() instead of checking for sync_file manually
+    //
     // check if rustique-sync.json exists
     // if so, parse the file for updating
     // if not, do all the sync process and then write a new file
@@ -127,11 +145,11 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
                 // delete the sync file because the json changed
                 tokio::fs::remove_file(&sync_file_path).await?;
                 // return a blank slate to keep going
-                RustiqueSyncJson::new()
+                RustiqueSyncJson::new(&sync_file_path)
             }
         }
     } else {
-       RustiqueSyncJson::new()
+       RustiqueSyncJson::new(&sync_file_path)
     };
 
     let config_path = Config::get_path();
@@ -213,6 +231,8 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
                 is_symlink: SymlinkManager::exists(mod_dir.join(mod_filename)),
             });
     }
+    
+    info!("Sync data before api call {:#?}", sync_data);
 
     let im = installed_mods.keys().clone().collect::<Vec<&String>>();
     info!("Installed mods: {:?}", im);
@@ -221,11 +241,13 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
     let client = ApiClient::new();
     let result: HashMap<ModID, Mod> = client
         .fetch_mods_parallel(
-            sync_data.rustique_sync.keys().cloned().collect()
+            sync_data.rustique_sync.keys().map(|m|split_modid_version(m).0.clone()).collect()
         ).await?;
     
     for (mod_id, res_mod) in &result {
 
+        // let (mod_id_parsed, _) = &split_modid_version(mod_id);
+        
         let pkg = if pin_versions.as_ref().is_empty() {
             config.pkg.iter().find(|p| p.mod_id.eq(mod_id)).cloned().unwrap_or_default()
         } else {
@@ -254,26 +276,14 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
                 .. Default::default()
             });
     }
-
-    // Write the sync data to file
-    let data = sync_data;
-    let json = prettify(&data, "Sync")?;
-
-    // Use tokio's async file operations
-    let mut file = File::create(sync_file_path)
-        .await
-        .map_err(|e| RustiqueError::IoError {
-            context: format!("Error writing sync file to mod_dir: {}", mod_dir.to_string_lossy()),
-            source: e,
-        })?;
-
-    AsyncWriteExt::write_all(&mut file, json.as_bytes()).await?;
-
+    
+    sync_data.save().await?;
+   
     if config.show_execution_time && !quiet {
         elapsed_footer(start_time, "Sync");
     }
 
-    Ok(())
+    Ok(sync_data)
 }
 
 
@@ -391,3 +401,5 @@ pub fn prettify<T>(data: T, command_type: impl StrRef) -> Result<String, Rustiqu
             source: serde_json5::Error::from(std::io::Error::other(e)),
         })
 }
+
+

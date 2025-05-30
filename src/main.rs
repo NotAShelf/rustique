@@ -20,6 +20,7 @@ mod config;
 mod consts;
 mod updater;
 
+use std::env::args;
 use crate::cli_commands::{Cli, Commands, ShellType};
 use config::config::parse_config_args;
 use crate::commands::install::{install_cmd, install_missing_deps};
@@ -38,12 +39,14 @@ use std::process::exit;
 use std::time::Instant;
 use comfy_table::{Attribute, Color};
 use tracing::{debug, error, info, warn};
+use crate::commands::delete::{delete_all, delete_cmd};
 use crate::commands::download::download;
 use crate::commands::info::info;
 use crate::commands::search::search;
 use crate::config::config_manager::{get_config, init_config};
 use crate::information_utils::{elapsed_footer, notice};
 use crate::modpack::modpack_commands::parse_modpack_commands;
+use crate::rustique_errors::{handle_err_result, ErrorMsgFn};
 use crate::traits::ref_ext::PathRef;
 use crate::traits::string_ext::StrLowerExt;
 use crate::updater::update_manager;
@@ -74,12 +77,8 @@ async fn async_main() {
     // ideally this *could* be setup by the user on where they want the config to be loaded from,
     // but for now it will always be in .config/rustique
     // this will need to be modified to work with windows using %appdata%
-    match init_config(None) {
-        Ok(()) => {},
-        Err(e) => {
-            debug!("{}", e.to_string().red().bold());
-        }
-    }
+    handle_err_result(init_config(None), "init_config: ", ErrorMsgFn::Debug);
+    
     if cli.verbose {
         debug!("Verbose logging enabled");
     }
@@ -94,7 +93,7 @@ async fn async_main() {
         }
     }
 
-    info!("Operating on mods dir: {:?}", mod_dir);
+   
 
 
     // don't display the update message we are calling anything with self as it already deall with updates
@@ -111,24 +110,22 @@ async fn async_main() {
         }
     }
 
-
+    info!("Operating on mods dir: {:?}", mod_dir);
     match &cli.command {
         Commands::Sync(args) => {
             // Sync will add a rustique-sync.json to a valid mod_dir
             if args.sync_search_db {
-                match daily_file_syncs(args.sync_search_db).await {
-                    Ok(_) => {},
-                    Err(e) => {
-                        error!("{}", e.to_string().red().bold());
-                    }
-                }
+                handle_err_result(
+                    daily_file_syncs(args.sync_search_db).await,
+                    "Failed calling sync_search_db",
+                    ErrorMsgFn::Error
+                ); 
             } else if args.sync_game_versions {
-                match game_version_sync(args.sync_game_versions).await {
-                    Ok(_) => {},
-                    Err(e) => {
-                        error!("{}", e.to_string().red().bold());
-                    }
-                }
+                handle_err_result(
+                    game_version_sync(args.sync_game_versions).await, 
+                    "Failed calling sync_game_version",
+                    ErrorMsgFn::Error
+                ); 
             } else {
                 handle_sync_call(&mod_dir, false).await;
             }
@@ -139,18 +136,14 @@ async fn async_main() {
                 let filter_by = &args.game_versions.clone().unwrap_or("1.20".into());
                 
                 let versions: Vec<String> = sorted_versions.into_iter().filter(|v| v.lower_contains(filter_by)).collect();
-                
-               notice(format!("[{}]",versions.join("], [").as_str()), Some(Color::Yellow), vec![]); 
+                notice(format!("[{}]",versions.join("], [").as_str()), Some(Color::Yellow), vec![]); 
                 
             } else {
-                match cmd_list(&mod_dir, args.updates, false, false).await {
-                    Ok(()) => {
-
-                    },
-                    Err(e) => {
-                        error!("{}", e.to_string().red().bold());
-                    }
-                }
+                handle_err_result(
+                    cmd_list(&mod_dir, args.updates, false, false).await, 
+                    "Failed to display list",
+                    ErrorMsgFn::Error
+                );
             }
         }
         Commands::Update(args) => {
@@ -165,19 +158,12 @@ async fn async_main() {
             }
         }
         Commands::Download(args) => {
-            match download(args).await {
-                Ok(()) => {},
-                Err(e) => {
-                    eprint!("{}", e.to_string().red().bold());
-                }
-            }
+            handle_err_result(download(args).await, "Failed download:", ErrorMsgFn::Error);
         }
         Commands::Install(args) => {
             let start_time = Instant::now();
             let config = get_config().read().await;
-
             
-
             if !args.mod_ids.is_empty() {
                 match install_cmd(&mod_dir, args.mod_ids.clone(), args.missing_dependencies).await {
                     Ok(()) => {
@@ -208,46 +194,56 @@ async fn async_main() {
             parse_config_args(config_cmd).await;
         }
         Commands::Misc{ gen_auto_complete: Some(shell) } => {
-                generate_completion(shell.clone());
+            generate_completion(shell.clone());
         }
         Commands::Info(args) => {
-            match info(args).await {
-                Ok(()) => {}
-                Err(e) => {
-                    error!("{}", e.to_string().red().bold());
-                }
-            }
-        }
-        Commands::Search(args) => match search(args).await {
-            Ok(()) => {}
-            Err(e) => {
-                error!("{}", e.to_string().red().bold());
-            }
+            handle_err_result(info(args).await, "Failed to call Info:", ErrorMsgFn::Error);
+        },
+        Commands::Search(args) => {
+            handle_err_result(search(args).await, "Search failed:", ErrorMsgFn::Error ); 
         },
         Commands::Modpack(cmds) => {
            parse_modpack_commands(cmds, &mod_dir).await;
         }
         Commands::Misc{ .. }=> {},
         Commands::RustiqueSelf(args) =>{
+            
             if args.check_updates {
-                match update_manager::check_for_update(false, false).await {
-                    Ok(_) => {
-                       // Since this is a direct check for update, we don't do anything with the returned bool. 
-                    },
-                    Err(e) => {
-                        error!("{}", e.to_string().red().bold());
-                    }
-                }
+                handle_err_result(
+                    check_for_update(false, false).await,
+                    "Update check failed:",
+                    ErrorMsgFn::Error
+                );
             }
             
             if args.update {
-                match update_manager::self_update_binary(args.force).await {
-                    Ok(()) => {}
-                    Err(e) => {
-                       error!("{}", e.to_string().red().bold()); 
-                    }
+                handle_err_result(
+                    update_manager::self_update_binary(args.force).await,
+                    "Rustique update failed",
+                    ErrorMsgFn::Error
+                ); 
+            }
+        }
+
+        Commands::Delete(args) => {
+            if !args.mod_id.is_empty() {
+                handle_err_result(
+                    delete_cmd(&mod_dir, args.mod_id.clone(), args.mod_backups).await,
+                    "Unable to delete mod(s)",
+                    ErrorMsgFn::Error
+                );
+            }
+            
+            if args.all.is_some() {
+                if let Some(which) = &args.all {
+                    handle_err_result(
+                        delete_all(&mod_dir, which).await,
+                        &format!("Unable to delete all mod(s) in {}", mod_dir.display()),
+                        ErrorMsgFn::Error
+                    );
                 }
             }
+            
         }
         
     }
@@ -255,8 +251,8 @@ async fn async_main() {
 
 // Update this function to be async
 async fn handle_sync_call(mod_dir: impl PathRef, quiet: bool) {
-    match sync(mod_dir.as_ref(), quiet, vec![]).await {
-        Ok(()) => {},
+     match sync(mod_dir.as_ref(), quiet, vec![]).await {
+        Ok(_) => {},
         Err(e) => {
             error!("{}", e.to_string().red().bold());
             exit(1);

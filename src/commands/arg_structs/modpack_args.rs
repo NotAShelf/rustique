@@ -48,10 +48,13 @@ pub enum ModpackSubCommands {
     /// Delete a modpack by its id (alias)
     Delete(MPDeleteArgs),
     
+    /// Syncs the modpacks sync file. 
+    Sync,
+    
     /// Show all modpacks that are currently installed
     List(ListArgs),
     
-    /// Displays a nice table showing informatio about the modpack, including descriptions of each mod.
+    /// Displays a nice table showing information about the modpack, including descriptions of each mod.
     Info(ModInfoArgs),
     
     /// Manipulate the modpacks you created
