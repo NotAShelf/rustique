@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::path::Path;
 use crate::aliases::{ModFileName, ModID};
 use crate::api::api_structs::{ModInfo};
-use crate::commands::sync::{get_sync_data, sync, ModSyncInfo, RustiqueSyncJson};
+use crate::commands::sync::{get_sync_data, sync, ModSyncInfo};
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{extract_all_mods_metadata, gather_dependencies, gather_missing_dependencies, split_modid_version, parse_json_file, sanitize_string};
+use crate::utils::{extract_all_mods_metadata, gather_dependencies, gather_missing_dependencies, split_modid_version, sanitize_string};
 use crate::version_management::parse_version;
 use owo_colors::OwoColorize;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
@@ -15,8 +15,6 @@ use std::time::Instant;
 use tracing::{debug, info};
 use crate::config::config_manager::get_config;
 use crate::config::config_structs::{CellAttr, CellColor, ListColumn};
-use crate::consts::FILE_RUSTIQUE_SYNC;
-use crate::handle_sync_call;
 use crate::information_utils::prep_cell;
 use crate::install_manager::Install;
 use crate::traits::ref_ext::PathRef;
@@ -87,7 +85,7 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
     } else {
         Some(match get_sync_data(mod_dir, false).await {
             Ok(s) => s,
-            Err(e) => {
+            Err(_) => {
                 sync(mod_dir, false, vec![]).await
             }?
         })
@@ -122,7 +120,7 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                     info!("Sync data found!");
                     s
                 },
-                Err(e) => {
+                Err(_) => {
                     info!("Sync data bad, repopulating");
                     sync(mod_dir, true, vec![]).await?
                 }

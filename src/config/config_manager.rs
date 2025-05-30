@@ -319,6 +319,7 @@ pub fn init_config(config_dir: Option<PathBuf>) -> Result<(), RustiqueError> {
 }
 
 pub fn get_config() -> &'static RwLock<Config> {
+    info!("get_config() called");
     CONFIG.get_or_init(|| RwLock::new(Config::new(None).expect("Config has not been initialized")))
 }
 

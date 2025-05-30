@@ -1,5 +1,5 @@
 use crate::aliases::ModID;
-use crate::commands::sync::{get_sync_data, sync, ModSyncInfo};
+use crate::commands::sync::{get_sync_data, ModSyncInfo};
 use crate::install_manager::{install_manager, Install, Installed};
 use crate::rustique_errors::RustiqueError;
 use crate::utils::{backup_older_files, remove_older_files, split_modid_version};

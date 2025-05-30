@@ -47,7 +47,7 @@ impl fmt::Display for RustiqueError {
             RustiqueError::DownloadError(e) => write!(f, "Download Error: {}", e.to_string().red().bold()),
             RustiqueError::IoError { context, source } => write!(f, "{}: {}", context, source.to_string().red().bold()),
             RustiqueError::UrlParseError(e) => write!(f, "Parse Error: {}", e.to_string().red().bold()),
-            RustiqueError::SimpleError(e) => write!(f, "{}", e.to_string().red().bold()),
+            RustiqueError::SimpleError(e) => write!(f, "{e}"),
             RustiqueError::ZipError{context, source} => write!(f, "ZipError: {}, {}", context, source.to_string().red().bold()),
             RustiqueError::JsonError{context, source} => write!(f, "JsonParseError: {}, {}", context, source.to_string().red().bold()),
             RustiqueError::VersionError {context, source} => write!(f, "Version Parse Error: {}, {}", context, source.to_string().red().bold()),
@@ -91,6 +91,7 @@ pub fn handle_err_result<T>(result: Result<T, RustiqueError>, context: &str, msg
 }
 
 
+#[allow(dead_code)]
 pub enum ErrorMsgFn {
     Info,
     Debug,

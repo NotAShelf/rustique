@@ -1,15 +1,11 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use comfy_table::{Attribute, CellAlignment, Color};
+use comfy_table::{CellAlignment, Color};
 use comfy_table::presets::UTF8_BORDERS_ONLY;
-use futures::stream::iter;
-use num_cpus::get;
-use owo_colors::OwoColorize;
 use tokio::fs::ReadDir;
 use tracing::{info, warn};
-use crate::aliases::{FileName, ModFileName, ModID, ModVersion};
+use crate::aliases::{ModFileName, ModID, ModVersion};
 use crate::commands::arg_structs::delete_args::DeleteArgAllVals;
-use crate::commands::sync::get_sync_data;
 use crate::config::config_manager::get_config;
 use crate::handle_sync_call;
 use crate::information_utils::{display_table, CellData};

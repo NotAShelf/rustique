@@ -8,7 +8,7 @@ use crate::api::api_structs::ModInfo;
 use crate::api::client::ApiClient;
 use crate::api::download::download_requested_mods;
 use crate::commands::arg_structs::modpack_args::MPUpdateArgs;
-use crate::commands::sync::{get_sync_data, sync, ModSyncInfo, RustiqueSyncJson};
+use crate::commands::sync::{get_sync_data, sync, ModSyncInfo};
 use crate::commands::update::update_mods;
 use crate::config::config_manager::{get_config, Package};
 use crate::consts::{FILE_MODINFO_JSON, FILE_RUSTIQUE_SYNC};
@@ -16,7 +16,7 @@ use crate::information_utils::notice;
 use crate::install_manager::{Install};
 use crate::modpack::mp_install::check_if_mp_enabled;
 use crate::rustique_errors::RustiqueError;
-use crate::utils::{delete_file, extract_zip_metadata, parse_json_file, split_modid_version};
+use crate::utils::{delete_file, extract_zip_metadata, split_modid_version};
 
 pub async fn mp_update(args: MPUpdateArgs) -> Result<(), RustiqueError> {
 

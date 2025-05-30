@@ -1,4 +1,3 @@
-use std::clone;
 use crate::aliases::{ModFileName, ModID, ModName, ModVersion};
 use crate::api::api_structs::{Mod, ModsSearchFile};
 use crate::api::client::{ApiClient};
@@ -11,7 +10,6 @@ use serde_json::to_string_pretty;
 use std::collections::HashMap;
 use std::default::Default;
 use std::path::PathBuf;
-use std::ptr::eq;
 use std::time::{Instant};
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use tokio::fs::File;

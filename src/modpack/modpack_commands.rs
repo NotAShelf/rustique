@@ -1,4 +1,3 @@
-use std::env::args;
 use std::path::Path;
 use std::process::exit;
 use comfy_table::{Attribute, Color};
@@ -17,7 +16,6 @@ use crate::modpack::mp_disable::mp_disable;
 use crate::modpack::mp_enable::mp_enable;
 use crate::modpack::mp_install::mp_install;
 use crate::modpack::mp_update::mp_update;
-use crate::rustique_errors::{handle_err_result, ErrorMsgFn};
 use crate::traits::ref_ext::PathRef;
 
 pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl PathRef) {
@@ -38,12 +36,24 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
                     ], Some(UTF8_HORIZONTAL_ONLY));
                 },
                 Err(e) => {
-                    error!("{}", e.to_string().red().bold());
+                    error!("{}",e.to_string().red().bold());
                 }
             }
         }
         ModpackSubCommands::Delete(args) => {
-            handle_err_result(delete_mpk_cmd(args.mpk_id.clone()).await, "Failed in modpack: delete: ", ErrorMsgFn::Error);
+            match delete_mpk_cmd(args.mpk_id.clone()).await {
+                Ok(mpk_id) => {
+                    // do config write things
+                    let mut config = get_config().write().await;
+                    config.modpacks.disabled.retain(|m| m != &mpk_id);
+                    config.save(None).unwrap();
+                    
+                    notice(format!("{mpk_id} has been deleted successfully!"), Some(Color::Green), vec![Attribute::Bold]);
+                }
+                Err(e) => {
+                    notice(e.to_string(), Some(Color::Yellow), vec![Attribute::Bold]);
+                }
+            }
         }
         ModpackSubCommands::Install(args) => {
             match mp_install(args.mod_id.clone(), args.mod_version.clone()).await {

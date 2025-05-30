@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use clap::command;
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use crate::aliases::{ModID, ModVersion};
 use crate::api::client::ApiClient;

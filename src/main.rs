@@ -20,7 +20,6 @@ mod config;
 mod consts;
 mod updater;
 
-use std::env::args;
 use crate::cli_commands::{Cli, Commands, ShellType};
 use config::config::parse_config_args;
 use crate::commands::install::{install_cmd, install_missing_deps};
