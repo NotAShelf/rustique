@@ -85,6 +85,22 @@ jobs:
         path: target/${{ matrix.target }}/release/${{ matrix.binary_name }}
         if-no-files-found: error
 
+    - name: Create platform-specific archives
+      run: |
+        mkdir -p archives
+        cd release-artifacts
+        for dir in */; do
+          platform=$(basename "$dir")
+          cd "$dir"
+          if [[ "$platform" == *"windows"* ]]; then
+            zip -9 "../../archives/${platform}.zip" *.exe
+          else
+            zip -9 "../../archives/${platform}.zip" *
+          fi
+          cd ..
+        done
+        ls -la archives/
+
   release:
     name: Create Release
     needs: build
@@ -99,7 +115,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release-artifacts/*
+          files: archives/*
           draft: true
           prerelease: false
         env:
