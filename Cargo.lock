@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "Rustique"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "async_zip",
  "chrono",
@@ -17,7 +17,6 @@ dependencies = [
  "indexmap",
  "indicatif",
  "lenient_semver",
- "log",
  "num_cpus",
  "owo-colors",
  "reqwest",

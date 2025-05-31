@@ -91,13 +91,6 @@ pub struct ModIDSync {
    pub force: bool,
 }
 
-#[cfg(feature = "dev")]
-#[derive(Args, Debug)]
-pub struct LoadModsArgs {
-    #[arg(short, long)]
-    pub filename: String,
-}
-
 #[derive(Clone, ValueEnum)]
 pub enum ShellType {
     Bash,
