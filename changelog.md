@@ -1,3 +1,6 @@
+# Version 0.5.3-alpha
+* Fixed regression bug where sync would not lowercase the modid after making the API calls for the mods. This caused the sync file to create a new entry that didn't have the required information to update these types of mods.
+
 # Version 0.5.2-alpha
 * Fixed invalid type error with api call when checking for update for rustique. 
 

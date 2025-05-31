@@ -406,6 +406,7 @@ pub async fn sorted_game_versions() -> Vec<String> {
     versions
 }
 
+/// Returns mod_id as lowercase
 pub fn find_mod_id<V: AsRef<[ModApi]>>(mod_name: &String, mod_filename: &ModFileName, mods_search_data: V) -> Result<String, RustiqueError> {
     let mods_search_data = mods_search_data.as_ref();
     info!("{} has an empty mod id, attempting locate mod id...", mod_filename);
@@ -426,7 +427,7 @@ pub fn find_mod_id<V: AsRef<[ModApi]>>(mod_name: &String, mod_filename: &ModFile
                      Please contact the author to correct their modinfo.json file", mod_name.bright_red().bold(), mod_filename.bright_red().bold());
         Err(RustiqueError::SimpleError(format!("Unable to locate mod_id for {mod_name}")))
     } else {
-        Ok(res[0].mod_id.to_string())
+        Ok(res[0].mod_id.to_string().to_lowercase())
     } 
 }
 

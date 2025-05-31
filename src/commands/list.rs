@@ -115,15 +115,12 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
         let (pack_id, _) = split_modid_version(pack_id);
         let mpath = Path::new(&config.modpacks.modpack_dir).join("installed").join(pack_id);
         if mpath.exists() {
-            let mp_sync_file = match get_sync_data(&mpath, true).await {
-                Ok(s) => {
-                    info!("Sync data found!");
-                    s
-                },
-                Err(_) => {
-                    info!("Sync data bad, repopulating");
-                    sync(mod_dir, true, vec![]).await?
-                }
+            let mp_sync_file = if let Ok(s) = get_sync_data(&mpath, true).await {
+                info!("Sync data found!");
+                s
+            } else {
+                info!("Sync data bad, repopulating");
+                sync(mod_dir, true, vec![]).await?
             };
             let keys: Vec<ModID> = mp_sync_file.rustique_sync.into_keys().map(|k| split_modid_version(k).0).collect();
             v.extend(keys);
@@ -178,9 +175,9 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                         let (mut txt, mut the_color) = (String::new(), color);
                         
                         let mid = if !mod_info.mod_id.is_empty() {
-                            mod_info.mod_id.clone()
+                            mod_info.mod_id.clone().to_lowercase()
                         } else if !mod_sync_id.is_empty() {
-                            mod_sync_id.clone()
+                            mod_sync_id.clone().to_lowercase()
                         } else {
                             String::from("UNKNOWN")
                         };

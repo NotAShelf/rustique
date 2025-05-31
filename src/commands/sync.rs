@@ -194,6 +194,7 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
         
         // check if the file is a symlink
         
+        
         let version = if let Ok(parsed_version) = parse_version(&mod_info.version.clone().unwrap_or_default()) {
             parsed_version.to_string()
         } else {
@@ -213,7 +214,7 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
                 }
             }
         } else {
-            mod_info.mod_id.clone()
+            mod_info.mod_id.clone().to_lowercase()
         };
 
         sync_data
@@ -245,16 +246,20 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
     for (mod_id, res_mod) in &result {
 
         // let (mod_id_parsed, _) = &split_modid_version(mod_id);
+        // force to lowercase because some authors put uppercase chars in the modid
+        let mod_id = mod_id.to_lowercase();
         
         let pkg = if pin_versions.as_ref().is_empty() {
-            config.pkg.iter().find(|p| p.mod_id.eq(mod_id)).cloned().unwrap_or_default()
+            config.pkg.iter().find(|p| p.mod_id.eq(&mod_id)).cloned().unwrap_or_default()
         } else {
-            pin_versions.as_ref().iter().find(|p| p.mod_id.eq(mod_id)).cloned().unwrap_or_default()
+            pin_versions.as_ref().iter().find(|p| p.mod_id.eq(&mod_id)).cloned().unwrap_or_default()
         };
         
         let (mod_version, download_url, game_versions) = if !pkg.mod_id.is_empty() || !config.pinned_game_version.is_empty() {
+            info!("Parsing pinned versions for {mod_id}");
             parse_pinned_version(&res_mod.mod_json.releases, &pkg, config.pinned_game_version.clone())
         } else {
+            info!("Parsing latest versions for {mod_id}");
             parse_latest_version(&res_mod.mod_json.releases)
         };
 
@@ -312,7 +317,7 @@ pub async fn daily_file_syncs(force: bool) -> Result<ModsSearchFile, RustiqueErr
         ModsSearchFile::new()
     };
 
-    let sync_time = i64::from(config.sync_mod_search_file_every);
+    let sync_time = config.sync_mod_search_file_every;
 
     if file_data.mods.is_empty() || force || timestamp_older_than(sync_time, &file_data.last_sync){
 
@@ -364,7 +369,7 @@ pub async fn game_version_sync(force: bool) -> Result<GameVersionSync, RustiqueE
         GameVersionSync::new()
     };
     
-    let sync_time = i64::from(config.sync_latest_game_version_file_every);
+    let sync_time = config.sync_latest_game_version_file_every;
     
     if file_data.game_versions.is_empty() || force || timestamp_older_than(sync_time, &file_data.last_sync){
         notice("Syncing latest game versions..", Some(Color::Yellow), vec![Attribute::Bold]);
