@@ -58,7 +58,7 @@ pub struct GithubAssets {
     pub content_type: String,
     pub state: String,
     pub size: i64,
-    pub digest: Option<i64>,
+    pub digest: Option<String>,
     pub download_count: i64,
     pub created_at: String,
     pub updated_at: String,

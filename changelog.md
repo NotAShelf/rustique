@@ -1,3 +1,6 @@
+# Version 0.5.2-alpha
+* Fixed invalid type error with api call when checking for update for rustique. 
+
 # Version 0.5.1-alpha
 * Fixed bug with delete that was making the command pretty slow.
 
