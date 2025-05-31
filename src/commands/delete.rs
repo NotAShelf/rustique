@@ -6,8 +6,8 @@ use tokio::fs::ReadDir;
 use tracing::{info, warn};
 use crate::aliases::{ModFileName, ModID, ModVersion};
 use crate::commands::arg_structs::delete_args::DeleteArgAllVals;
+use crate::commands::sync::get_sync_data;
 use crate::config::config_manager::get_config;
-use crate::handle_sync_call;
 use crate::information_utils::{display_table, CellData};
 use crate::rustique_errors::RustiqueError;
 use crate::traits::ref_ext::PathRef;
@@ -40,7 +40,7 @@ pub async fn delete_all(mod_dir: impl PathRef, delete_type: &DeleteArgAllVals) -
         iterate_and_delete(&mut mods, &mut cleaned_mods).await?;
     }
     
-    show_deleted(format!("{:?}", cleaned_mods));
+    show_deleted(&format!("{cleaned_mods:?}"));
     
     Ok(())
 }
@@ -91,7 +91,7 @@ pub async fn delete_cmd(mod_dir: impl PathRef, mod_ids: Vec<ModID>, is_backup: b
             };
             
             if should_delete {
-                processed_mods.push((format!("{}@{}", modinfo.mod_id.clone(), modinfo.version.clone().unwrap_or(String::new())), filename.clone()));
+                processed_mods.push((format!("{}@{}", modinfo.mod_id, modinfo.version.unwrap_or(String::new())), filename.clone()));
                 delete_file(mod_dir.join(&filename)).await?;
             } else {
                 warn!("{:?}@{:?} not found", modinfo.mod_id, target_version);
@@ -99,32 +99,31 @@ pub async fn delete_cmd(mod_dir: impl PathRef, mod_ids: Vec<ModID>, is_backup: b
         } 
     }
     
-    // if !processed_mods.is_empty() {
-    //     // get sync data and remove all the processed_mods from it. (this saves having to sync again)
-    //     let mut sync_data = get_sync_data(&mod_dir, true).await?;
-    //     
-    //     for pm in &processed_mods {
-    //         if let Some(m) = sync_data.rustique_sync.remove_entry(&pm.0) {
-    //             info!("Removed {} from sync_data", m.0);
-    //         }
-    //     }
-    //     
-    //     // save the file
-    //     sync_data.save().await?;
-    //     
-    //    
-    //     
-    // }
-    
-    handle_sync_call(&mod_dir, true).await;
+    if !processed_mods.is_empty() {
+        // get sync data and remove all the processed_mods from it. (this saves having to sync again)
+        let mut sync_data = get_sync_data(&mod_dir, true).await?;
+
+        for pm in &processed_mods {
+            let (mod_id, version) = split_modid_version(&pm.0);
+            
+            if let Some(rem_data) = sync_data.rustique_sync.remove(&mod_id) {
+                if rem_data.installed_version != version.unwrap_or(String::new()) {
+                    // value didn't match, put the entry back into the sync file. 
+                    // Sync file will only have the latest version, so this prob means it was on old version that was removed.
+                    sync_data.rustique_sync.insert(mod_id, rem_data);
+                }
+            }
+            
+        }
+
+        // save the file
+        sync_data.save().await?;
+    }
     
     let removed = processed_mods.iter().map(|m|format!("{}:{}",m.0, m.1)).collect::<Vec<String>>().join("], [");
 
+    show_deleted(&removed);
 
-    show_deleted(removed);
-    
-    
-    
     if !mod_lookup.is_empty() {
         info!("Unable to find {:?}", mod_lookup);
     }
@@ -132,7 +131,7 @@ pub async fn delete_cmd(mod_dir: impl PathRef, mod_ids: Vec<ModID>, is_backup: b
     Ok(())
 }
 
-fn show_deleted(deleted_mods: String) {
+fn show_deleted(deleted_mods: &str) {
     display_table(
         vec![
             (

@@ -1,3 +1,6 @@
+# Version 0.5.1-alpha
+* Fixed bug with delete that was making the command pretty slow.
+
 # Version 0.5.0-alpha - Self Updating.. Update!
 * Rustique now has a self update!! Rustique will update in place. Check out `Rustique help self` to see the commands. (You can check for updates and perform an update)
 * Fixed `list --updates` showing all mods instead of only ones that need updates. This fixes issue #12.

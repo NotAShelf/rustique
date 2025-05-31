@@ -3,7 +3,8 @@ name: Rustique Workflow
 
 on:
   push:
-    branches: [ omega ]
+#    branches: [ omega ] - disable this for production. Only build when there is a release
+# should be turned on for specific testing branches
     tags: ['v*']
   pull_request:
     branches: [ omega ]
