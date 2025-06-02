@@ -12,12 +12,15 @@ pub struct ModpackCommands {
 #[derive(Subcommand, Debug, Clone)]
 pub enum ModpackSubCommands {
     
-    /// Create a new mod pack. 
+    /// Create a new mod pack. For a better guide, check the wiki: https://github.com/Tekunogosu/Rustique/wiki/Modpacks
     ///
     /// When you create a new modpack, the pack file itself will be save to ~/.config/rustique/modpacks/mypacks/yourmod.zip
     /// 
     /// The mods found in the mod_dir you are creating from, will be MOVED into ~/.config/rustique/modpacks/installed/yourmod.
     /// If you want to COPY the files instead, pass the --copy-mods flag with create. 
+    /// 
+    /// You can include your ModConfigs as well for a completely tailored modpack by adding --include-configs with create.
+    /// By the configs will be MOVED unless you also add --copy-configs 
     /// 
     /// Once your mod has been created, you can use modpack local commands to manage your modpacks, see `Rustique modpack help local`
     /// 
@@ -61,13 +64,10 @@ pub enum ModpackSubCommands {
     Local(MPLocalArgs)
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Args, Debug, Clone)]
 pub struct MPCreateArgs {
-    
-    // /// There are a lot of options, this flag will ask you all the questions to create a new mod pack
-    // #[arg(short, long, default_value = "false")]
-    // pub interactive: bool,
-    
+
     /// *Required* This is the long form name of your modpack, "Theysa magic mod pack"
     #[arg(short, long)]
     pub name: String,
@@ -106,7 +106,7 @@ pub struct MPCreateArgs {
     #[arg(short, long, value_name = "PATH")]
     pub save_path: Option<String>,
     
-    /// *Optional* By default, when you create a modpack it will grab ALL mods in the specified dir, including mods from other modpacks you have enabled. If you want to ignore the installed modpacks, just set this to true.
+    /// *Optional* By default, when you create a modpack it will grab ALL mods in the specified dir, including mods from other modpacks you have enabled. If you want to ignore the installed modpacks, set this to true.
     /// 
     /// This is false be default so you can make modpacks from other modpacks with ease. You can also just disable the modpacks first, but this option is available
     #[arg(short = 'I', long, default_value = "false")]
@@ -115,6 +115,14 @@ pub struct MPCreateArgs {
     /// *Optional* Copy the mods in your pack instead of moving them. By default, when you create a new modpack, the mods themselves will be moved into a new folder associated with your modpack. 
     #[arg(short = 'C', long, default_value = "false")]
     pub copy_mods: bool,
+
+    /// *Optional* Includes ALL configs found in VintagestoryData/ModConfig. Before you enable this, make sure ALL the configs are the ones you want.
+    #[arg(short = 'i', long, default_value = "false")]
+    pub include_configs: bool,
+
+    /// *Optional* Use with --include_configs. By default --include-configs MOVES the configs, this flag will COPY instead.
+    #[arg(short = 'G', long, requires = "include_configs", default_value = "false")]
+    pub copy_configs: bool,
 }
 
 

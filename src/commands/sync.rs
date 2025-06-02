@@ -43,7 +43,7 @@ impl RustiqueSyncJson {
     
     pub async fn save(&self) -> Result<(), RustiqueError> {
        
-        info!("Attempting to save {:?}", self);
+        debug!("Attempting to save {:?}", self);
        
         let json = prettify(self, "Sync")?;
 

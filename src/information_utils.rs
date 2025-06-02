@@ -203,6 +203,11 @@ impl CellData {
             alignment
         }
     }
+   
+    #[allow(dead_code)]
+    pub fn blank() -> CellData {
+        Self::new(String::new(), None, vec![], None)
+    }
 }
 
 pub fn elapsed_footer(start_time: Instant, operation: impl StrRef + std::fmt::Display) {

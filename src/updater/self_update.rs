@@ -5,9 +5,13 @@ use std::path::PathBuf;
 #[cfg(windows)]
 use std::process::Command;
 
+#[cfg(unix)]
+use crate::information_utils::notice;
+
+#[cfg(unix)]
+use comfy_table::{Attribute, Color};
 
 use async_zip::tokio::read::fs::ZipFileReader;
-use comfy_table::{Attribute, Color};
 use futures::AsyncReadExt;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -17,7 +21,6 @@ use owo_colors::OwoColorize;
 use tokio::fs;
 use crate::api::client::ApiClient;
 use crate::commands::download::download_file;
-use crate::information_utils::notice;
 use crate::rustique_errors::RustiqueError;
 use crate::traits::ref_ext::{PathRef, StrRef};
 

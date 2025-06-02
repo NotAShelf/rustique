@@ -28,7 +28,7 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
                     exit(1);
                 }
             };
-            match mp_create(&mod_dir, &mut parse_args, args.save_path.clone(), args.copy_mods, args.ignore_modpacks).await {
+            match mp_create(&mod_dir, &mut parse_args, args.save_path.clone(), args.copy_mods, args.ignore_modpacks, args.include_configs, args.copy_configs).await {
                 Ok((zip_location, mods_location)) => {
                     display_table(vec![
                         command_output("Your modpack has been created and saved to:", zip_location.display().to_string()),
@@ -89,7 +89,7 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
            
         }
         ModpackSubCommands::Enable(args) => {
-            match mp_enable(args.clone(), mod_dir).await {
+            match mp_enable(args.mpk_id.clone(), mod_dir, args.force).await {
                 Ok(enabled_pack) => {
                     let mut config = get_config().write().await;
                     config.modpacks.enabled.push(enabled_pack.clone());
@@ -110,7 +110,7 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
             }
         }
         ModpackSubCommands::Disable(args) => {
-            match mp_disable(args.clone(), mod_dir).await {
+            match mp_disable(args.mpk_id.clone(), mod_dir).await {
                 Ok(disabled_pack) => {
                     let mut config = get_config().write().await;
                     config.modpacks.enabled.retain(|m| !m.eq_ignore_ascii_case(&disabled_pack));

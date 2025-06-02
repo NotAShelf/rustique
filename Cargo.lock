@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "Rustique"
-version = "0.5.4"
+version = "0.5.5"
 dependencies = [
  "async_zip",
  "chrono",
@@ -16,7 +16,9 @@ dependencies = [
  "html2text",
  "indexmap",
  "indicatif",
+ "is_elevated",
  "lenient_semver",
+ "log",
  "num_cpus",
  "owo-colors",
  "reqwest",
@@ -978,6 +980,15 @@ name = "is_ci"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7655c9839580ee829dfacba1d1278c2b7883e50a277ff7541299489d6bdfdc45"
+
+[[package]]
+name = "is_elevated"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5299060ff5db63e788015dcb9525ad9b84f4fd9717ed2cbdeba5018cbf42f9b5"
+dependencies = [
+ "winapi",
+]
 
 [[package]]
 name = "is_terminal_polyfill"

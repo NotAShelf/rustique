@@ -4,6 +4,7 @@ use std::fmt::Display;
 use std::path::PathBuf;
 use tokio::fs::File;
 use async_zip::tokio::write::ZipFileWriter;
+use async_zip::ZipEntryBuilder;
 use crate::aliases::{FileName, ModID, ModVersion};
 use crate::consts::FILE_MODINFO_JSON;
 use crate::rustique_errors::RustiqueError;
@@ -143,7 +144,42 @@ impl ModInfo {
             })?;
         
         Ok(())
-    } 
+    }
+    
+   async fn add_dir_to_zip(&self, zip: &mut ZipFileWriter<File>, dir_path: impl PathRef, zip_prefix: &str) -> Result<(), RustiqueError> {
+        
+        let mut entries = tokio::fs::read_dir(dir_path.as_ref()).await
+            .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
+        
+        while let Some(entry) = entries.next_entry().await
+            .map_err(|e| RustiqueError::SimpleError(e.to_string()))? {
+            
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            let zip_path = if zip_prefix.is_empty() { 
+                name.clone() 
+            } else { 
+                format!("{zip_prefix}/{name}") 
+            };
+            
+            if path.is_dir() {
+               Box::pin(self.add_dir_to_zip(zip, &path, &zip_path)).await?;
+            } else {
+                let content = tokio::fs::read(&path).await
+                    .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
+                
+                let entry_builder = ZipEntryBuilder::new(zip_path.clone().into(), async_zip::Compression::Deflate);
+                zip.write_entry_whole(entry_builder, &content).await
+                    .map_err(|e| RustiqueError::ZipError {
+                        context: format!("Unable to create: {zip_path}"),
+                        source: e
+                    })?;
+            }
+        }
+       
+       Ok(())
+   } 
+
     
 }
 

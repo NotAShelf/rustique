@@ -1,8 +1,8 @@
 use std::path::Path;
+
 use comfy_table::{Attribute, Color};
 use tracing::warn;
-use crate::aliases::FileName;
-use crate::commands::arg_structs::modpack_args::MPDisableArgs;
+use crate::aliases::{FileName, ModID};
 use crate::config::config_manager::get_config;
 use crate::information_utils::notice;
 use crate::modpack::symlink_manager::SymlinkManager;
@@ -10,18 +10,31 @@ use crate::rustique_errors::RustiqueError;
 use crate::traits::ref_ext::PathRef;
 use crate::utils::extract_all_mods_metadata;
 
-pub async fn mp_disable(args: MPDisableArgs, mod_dir: impl PathRef) -> Result<String, RustiqueError> {
+#[cfg(windows)]
+use is_elevated::is_elevated;
+
+#[cfg(windows)]
+use std::process::exit;
+
+pub async fn mp_disable(mpk_id: ModID, mod_dir: impl PathRef) -> Result<ModID, RustiqueError> {
+   
+    #[cfg(windows)]
+      if !is_elevated() {
+        notice("In order to disable modpacks, Rustique uses symlinks which require admin permissions on Windows. Please run Rustique with admin rights and try again.", Some(Color::Red), vec![Attribute::Bold]);
+        exit(1);
+    }
+    
    
     let config = get_config().read().await;
     
-    let mod_pack_dir = Path::new(&config.modpacks.modpack_dir).join("installed").join(&args.mpk_id);
+    let mod_pack_dir = Path::new(&config.modpacks.modpack_dir).join("installed").join(&mpk_id);
     
     if !mod_pack_dir.exists() {
         return Err(RustiqueError::SimpleError("Modpack {} doesn't exist. Run 'Rustique modpack list' to view installed modpacks.".into()));
     }
     
-    if !config.modpacks.enabled.contains(&args.mpk_id) {
-        notice(format!("The requested modpack [{}] is not enabled, or you misstyped the ID", &args.mpk_id), Some(Color::Yellow), vec![Attribute::Bold]);
+    if !config.modpacks.enabled.contains(&mpk_id) {
+        notice(format!("The requested modpack [{}] is not enabled, or you misstyped the ID", &mpk_id), Some(Color::Yellow), vec![Attribute::Bold]);
         return Err(RustiqueError::SimpleError("Modpack is not enabled".into()));
     }
     
@@ -43,5 +56,5 @@ pub async fn mp_disable(args: MPDisableArgs, mod_dir: impl PathRef) -> Result<St
         }
     }
     
-    Ok(args.mpk_id)
+    Ok(mpk_id)
 }

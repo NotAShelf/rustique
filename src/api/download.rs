@@ -96,7 +96,6 @@ pub async fn download_mod(mod_dir: &Path, download_url: String, api_client: &Api
     // Retry logic - attempt download up to 3 times
     let max_retries = 3;
     let mut attempt = 0;
-    let mut last_error = None;
 
     while attempt < max_retries {
         attempt += 1;
@@ -119,7 +118,6 @@ pub async fn download_mod(mod_dir: &Path, download_url: String, api_client: &Api
                     }
                 }
 
-                // last_error = Some(e);
                 info!("{} {} {}", "Download failed on attempt ".yellow(), attempt.to_string().magenta(), e.to_string().red());
 
                 // Add a small delay between retries
@@ -130,7 +128,7 @@ pub async fn download_mod(mod_dir: &Path, download_url: String, api_client: &Api
         }
     }
 
-    Err(last_error.unwrap_or_else(|| RustiqueError::SimpleError("Maximum retries exceeded".to_string())))
+    Err(RustiqueError::SimpleError("Maximum retries exceeded".to_string()))
 }
 
 pub async fn download_and_verify(url: &Url, file_path: impl PathRef, api_client: &ApiClient) -> Result<PathBuf, RustiqueError> {

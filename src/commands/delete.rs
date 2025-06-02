@@ -9,6 +9,7 @@ use crate::commands::arg_structs::delete_args::DeleteArgAllVals;
 use crate::commands::sync::get_sync_data;
 use crate::config::config_manager::get_config;
 use crate::information_utils::{display_table, CellData};
+use crate::modpack::symlink_manager::SymlinkManager;
 use crate::rustique_errors::RustiqueError;
 use crate::traits::ref_ext::PathRef;
 use crate::utils::{delete_file, extract_all_mods_metadata, split_modid_version};
@@ -55,6 +56,27 @@ pub async fn iterate_and_delete(mods: &mut ReadDir, result_vec: &mut Vec<PathBuf
         }
     }
     
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub async fn iterate_and_move_zip(curr_items: &mut ReadDir, target_dir: impl PathRef, ignore_symlinks: bool) -> Result<(), RustiqueError> {
+    while let Some(entry) = curr_items.next_entry().await.map_err(|e| RustiqueError::SimpleError(format!("Unable to iterate on dir: {e}")))? {
+        if entry.path().exists() {
+            let file_name = entry.file_name();
+            // check if file_name is a .zip
+            
+            // if the file is not a zip OR ignore symlinks is true AND the entry is a symlink, skip it.
+            if !file_name.to_string_lossy().ends_with(".zip") 
+                || (ignore_symlinks && SymlinkManager::exists(entry.path())) {
+                continue;
+            }
+            info!("Moving {file_name:?}");
+            tokio::fs::rename(&entry.path(), target_dir.as_ref().join(&file_name))
+                .await.map_err(|e| RustiqueError::SimpleError(format!("Unable to move file: {e}")))?;
+        }
+    }
+
     Ok(())
 }
 

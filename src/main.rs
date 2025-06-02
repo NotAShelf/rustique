@@ -75,12 +75,26 @@ async fn async_main() {
     // setup the config global
     // ideally this *could* be setup by the user on where they want the config to be loaded from,
     // but for now it will always be in .config/rustique
-    // this will need to be modified to work with windows using %appdata%
     handle_err_result(init_config(None), "init_config: ", false, ErrorMsgFn::Debug);
     
     if cli.verbose {
-        debug!("Verbose logging enabled");
+        info!("Verbose logging enabled");
     }
+
+    if cli.debug {
+        debug!("Debug logging enabled");
+    }
+
+    info!("Before call");
+    // Check if the windows path needs to be updated before we do anything else
+    #[cfg(windows)]
+    match RustiqueOptions::check_old_default_windows().await {
+        Ok(_) => {}
+        Err(e) => {
+            error!("Error attempting to update default mod path {}", e);
+        }
+    }
+
     let mod_opts: RustiqueOptions = RustiqueOptions::default();
     let mut mod_dir = mod_opts.get_mod_path().await;
     // the mods_dir from the cli takes priority from all other means, including the config file
@@ -91,7 +105,6 @@ async fn async_main() {
             exit(1);
         }
     }
-    
 
     // don't display the update message we are calling anything with self as it already dealt with updates
     if !matches!(&cli.command, Commands::RustiqueSelf(_)) {

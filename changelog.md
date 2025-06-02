@@ -1,3 +1,7 @@
+# Version 0.5.5-alpha
+* WINDOWS ONLY: Changed the default path for Windows to `%appdata%/VintagestoryData/Mods`. Originally it was `%appdata%/Vintagestory/Mods`, which is technically works, but the preferred location is VintagestoryData. I was looking at an old wiki page when getting this information initially.
+* WINDOWS ONLY: Because of the change to the default mod path for windows, Rustique will now ask if you want to move the mods when you first run Rustique. This will not affect your game in any way, just where the mods get loaded from.
+
 # Version 0.5.4-alpha
 * Added progress bars for mod api fetches and downloading of mod files. Will possible add more in other sections at a later time.
 * Added new flag; `Rustique modpack install --missing-dependencies mpkid`. This helps download mods for a modpack that you install manually. 

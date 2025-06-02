@@ -44,7 +44,7 @@ pub struct CommonArgs {
     /// You can use ~/ as well, it will expand into /home/username/
     ///
     /// Default: '~/.config/VintagestoryData/Mods' for Unix systems (Linux and Mac)
-    ///          '%appdata%/Vintagestory/Mods' for windows
+    ///          '%appdata%/VintagestoryData/Mods' for windows
     #[arg(short, long)]
     pub mods_dir: Option<String>,
 

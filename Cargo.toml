@@ -1,6 +1,6 @@
 [package]
 name = "Rustique"
-version = "0.5.4"
+version = "0.5.5"
 edition = "2024"
 authors = ["tekunogosu", "Violet4"]
 
@@ -29,6 +29,10 @@ async_zip = { version = "0.0.17", features = ["tokio", "tokio-fs", "deflate"] }
 futures = "0.3.31"
 num_cpus = "1.16.0"
 uuid = { version = "1.17.0", features = ["v4"] }
+log = "0.4.27"
+
+[target.'cfg(windows)'.dependencies]
+is_elevated = "0.1.2"
 
 [profile.dev]
 opt-level = 1
