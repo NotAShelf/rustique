@@ -13,28 +13,26 @@ pub struct ListArgs {
     pub game_versions: Option<String>,
    
     #[clap(flatten)]
-    pub output_commands: ListOutputArgs
+    pub export_args: ListOutputArgs
 }
-
 
 #[derive(ValueEnum, Clone, Debug)]
-pub enum ListOutput {
+pub enum ListExport {
     Csv,
 }
-
 
 #[derive(Args, Debug, Clone)]
 pub struct ListOutputArgs {
 
-    /// Instead of printing the text table, output to this type instead. IF you use csv AND use show the changelog column, you may not be able to redirect to a file as long text can get truncated. Use -f /path/to/save.csv instead.
+    /// Instead of printing the text table, export to this type instead. IF you use csv AND show the changelog column, you may not be able to redirect to a file as long text can get truncated. Use -f /path/to/save.csv instead.
     #[arg(short, long)]
-    pub output: Option<ListOutput>,
+    pub export_as: Option<ListExport>,
 
     /// Show specific columns for the list output. This flag takes priority over the config values for the list display.
     #[arg(short, long, num_args = 1.., value_name = "COLUMNS")]
     pub columns: Vec<ListColumn>,
 
-    /// Set this to save output to file INSTEAD of stdout
-    #[arg(short, long, value_name = "PATH", requires = "output")]
+    /// Set this to save output to file INSTEAD of stdout, used with --export-as
+    #[arg(short, long, value_name = "PATH", requires = "export_as")]
     pub file_path: Option<PathBuf>,
 }

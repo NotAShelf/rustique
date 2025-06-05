@@ -16,8 +16,7 @@ use std::str::FromStr;
 use std::time::Instant;
 use csv::Writer;
 use tracing::{debug, info};
-use crate::commands::arg_structs::list_args::ListOutput;
-use crate::commands::info::info;
+use crate::commands::arg_structs::list_args::ListExport;
 use crate::commands::search::parse_search_file;
 use crate::config::config_manager::get_config;
 use crate::config::config_structs::{CellAttr, CellColor, ListColumn, TableSection};
@@ -36,7 +35,7 @@ fn grab_this_mod_deps(mod_info: &ModInfo, dep_list: &[Install]) -> String {
 }
 
 #[allow(clippy::filter_map_next, clippy::too_many_lines)]
-pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: bool, local_mp_call: bool, columns: Vec<ListColumn>, output: Option<ListOutput>, write_file: Option<PathBuf>) -> Result<(), RustiqueError> {
+pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: bool, local_mp_call: bool, columns: Vec<ListColumn>, export: Option<ListExport>, write_file: Option<PathBuf>) -> Result<(), RustiqueError> {
     let mod_dir = mod_dir.as_ref();
     let start_time = Instant::now();
     let config = get_config().read().await;
@@ -144,14 +143,6 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
         let (pack_id, _) = split_modid_version(pack_id);
         let mpath = Path::new(&config.modpacks.modpack_dir).join("installed").join(pack_id);
         if mpath.exists() {
-            // let mp_sync_file = if let Ok(s) = get_sync_data(&mpath, true).await {
-            //     info!("Sync data found!");
-            //     s
-            // } else {
-            //     info!("Sync data bad, repopulating");
-            //     sync(mod_dir, true, vec![]).await?
-            // };
-            
             let mp_sync_file = match get_sync_data(&mpath, false).await {
                 Ok(s) => {
                     info!("Sync data found");
@@ -283,8 +274,8 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                     Ok(ListColumn::Description) => {
                         let mut txt = sanitize_string(&mod_info.description.clone().unwrap_or(String::new()));
 
-                        if let Some(out) = &output {
-                            if matches!(out, ListOutput::Csv) {
+                        if let Some(out) = &export {
+                            if matches!(out, ListExport::Csv) {
                                 txt = format_for_csv(txt);
                             }
                         }
@@ -294,8 +285,8 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                     Ok(ListColumn::Deps) => {
                         let mut deps = grab_this_mod_deps(mod_info, &all_deps.clone());
                         let mut table_sep = Some(',');
-                        if let Some(out) = &output {
-                           if matches!(out, ListOutput::Csv) {
+                        if let Some(out) = &export {
+                           if matches!(out, ListExport::Csv) {
                                deps = format_for_csv(deps);
                                table_sep = None;
                            }
@@ -310,8 +301,8 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                         let mut missing = grab_this_mod_deps(mod_info, &missing_deps.clone());
                         let mut table_sep = Some(',');
                         // if output === csv, replace all , with space
-                        if let Some(out) = &output {
-                           if matches!(out, ListOutput::Csv) {
+                        if let Some(out) = &export {
+                           if matches!(out, ListExport::Csv) {
                                missing = format_for_csv(missing);
                                table_sep = None;
                            }
@@ -328,8 +319,8 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                         let gv  = mod_sync_data.game_versions;
                         let game_versions = if gv.len() > 1  {
                             format!("{} - {}", gv[gv.len() - 1], gv[0])
-                        } else if let Some(out) = &output {
-                            if matches!(out, ListOutput::Csv) {
+                        } else if let Some(out) = &export {
+                            if matches!(out, ListExport::Csv) {
                                 gv.join(" ")
                             } else {
                                 gv.join(",")
@@ -349,8 +340,8 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                         let mut changelog = &mod_sync_data.latest_changelog;
 
                         let out =  html_parse(&mut changelog, usize::from(table.width().unwrap_or_default())).unwrap_or_default();
-                        let changelog = if let Some(output) = &output {
-                            if matches!(output, ListOutput::Csv) {
+                        let changelog = if let Some(output) = &export {
+                            if matches!(output, ListExport::Csv) {
                                 format_for_csv(out)
                             } else {
                                 out
@@ -365,8 +356,6 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                         Some(prep_cell(mod_info.website.clone().unwrap_or_default().as_str(), color, attr, None, None))
                     },
                     Ok(ListColumn::ModURL) => {
-
-
                         let url = if let Some(api) = mod_api_search {
                             format!("https://mods.vintagestory.at/show/mod/{}", api.asset_id)
                         } else {
@@ -384,8 +373,8 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
 
     table.add_rows(rows);
     
-    if let Some(out) = &output {
-        if matches!(out, ListOutput::Csv) {
+    if let Some(out) = &export {
+        if matches!(out, ListExport::Csv) {
             
            
             let writer: Box<dyn Write> = match write_file {
@@ -396,13 +385,11 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
             let mut wtr = Writer::from_writer(writer);
             
             if let Some(row) = table.header() {
-                let h: Vec<String> = row.cell_iter().map(|c|c.content()).collect();
-                wtr.write_record(h).map_err(|e| RustiqueError::SimpleError(e.to_string()))?
+                write_record(&mut wtr, row.cell_iter().map(|c|c.content()))?;
             }
 
             for row in table.row_iter() {
-                let r: Vec<String> = row.cell_iter().map(|c|c.content()).collect();
-                wtr.write_record(r).map_err(|e| RustiqueError::SimpleError(e.to_string()))?
+                write_record(&mut wtr, row.cell_iter().map(|c|c.content()))?;
             }
             
            
@@ -420,4 +407,13 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
     }
 
     Ok(())
+}
+
+/// simple helper method for writer a record to the CSV writer. to avoid duplicate code
+fn write_record<I, T>(writer: &mut Writer<Box<dyn Write>>, collection: I) -> Result<(),RustiqueError>
+where 
+    I: IntoIterator<Item=T>,
+    T: AsRef<[u8]>
+{
+    writer.write_record(collection).map_err(|e| RustiqueError::SimpleError(e.to_string()))
 }

@@ -163,11 +163,13 @@ pub async fn get_mod_path(&self) -> PathBuf {
                         CellData::new(new_default.to_string_lossy().to_string(), Some(Color::Cyan), vec![], Some(CellAlignment::Center)),
                         CellData::blank(),
                         CellData::new("Rustique can update this location and move your mods. This changes only the default mod location that Rustique uses and WILL NOT affect gameplay.".into(), Some(Color::Yellow), vec![], Some(CellAlignment::Center)),
+                        CellData::blank(),
+                        CellData::new("Would you like rustique to update this location? Type: Y or N".into(), Some(Color::Green), vec![], Some(CellAlignment::Center)),
                     ],
                 });
 
                 loop {
-                    print!("Would you like Rustique to update your default path? [Y/N]: ");
+                    // print!("Would you like Rustique to update your default path? [Y/N]: ");
                     let mut input = String::new();
                     std::io::stdin().read_line(&mut input).expect("Unable to read input, try again.");
                     match  input.trim().to_lowercase().as_str() {
@@ -179,9 +181,11 @@ pub async fn get_mod_path(&self) -> PathBuf {
                         _ => println!("Please enter 'y' or 'yes', 'n' or 'no'"),
                     }
                 }
+               
 
                 if !can_proceed {
-                    //
+                    
+                    println!("");
                     notice("Ok, Rustique will not update your mod location. To prevent Rustique from checking again, use the following command:", Some(Color::Green), vec![]);
                     notice("Rustique config set --update-default-windows-loc false", Some(Color::Cyan), vec![Attribute::Bold]);
                     return Ok(());
@@ -234,6 +238,7 @@ pub async fn get_mod_path(&self) -> PathBuf {
                 if Path::new(&mod_dir) == old_default {
                     let mut config = get_config().write().await;
                     config.mod_dir = new_default.to_string_lossy().to_string();
+                    config.update_default_windows_loc = false; // set this to false so we don't try to run the update again
                     config.save(None)?;
                     info!("Updated mod_dir in config to new path {}", new_default.display());
                 }
@@ -254,6 +259,8 @@ pub async fn get_mod_path(&self) -> PathBuf {
                         }
                     }
                 }
+                
+                notice(format!("Your default mod location has been updated! You can now find your mods in {}", new_default.display()), Some(Color::Green), vec![Attribute::Bold]);
             }
         } else {
             info!("Unable to reade the appdata folder. This should not happen and will cause errors with rustique");

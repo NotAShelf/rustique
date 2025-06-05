@@ -87,22 +87,28 @@ async fn async_main() {
         debug!("Debug logging enabled");
     }
 
-    info!("Before call");
+    
+    
     // Check if the windows path needs to be updated before we do anything else
     #[cfg(windows)]
     {
-        let update_windows_default_loc = {
-            let config = get_config().read().await;
-            config.update_default_windows_loc
-        };
+        // Prevent the message from popping up if you are calling config.
+        // This lets you disable the message WITHOUT being annoyed again by the update call
+        if !matches!(cli.command, Commands::Config{..}) {
+            let update_windows_default_loc = {
+                let config = get_config().read().await;
+                config.update_default_windows_loc
+            };
 
-        if update_windows_default_loc {
-            match RustiqueOptions::check_old_default_windows().await {
-                Ok(_) => {}
-                Err(e) => {
-                    error!("Error attempting to update default mod path {}", e);
+            if update_windows_default_loc {
+                match RustiqueOptions::check_old_default_windows().await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        error!("Error attempting to update default mod path {}", e);
+                    }
                 }
             }
+        
         }
     }
     
@@ -165,7 +171,7 @@ async fn async_main() {
                 
             } else {
                 handle_err_result(
-                    cmd_list(&mod_dir, args.updates, false, false, args.output_commands.columns.clone(), Option::from(args.output_commands.output.clone()), args.output_commands.file_path.clone()).await,
+                    cmd_list(&mod_dir, args.updates, false, false, args.export_args.columns.clone(), Option::from(args.export_args.export_as.clone()), args.export_args.file_path.clone()).await,
                     "Failed to display list",
                     true,
                     ErrorMsgFn::Error
