@@ -7,6 +7,10 @@ pub struct ListArgs {
     /// List only mods that need updating
     #[arg(short, long, default_value = "false")]
     pub updates: bool,
+    
+    /// List only mods that are version pinned
+    #[arg(short, long, default_value = "false")]
+    pub pinned: bool,
 
     /// (Does not work with modpack commands) List all game versions for MAJOR.MINOR: Example, Rustique list --game-versions 1.20, which will show all valid versions for 1.20.x, --game-versions 1 will show all versions 1.x.x
     #[arg(short, long, value_name = "MAJOR.MINOR")]

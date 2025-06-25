@@ -194,6 +194,7 @@ async fn async_main() {
                     cmd_list(
                         &mod_dir,
                         args.updates,
+                        args.pinned,
                         false,
                         false,
                         args.export_args.columns.clone(),

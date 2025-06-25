@@ -132,7 +132,7 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
         ModpackSubCommands::List(args) => {
             let config = get_config().read().await;
             let packs_path = Path::new(&config.modpacks.modpack_dir).join("packs");
-            match cmd_list(&packs_path, args.updates, true, false, args.export_args.columns.clone(), args.export_args.export_as.clone(), args.export_args.file_path.clone()).await {
+            match cmd_list(&packs_path, args.updates, false, true, false, args.export_args.columns.clone(), args.export_args.export_as.clone(), args.export_args.file_path.clone()).await {
                 Ok(()) => {}
                 Err(e) => {
                     
@@ -167,7 +167,7 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
                     let config = get_config().read().await;
                     let packs_path = Path::new(&config.modpacks.modpack_dir).join("mypacks");
                     
-                    match cmd_list(&packs_path, false, true, true, largs.output_commands.columns.clone(), largs.output_commands.export_as.clone(), largs.output_commands.file_path.clone()).await {
+                    match cmd_list(&packs_path,false, false, true, true, largs.output_commands.columns.clone(), largs.output_commands.export_as.clone(), largs.output_commands.file_path.clone()).await {
                         Ok(()) => {}
                         Err(e) => {
                             error!("{}", e.to_string().red().bold());

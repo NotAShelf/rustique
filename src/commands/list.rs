@@ -34,8 +34,18 @@ fn grab_this_mod_deps(mod_info: &ModInfo, dep_list: &[Install]) -> String {
     res.join(", ")
 }
 
-#[allow(clippy::filter_map_next, clippy::too_many_lines)]
-pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: bool, local_mp_call: bool, columns: Vec<ListColumn>, export: Option<ListExport>, write_file: Option<PathBuf>) -> Result<(), RustiqueError> {
+#[allow(clippy::filter_map_next, clippy::too_many_lines, clippy::too_many_arguments, clippy::fn_params_excessive_bools)]
+pub async fn cmd_list(
+    mod_dir: impl PathRef, 
+    only_updated: bool,
+    only_pinned: bool,
+    modpack_call: bool, 
+    local_mp_call: bool, 
+    columns: Vec<ListColumn>, 
+    export: Option<ListExport>, 
+    write_file: Option<PathBuf>
+) -> Result<(), RustiqueError> {
+    
     let mod_dir = mod_dir.as_ref();
     let start_time = Instant::now();
     let config = get_config().read().await;
@@ -175,13 +185,16 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                 .find(|sync| sync.mod_name == mod_info.name)
                 .is_some_and(|sync| sync.latest_known_version != sync.installed_version)
         })
-        .map(|(filename, mod_info)| {
-
-
-
+        .filter_map(|(filename, mod_info)| {
+            
             let file_is_symlink = mod_dir.join(filename).is_symlink();
            
             let pkg = config.pkg.iter().find(|p| p.mod_id.eq(&mod_info.mod_id));
+
+            if only_pinned && pkg.is_none() {
+                return None
+            }
+            
             let cells: Vec<Cell> = list_columns.cells.iter().filter_map(|(column, properties)| {
                 
                 let color = properties.color.clone();
@@ -207,6 +220,8 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                         false
                     }
                 });
+                
+                
 
                 match <ListColumn as FromStr>::from_str(column) {
                     Ok(ListColumn::Name) => {
@@ -368,7 +383,7 @@ pub async fn cmd_list(mod_dir: impl PathRef, only_updated: bool, modpack_call: b
                 } 
             }).collect();
 
-        Row::from(cells)
+            Option::from(Row::from(cells))
     }).collect();
 
     table.add_rows(rows);
