@@ -25,7 +25,7 @@ use crate::utils::{extract_all_mods_metadata, extract_zip_metadata};
 use crate::version_management::{parse_download_url_from_version, parse_latest_version, parse_pinned_version};
 
 
-pub fn check_if_mp_enabled(mp_id: &ModID, array: &Vec<String>) {
+pub fn check_if_mp_enabled(mp_id: &ModID, array: &[String]) {
     if array.contains(mp_id) {
         notice(format!("{} {}", mp_id, "is currently enabled!. Disable it first then try again. "), Some(Color::Yellow), vec![]);
         exit(1);
@@ -45,7 +45,7 @@ pub async fn mp_install(mp_id: ModID, mp_version: Option<ModVersion>) -> Result<
     let client = ApiClient::new();
     
     let mod_info = client.fetch_mod(&mp_id).await?;
-    debug!("mod_info fetched.. Doing modpack installation..");
+    info!("mod_info fetched.. Doing modpack installation..");
 
     let installed_dir = Path::new(&config.modpacks.modpack_dir).join("installed");
     
@@ -60,7 +60,7 @@ pub async fn mp_install(mp_id: ModID, mp_version: Option<ModVersion>) -> Result<
         parse_latest_version(&mod_info.mod_json.releases)
     };
     
-    debug!("version: {}, download_url {}", version, download_url);
+    info!("version: {}, download_url {}", version, download_url);
     
     
     let install_modpack = Install {

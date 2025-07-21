@@ -273,6 +273,8 @@ async fn async_main() {
         Commands::Misc { one_click_setup: true, .. } => {
             one_click_setup();
         }
+        // This section is needed for windows to compile because one_click_setup is not available on windows
+        Commands::Misc { .. } => {}
         Commands::Info(args) => {
             handle_err_result(
                 info(args).await,
@@ -291,7 +293,6 @@ async fn async_main() {
         Commands::Modpack(cmds) => {
             parse_modpack_commands(cmds, &mod_dir).await;
         }
-        Commands::Misc { .. } => {}
         Commands::RustiqueSelf(args) => {
             if args.check_updates {
                 handle_err_result(

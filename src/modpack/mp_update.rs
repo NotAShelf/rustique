@@ -11,7 +11,7 @@ use crate::commands::arg_structs::modpack_args::MPUpdateArgs;
 use crate::commands::sync::{get_sync_data, sync, ModSyncInfo};
 use crate::commands::update::update_mods;
 use crate::config::config_manager::{get_config, Package};
-use crate::consts::{FILE_MODINFO_JSON, FILE_RUSTIQUE_SYNC};
+use crate::consts::FILE_MODINFO_JSON;
 use crate::information_utils::notice;
 use crate::install_manager::{Install};
 use crate::modpack::mp_install::check_if_mp_enabled;
@@ -29,7 +29,7 @@ pub async fn mp_update(args: MPUpdateArgs) -> Result<(), RustiqueError> {
     let modpack_base_dir = Path::new(&config.modpacks.modpack_dir);
     let pack_dir = modpack_base_dir.join("packs");
     
-    let modpack_sync_file = get_sync_data(&pack_dir.join(FILE_RUSTIQUE_SYNC), false).await?;
+    let modpack_sync_file = get_sync_data(&pack_dir, false).await?;
 
     let modpack_sync_file: HashMap<ModID, ModSyncInfo> = modpack_sync_file.rustique_sync
         .into_iter()

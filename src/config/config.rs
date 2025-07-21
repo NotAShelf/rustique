@@ -88,7 +88,7 @@ async fn set(args: &CommonArgs) {
 
         game_versions.game_versions.reverse();
         
-        let v = version.to_lowercase().replace("v", "");
+        let v = version.to_lowercase().replace('v', "");
         
         if game_versions.game_versions.contains(&v) {
             config.pinned_game_version.clone_from(&v);
@@ -119,6 +119,7 @@ async fn set(args: &CommonArgs) {
             }
             save = true;
             display_vec.push(command_output(format!("Pinned: {with_mod}"), version));
+            notice("Be sure to run the sync command to update Rustique's sync file to use the newly set pinned mod version.", Some(Color::Green), vec![]);
         }
     }
 
@@ -184,7 +185,7 @@ async fn set(args: &CommonArgs) {
     if let Some(check) = args.check_for_updates {
         config.check_for_updates = check; 
         save = true;
-        display_vec.push(command_output("config.check_for_updates", args.check_for_updates.clone().unwrap_or_default().to_string()));
+        display_vec.push(command_output("config.check_for_updates", args.check_for_updates.unwrap_or_default().to_string()));
     }
 
     #[cfg(windows)]

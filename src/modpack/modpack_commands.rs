@@ -156,9 +156,11 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
                 }
             }
         }
-        
         ModpackSubCommands::Sync => {
-            handle_sync_call(&mod_dir, false).await;
+            let config = get_config().read().await;
+            let mp_dir = Path::new(&config.modpacks.modpack_dir).join("packs");
+
+            handle_sync_call(&mp_dir, false).await;
         }
         
         ModpackSubCommands::Local(args) => {

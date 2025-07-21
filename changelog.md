@@ -1,3 +1,8 @@
+# version 0.5.10-alpha
+* Rustique now notifies you to run the sync command after pinning a mod version.
+* Fixed a bug with the modpack sync command not checking the correct directory for modpacks.
+* Fixed regression bug with modpack update. Modpack update should now work properly.
+
 # Version 0.5.9-alpha
 * Added requested `[-p, --pinned]` to the list command to show only pinned mods. Thanks propaneko for the suggestion!
 
@@ -8,7 +13,7 @@
 * Fixed bug #20, where rustique was replacing spaces in the mod directory with underscores, "_", which caused downloads to fail as the path didn't exist.
 
 # Version 0.5.6-alpha
-* **unix only** Added functionality to enable the 1-click install with Rustique for linux. Thanks Coolcoder613!
+* **linux only** Added functionality to enable the 1-click install with Rustique for linux. Thanks Coolcoder613!
 
 # Version 0.5.5-alpha
 * **WINDOWS ONLY:** Changed the default path for Windows to `%appdata%/VintagestoryData/Mods`. Originally it was `%appdata%/Vintagestory/Mods`, which is technically works, but the preferred location is VintagestoryData. I was looking at an old wiki page when getting this information initially.
