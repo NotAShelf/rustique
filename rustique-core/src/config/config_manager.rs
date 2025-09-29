@@ -114,14 +114,14 @@ impl Config {
     pub fn get_path() -> PathBuf {
         if cfg!(target_os = "windows") {
             if let Some(w_path) = std::env::var_os("APPDATA") {
-                PathBuf::from(w_path).join("../../rustique")
+                PathBuf::from(w_path).join("rustique")
             } else {
-                PathBuf::from("../..").join("../../rustique")
+                PathBuf::from("../..").join("rustique")
             }
         } else if let Some(u_path) = home_dir() {
-            u_path.join(".config").join("../../rustique")
+            u_path.join(".config").join("rustique")
         } else {
-            PathBuf::from("../..").join("../../rustique")
+            PathBuf::from("../..").join("rustique")
         }
     }
 }
@@ -170,6 +170,8 @@ impl Default for Config {
 impl Config {
     pub fn new() -> Result<Config, RustiqueError> {
         let config_path = Self::get_path();
+
+        info!("config_path: {}", config_path.display());
 
         if !config_path.exists() {
             fs::create_dir_all(&config_path).map_err(|e| {

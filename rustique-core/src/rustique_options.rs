@@ -1,10 +1,13 @@
 use crate::config::config_manager::get_config;
 use crate::utils::get_expanded_path;
 use std::path::PathBuf;
+#[cfg(windows)]
 use comfy_table::{Attribute, Color};
 #[cfg(unix)]
 use dirs::home_dir;
 use tracing::info;
+
+#[cfg(windows)]
 use crate::information_utils::notice;
 
 #[derive(Clone, Debug)]
