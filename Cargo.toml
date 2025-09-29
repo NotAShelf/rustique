@@ -1,37 +1,37 @@
-[package]
-name = "Rustique"
-version = "0.5.10"
-edition = "2024"
-authors = ["tekunogosu", "Violet4"]
+[workspace]
+members = [
+    "rustique-cli",
+    "rustique-core",
+]
+resolver = "2"
 
-[dependencies]
-clap = { version = "4.5.37", features = ["color", "suggestions", "derive"] }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
+
+[workspace.dependencies]
+clap = { version = "4.5.48", features = ["color", "suggestions", "derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
 dirs = { version = "6.0.0" }
 serde_json5 = {  version = "0.2.1" }
-chrono = { version =  "0.4.40" }
-comfy-table = "7.1.4"
-url = "2.5.4"
+chrono = { version =  "0.4.42" }
+comfy-table = "7.2.1"
+url = "2.5.7"
 lenient_semver = "0.4.2"
-semver = "1.0.26"
-toml = "0.8.22"
+semver = "1.0.27"
+toml = "0.9.7"
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-reqwest = { version = "0.12.15", features = ["json", "rustls-tls"], default-features = false }
-tokio = { version = "1.44.2", features = ["fs","rt-multi-thread", "macros", "io-util"] }
-clap_complete = "4.5.50"
-owo-colors = { version = "4.2.0", features = ["supports-colors"] }
-indexmap = { version = "2.9.0", features = ["serde"] }
-html2text = "0.15.0"
-indicatif = { version = "0.17.11", features = ["tokio"] }
-async_zip = { version = "0.0.17", features = ["tokio", "tokio-fs", "deflate"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+reqwest = { version = "0.12.23", features = ["json", "rustls-tls"], default-features = false }
+tokio = { version = "1.47.1", features = ["fs","rt-multi-thread", "macros", "io-util"] }
+clap_complete = "4.5.58"
+owo-colors = { version = "4.2.2", features = ["supports-colors"] }
+indexmap = { version = "2.11.4", features = ["serde"] }
+html2text = "0.15.5"
+indicatif = { version = "0.18.0", features = ["tokio"] }
+async_zip = { version = "0.0.18", features = ["tokio", "tokio-fs", "deflate"] }
 futures = "0.3.31"
-num_cpus = "1.16.0"
-uuid = { version = "1.17.0", features = ["v4"] }
+num_cpus = "1.17.0"
+uuid = { version = "1.18.1", features = ["v4"] }
 csv = "1.3.1"
-
-[target.'cfg(windows)'.dependencies]
 is_elevated = "0.1.2"
 
 [profile.dev]

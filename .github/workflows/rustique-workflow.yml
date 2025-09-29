@@ -23,7 +23,7 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            binary_name: Rustique
+            binary_name: rustique
             asset_name: rustique-linux-x86_64
             rustflags: ""
             
@@ -35,19 +35,19 @@ jobs:
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            binary_name: Rustique.exe
+            binary_name: rustique.exe
             asset_name: rustique-windows-x86_64
             rustflags: "-C link-args=/SUBSYSTEM:CONSOLE"
 
           - os: macos-latest
             target: x86_64-apple-darwin
-            binary_name: Rustique
+            binary_name: rustique
             asset_name: rustique-macos-x86_64
             rustflags: ""
             
           - os: macos-latest
             target: aarch64-apple-darwin
-            binary_name: Rustique
+            binary_name: rustique
             asset_name: rustique-macos-arm64
             rustflags: ""
 
@@ -72,10 +72,10 @@ jobs:
 #        sudo apt-get install -y gcc-aarch64-linux-gnu musl-tools
 #        rustup target add aarch64-unknown-linux-musl
 
-    - name: Build with Cargo
+    - name: Build CLI with Cargo
       env:
         RUSTFLAGS: ${{ matrix.rustflags }}
-      run: cargo build --release --target ${{ matrix.target }}
+      run: cargo build --release --target ${{ matrix.target }} --package rustique-cli
     
     # Upload the ZIP artifacts only
     - name: Upload ZIP artifact
@@ -104,8 +104,10 @@ jobs:
             platform=$(basename "$dir")
             cd "$dir"
             if [[ "$platform" == *"windows"* ]]; then
+              mv rustique-cli.exe rustique.exe
               zip -9 "../../archives/${platform}.zip" *.exe
             else
+              mv rustique-cli rustique
               zip -9 "../../archives/${platform}.zip" *
             fi
             cd ..
