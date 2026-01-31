@@ -1,29 +1,31 @@
-
-// mp_install calls normal install, except it gathers a list of all the required mods before hand 
+// mp_install calls normal install, except it gathers a list of all the required mods before hand
 // and sets the install location to be the modpack specific folder
 
+use crate::commands::install::install_missing_deps;
+use crate::commands::sync::sync;
+use comfy_table::{Attribute, Color};
+use owo_colors::OwoColorize;
+use rustique_core::aliases::{ModFileName, ModID, ModVersion};
+use rustique_core::api::api_structs::ModInfo;
+use rustique_core::api::client::ApiClient;
+use rustique_core::api::download::download_requested_mods;
+use rustique_core::config::config_manager::{Config, Package, get_config};
+use rustique_core::consts::FILE_MODINFO_JSON;
+use rustique_core::information_utils::{command_output, display_table, elapsed_footer, notice};
+use rustique_core::install_manager::{Install, install_manager};
+use rustique_core::rustique_errors::RustiqueError;
+use rustique_core::utils::{extract_all_mods_metadata, extract_zip_metadata};
+use rustique_core::version_management::{
+    parse_download_url_from_version, parse_latest_version, parse_pinned_version,
+};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::process::exit;
+use std::ptr::null;
 use std::time::Instant;
-use comfy_table::{Attribute, Color};
-use owo_colors::OwoColorize;
+use tokio::sync::RwLockReadGuard;
 use tracing::{debug, error, info, warn};
-use rustique_core::aliases::{ModID, ModVersion};
-use rustique_core::api::api_structs::ModInfo;
-use rustique_core::api::client::ApiClient;
-use rustique_core::api::download::download_requested_mods;
-use rustique_core::config::config_manager::{get_config, Package};
-use rustique_core::consts::FILE_MODINFO_JSON;
-use rustique_core::information_utils::{command_output, display_table, elapsed_footer, notice};
-use rustique_core::install_manager::{install_manager, Install};
-use rustique_core::rustique_errors::RustiqueError;
-use rustique_core::utils::{extract_all_mods_metadata, extract_zip_metadata};
-use rustique_core::version_management::{parse_download_url_from_version, parse_latest_version, parse_pinned_version};
-use crate::commands::install::install_missing_deps;
-use crate::commands::sync::sync;
-
 
 pub fn check_if_mp_enabled(mp_id: &ModID, array: &[String]) {
     if array.contains(mp_id) {
@@ -41,7 +43,21 @@ pub async fn mp_install(mp_id: ModID, mp_version: Option<ModVersion>) -> Result<
     let config = get_config().read().await;
     
     check_if_mp_enabled(&mp_id, &config.modpacks.enabled);
-        
+
+    let config = get_config().read().await;
+    let packs_path = Path::new(&config.modpacks.modpack_dir).join("mypacks");
+    let local_packs = extract_all_mods_metadata(&packs_path, false)
+        .await
+        .unwrap_or_default();
+    info!("local_packs: {:#?}", local_packs);
+
+    if local_packs
+        .iter()
+        .any(|(filename, info)| info.mod_id.eq_ignore_ascii_case(&mp_id))
+    {
+        return install_local_pack(&mp_id, &config, local_packs).await;
+    }
+
     let client = ApiClient::new();
     
     let mod_info = client.fetch_mod(&mp_id).await?;
@@ -154,11 +170,20 @@ pub async fn mp_install(mp_id: ModID, mp_version: Option<ModVersion>) -> Result<
     Err(RustiqueError::SimpleError("Unable to find installed modpack".into()))
 }
 
+    display_table(
+        vec![command_output(
+            "Successfully installed Modpack:",
+            local_pack.1.name.clone(),
+        )],
+        None,
+    );
+    elapsed_footer(start_time, "Modpack Install");
+    return Ok(local_pack.1.mod_id.clone());
+}
 
 pub async fn mp_install_missing_deps(mpk_id: ModID) -> Result<(), RustiqueError> {
     // iterate through all the modpacks and for each one check the dependencies.
     // if the installed/modpack folder is missing, create it and download all deps without checking
-    
     // use a write here as we need to update the config IF the modpack wasn't installed via the modpack install command 
     let config = get_config().read().await;
     
