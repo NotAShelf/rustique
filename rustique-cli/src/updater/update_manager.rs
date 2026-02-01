@@ -134,9 +134,9 @@ pub async fn self_update_binary(force_update: bool) -> Result<(), RustiqueError>
     };
 
     let new_binary_name: String = if cfg!(windows) {
-        "Rustique.exe".into()
+        "rustique.exe".into()
     } else {
-        "Rustique".into()
+        "rustique".into()
     };
     
        
