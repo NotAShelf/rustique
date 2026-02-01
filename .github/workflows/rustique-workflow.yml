@@ -39,17 +39,17 @@ jobs:
             asset_name: rustique-windows-x86_64
             rustflags: "-C link-args=/SUBSYSTEM:CONSOLE"
 
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            binary_name: rustique-cli
-            asset_name: rustique-macos-x86_64
-            rustflags: ""
-            
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            binary_name: rustique-cli
-            asset_name: rustique-macos-arm64
-            rustflags: ""
+#          - os: macos-latest
+#            target: x86_64-apple-darwin
+#            binary_name: rustique-cli
+#            asset_name: rustique-macos-x86_64
+#            rustflags: ""
+#
+#          - os: macos-latest
+#            target: aarch64-apple-darwin
+#            binary_name: rustique-cli
+#            asset_name: rustique-macos-arm64
+#            rustflags: ""
 
     steps:
     - uses: actions/checkout@v4
