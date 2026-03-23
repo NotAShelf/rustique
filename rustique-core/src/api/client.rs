@@ -186,7 +186,7 @@ impl ApiClient {
                         Some((mod_id, the_mod))
                     },
                     Err(e) => {
-                        info!("{mod_id} {e}");
+                        error!("{mod_id} {e}");
                         pb_clone.set_message(format!("Failed: {}", mod_id.red()));
                         pb_clone.inc(1);
                         None
