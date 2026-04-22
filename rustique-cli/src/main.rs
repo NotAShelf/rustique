@@ -63,7 +63,6 @@ fn main() {
 
 #[allow(clippy::too_many_lines)]
 async fn async_main() {
-    // let cmd = handle_about_text(Cli::command());
     let cmd = Cli::command();
     let cli = Cli::from_arg_matches(&cmd.get_matches()).unwrap_or_else(|_| {
         error!("Error attempting to parse CLI arguments: ");
@@ -128,14 +127,15 @@ async fn async_main() {
         }
     }
 
+    let config = get_config().read().await;
+
     // don't display the update message we are calling anything with self as it already dealt with updates
     if !matches!(&cli.command, Commands::RustiqueSelf(_)) {
-        let config = get_config().read().await;
+        // let config = get_config().read().await;
         let _ = check_for_update(config.check_for_updates, true).await;
     }
 
     if cli.with_mpk.is_some() {
-        let config = get_config().read().await;
         mod_dir = Path::new(&config.modpacks.modpack_dir)
             .join("installed")
             .join(cli.with_mpk.clone().unwrap_or(String::new()));
@@ -225,7 +225,6 @@ async fn async_main() {
         }
         Commands::Install(args) => {
             let start_time = Instant::now();
-            let config = get_config().read().await;
 
             if !args.mod_ids.is_empty() {
                 match install_cmd(&mod_dir, args.mod_ids.clone(), args.missing_dependencies).await {
@@ -333,7 +332,7 @@ async fn async_main() {
     }
 }
 
-// Update this function to be async
+
 async fn handle_sync_call(mod_dir: impl PathRef, quiet: bool) {
     match sync(mod_dir.as_ref(), quiet, vec![]).await {
         Ok(_) => {}

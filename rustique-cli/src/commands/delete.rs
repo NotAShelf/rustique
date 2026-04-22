@@ -8,6 +8,7 @@ use rustique_core::aliases::{ModFileName, ModID, ModVersion};
 use crate::commands::arg_structs::delete_args::DeleteArgAllVals;
 use crate::commands::sync::get_sync_data;
 use rustique_core::config::config_manager::get_config;
+use rustique_core::consts::FILE_RUSTIQUE_SYNC;
 use rustique_core::information_utils::{display_table, CellData};
 use rustique_core::symlink_manager::SymlinkManager;
 use rustique_core::rustique_errors::RustiqueError;
@@ -127,19 +128,19 @@ pub async fn delete_cmd(mod_dir: impl PathRef, mod_ids: Vec<ModID>, is_backup: b
 
         for pm in &processed_mods {
             let (mod_id, version) = split_modid_version(&pm.0);
-            
+
             if let Some(rem_data) = sync_data.rustique_sync.remove(&mod_id) {
                 if rem_data.installed_version != version.unwrap_or(String::new()) {
-                    // value didn't match, put the entry back into the sync file. 
+                    // value didn't match, put the entry back into the sync file.
                     // Sync file will only have the latest version, so this prob means it was on old version that was removed.
                     sync_data.rustique_sync.insert(mod_id, rem_data);
                 }
             }
-            
+
         }
 
-        // save the file
-        sync_data.save().await?;
+        // save the file from the passed mod_dir (which could be from the config file or the cli)
+        sync_data.save(Path::new(mod_dir).join(FILE_RUSTIQUE_SYNC)).await?;
     }
     
     let removed = processed_mods.iter().map(|m|format!("{}:{}",m.0, m.1)).collect::<Vec<String>>().join("], [");

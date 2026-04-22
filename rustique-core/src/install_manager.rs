@@ -67,7 +67,7 @@ pub async fn install_manager(
     installed_mods: HashMap<ModID, ModSyncInfo>) -> Result<Vec<Installed>, RustiqueError> {
 
     let mod_dir = mod_dir.as_ref(); 
-    // this is the combined list of all mods installed, once download is completed, now mods will be
+    // this is the combined list of all mods installed, once download is completed, new mods will be
     // added here
     let mut total_mods_seen: HashMap<ModID, Installed> = HashMap::with_capacity(installed_mods.len());
     for (mod_id, mod_sync_info) in &installed_mods {

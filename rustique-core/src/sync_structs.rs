@@ -1,5 +1,5 @@
+use std::default::Default;
 use std::collections::HashMap;
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -14,31 +14,32 @@ pub struct RustiqueSyncJson {
     #[serde(rename = "RustiqueSync")]
     pub rustique_sync: HashMap<ModID, ModSyncInfo>,
     pub last_sync: String,
-    
-    pub file_location: PathBuf,
 }
 
-
-impl RustiqueSyncJson {
-    pub fn new(file_path: impl PathRef) -> RustiqueSyncJson {
-        Self {
-            rustique_sync: HashMap::<ModID, ModSyncInfo>::new(),
-            last_sync: get_current_time(),
-            file_location: file_path.as_ref().to_path_buf(),
+impl Default for RustiqueSyncJson {
+    fn default() -> Self {
+        RustiqueSyncJson {
+            rustique_sync: HashMap::default(),
+            last_sync: get_current_time()
         }
     }
-    
-    pub async fn save(&self) -> Result<(), RustiqueError> {
+}
+
+impl RustiqueSyncJson {
+
+    // Let the calling function tell us where the sync file is located
+    pub async fn save(&self, file_location: impl PathRef) -> Result<(), RustiqueError> {
        
         debug!("Attempting to save {:?}", self);
-       
+
+
         let json = prettify(self, "Sync")?;
 
         // Use tokio's async file operations
-        let mut file = File::create(&self.file_location)
+        let mut file = File::create(&file_location)
             .await
             .map_err(|e| RustiqueError::IoError {
-                context: format!("Error writing sync file to {}", &self.file_location.to_string_lossy()),
+                context: format!("Error writing sync file to {}", file_location.as_ref().to_string_lossy()),
                 source: e,
             })?;
 

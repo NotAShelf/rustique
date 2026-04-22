@@ -68,11 +68,11 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
                 // delete the sync file because the json changed
                 tokio::fs::remove_file(&sync_file_path).await?;
                 // return a blank slate to keep going
-                RustiqueSyncJson::new(&sync_file_path)
+                RustiqueSyncJson::default()
             }
         }
     } else {
-       RustiqueSyncJson::new(&sync_file_path)
+       RustiqueSyncJson::default()
     };
 
     let config_path = Config::get_path();
@@ -182,10 +182,10 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
         };
         
         let (mod_version, download_url, game_versions, changelog) = if !pkg.mod_id.is_empty() || !config.pinned_game_version.is_empty() {
-            info!("Parsing pinned versions for {mod_id}");
+            info!("{} {}","Parsing pinned versions for".yellow(), mod_id.blue());
             parse_pinned_version(&res_mod.mod_json.releases, &pkg, config.pinned_game_version.clone())
         } else {
-            info!("Parsing latest versions for {mod_id}");
+            info!("{} {}", "Parsing latest versions for".yellow(), mod_id.blue());
             parse_latest_version(&res_mod.mod_json.releases)
         };
 
@@ -208,7 +208,7 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
             });
     }
     
-    sync_data.save().await?;
+    sync_data.save(sync_file_path).await?;
    
     if config.show_execution_time && !quiet {
         elapsed_footer(start_time, "Sync");
@@ -235,7 +235,7 @@ pub async fn daily_file_syncs(force: bool) -> Result<ModsSearchFile, RustiqueErr
             Ok(json) => json,
             Err(e) => {
                 // delete the file and try again
-                info!("mod-search.json parse error: {}", e);
+                error!("mod-search.json parse error: {}", e);
                 tokio::fs::remove_file(&search_file).await?;
                 // println!("mod-search.json parse error: {}", e);
                 ModsSearchFile::new()
@@ -258,12 +258,12 @@ pub async fn daily_file_syncs(force: bool) -> Result<ModsSearchFile, RustiqueErr
 
         debug!("file_data {:?}", file_data);
 
-        info!("Attempting to write Mod Search file to {}", search_file.display());
+        info!("{} {}", "Attempting to write Mod Search file to".yellow(), search_file.display());
 
         let json = prettify(&file_data, "Mods Search DB")?;
         write_json_file(&search_file, json, &Config::get_path()).await?;
         
-        info!("Mods Search Sync file written successfully");
+        info!("{}", "Mods Search Sync file written successfully".green());
     }
 
     if config.show_execution_time && force {
@@ -287,7 +287,7 @@ pub async fn game_version_sync(force: bool) -> Result<GameVersionSync, RustiqueE
         match parse_json_file::<GameVersionSync>(&file).await {
             Ok(json) => json,
             Err(e) => {
-                info!("Game version sync file parse error: {}", e);
+                error!("Game version sync file parse error: {}", e);
                 // delete the file and recreate it
                 tokio::fs::remove_file(&file).await?;
                 GameVersionSync::new()
@@ -311,7 +311,7 @@ pub async fn game_version_sync(force: bool) -> Result<GameVersionSync, RustiqueE
         
         write_json_file(&file, json, &Config::get_path()).await?;
 
-        info!("Mods Search Sync file written successfully");
+        info!("{}", "Mods Search Sync file written successfully".green());
         
     }
     
