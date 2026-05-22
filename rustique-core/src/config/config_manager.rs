@@ -92,7 +92,7 @@ pub struct ModPacks {
 impl Default for ModPacks {
     fn default() -> Self {
         Self {
-            modpack_dir: Config::get_path()
+            modpack_dir: Config::data_path()
                 .join("modpacks")
                 .to_string_lossy()
                 .to_string(),
@@ -121,10 +121,24 @@ impl Config {
             } else {
                 PathBuf::from("../..").join("rustique")
             }
+        } else if let Some(config_dir) = dirs::config_dir() {
+            config_dir.join("rustique")
         } else if let Some(u_path) = home_dir() {
             u_path.join(".config").join("rustique")
         } else {
             PathBuf::from("../..").join("rustique")
+        }
+    }
+
+    pub fn data_path() -> PathBuf {
+        if cfg!(target_os = "windows") {
+            Self::get_path()
+        } else if let Some(data_dir) = dirs::data_dir() {
+            data_dir.join("rustique")
+        } else if let Some(u_path) = home_dir() {
+            u_path.join(".local").join("share").join("rustique")
+        } else {
+            Self::get_path()
         }
     }
 }
@@ -132,8 +146,8 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         // let backup_mods_dir = get_expanded_path(PathBuf::from(CONFIG_DEFAULT_DIR).join("mod_backups"));
-        let backup_mods_dir = Self::get_path().join("mod_backups");
-        let modpack_dir = Self::get_path().join("modpacks");
+        let backup_mods_dir = Self::data_path().join("mod_backups");
+        let modpack_dir = Self::data_path().join("modpacks");
 
         match Self::setup_modpack_dir("modpacks") {
             Ok(_) => {}
@@ -237,7 +251,7 @@ impl Config {
     }
 
     pub fn setup_modpack_dir(modpack_dir: impl PathRef) -> Result<(), RustiqueError> {
-        let modpack_dir = Self::get_path().join(modpack_dir);
+        let modpack_dir = Self::data_path().join(modpack_dir);
         // create the modpack directory if it hasn't been created
         debug!("Checking if {} exists", modpack_dir.to_string_lossy());
         if !&modpack_dir.exists() {
