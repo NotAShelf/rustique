@@ -1,13 +1,13 @@
-use std::default::Default;
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
-use tracing::debug;
 use crate::aliases::{ModFileName, ModID, ModName, ModVersion};
 use crate::rustique_errors::RustiqueError;
 use crate::traits::ref_ext::PathRef;
 use crate::utils::{get_current_time, prettify};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::default::Default;
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
+use tracing::debug;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct RustiqueSyncJson {
@@ -20,18 +20,15 @@ impl Default for RustiqueSyncJson {
     fn default() -> Self {
         RustiqueSyncJson {
             rustique_sync: HashMap::default(),
-            last_sync: get_current_time()
+            last_sync: get_current_time(),
         }
     }
 }
 
 impl RustiqueSyncJson {
-
     // Let the calling function tell us where the sync file is located
     pub async fn save(&self, file_location: impl PathRef) -> Result<(), RustiqueError> {
-       
         debug!("Attempting to save {:?}", self);
-
 
         let json = prettify(self, "Sync")?;
 
@@ -39,7 +36,10 @@ impl RustiqueSyncJson {
         let mut file = File::create(&file_location)
             .await
             .map_err(|e| RustiqueError::IoError {
-                context: format!("Error writing sync file to {}", file_location.as_ref().to_string_lossy()),
+                context: format!(
+                    "Error writing sync file to {}",
+                    file_location.as_ref().to_string_lossy()
+                ),
                 source: e,
             })?;
 
@@ -58,7 +58,7 @@ pub struct ModIDSync {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ModIDSyncData {
     pub mod_id: ModID,
-    pub modid_strs: Vec<String>
+    pub modid_strs: Vec<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
@@ -71,11 +71,10 @@ pub struct ModSyncInfo {
     pub latest_download_url: String,
     pub game_versions: Vec<String>,
     pub latest_changelog: String,
-    
-    #[serde(default)]
-    pub is_symlink: bool
-}
 
+    #[serde(default)]
+    pub is_symlink: bool,
+}
 
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
 pub struct GameVersionSync {

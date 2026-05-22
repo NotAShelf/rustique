@@ -1,10 +1,10 @@
 use crate::config::config_manager::get_config;
 use crate::utils::get_expanded_path;
-use std::path::PathBuf;
 #[cfg(windows)]
 use comfy_table::{Attribute, Color};
 #[cfg(unix)]
 use dirs::home_dir;
+use std::path::PathBuf;
 use tracing::info;
 
 #[cfg(windows)]
@@ -29,7 +29,7 @@ impl RustiqueOptions {
         if let Some(path) = std::env::var_os("APPDATA") {
             return RustiqueOptions {
                 mod_dir: Some(PathBuf::from(path).join("VintagestoryData").join("Mods")),
-            }
+            };
         }
         panic!("Unable to determine default mods directory");
     }
@@ -40,7 +40,6 @@ impl RustiqueOptions {
     pub fn unix() -> Self {
         // TODO: check if dir exists, if not check for the flatpack dir, throw error message if none are found
         if let Some(home) = home_dir() {
-
             #[cfg(target_os = "macos")]
             let mac_base = home
                 .join("Library")
@@ -48,10 +47,7 @@ impl RustiqueOptions {
                 .join("VintagestoryData")
                 .join("Mods");
 
-            let base =  home
-                .join(".config")
-                .join("VintagestoryData")
-                .join("Mods");
+            let base = home.join(".config").join("VintagestoryData").join("Mods");
 
             let flatpak = home
                 .join(".var")
@@ -62,9 +58,8 @@ impl RustiqueOptions {
                 .join("Mods");
 
             let mut options = RustiqueOptions {
-                mod_dir: Some(PathBuf::new())
+                mod_dir: Some(PathBuf::new()),
             };
-
 
             #[cfg(target_os = "macos")]
             if mac_base.exists() {
@@ -84,7 +79,7 @@ impl RustiqueOptions {
                 options.mod_dir = None;
             }
 
-            return options
+            return options;
         }
         panic!("Unable to determine user's home directory, do you have permissions??");
     }
@@ -106,10 +101,7 @@ impl RustiqueOptions {
                 .join("VintagestoryData")
                 .join("Mods");
 
-            let old_default = home
-                .join(".config")
-                .join("VintagestoryData")
-                .join("Mods");
+            let old_default = home.join(".config").join("VintagestoryData").join("Mods");
 
             // if old default exists and IS NOT empty, prompt user
             // if its empty, check if new_default exist.
@@ -117,26 +109,27 @@ impl RustiqueOptions {
             // if not, return old default, but let user know that 1.21 will use the new default
 
             let mut options = RustiqueOptions {
-                mod_dir: Some(PathBuf::new())
+                mod_dir: Some(PathBuf::new()),
             };
 
             // old exists, but is empty AND new exists, just use new location
             if old_default.exists()
                 && old_default.read_dir().unwrap().count() <= 0
-                && new_default.exists() {
+                && new_default.exists()
+            {
                 options.mod_dir = Some(new_default);
             } else if old_default.exists()
                 && old_default.read_dir().unwrap().count() > 0
-                && new_default.exists() {
-
+                && new_default.exists()
+            {
                 // let user know that the new location should be used and ask if they want to set the
                 // default and move the mods over
                 options.mod_dir = Some(old_default);
 
                 notice(
-                   "It looks like you are using the old default location for mods. As of Vintage Story 1.21, the new mac location is ~/Library/Application Support/VintagestoryData/Mods",
-                   Some(Color::Yellow),
-                   vec![Attribute::Bold],
+                    "It looks like you are using the old default location for mods. As of Vintage Story 1.21, the new mac location is ~/Library/Application Support/VintagestoryData/Mods",
+                    Some(Color::Yellow),
+                    vec![Attribute::Bold],
                 );
                 notice(
                     "To update this run, rustique config set -m ~/Library/Application Support/VintagestoryData/Mods -- Note you will have to manually move your mods from the old location ~/.config/VintagestoryData/Mods",
@@ -144,9 +137,6 @@ impl RustiqueOptions {
                     vec![Attribute::Bold],
                 );
             }
-
-
-
         }
 
         panic!("Unable to determine default home directory");
@@ -157,12 +147,13 @@ impl RustiqueOptions {
         let config = get_config().read().await;
         let config_mod_dir = PathBuf::from(&config.mod_dir);
 
-        if default_path.as_path().eq(get_expanded_path(config_mod_dir.clone()).as_path()) {
+        if default_path
+            .as_path()
+            .eq(get_expanded_path(config_mod_dir.clone()).as_path())
+        {
             default_path
         } else {
             config_mod_dir
         }
     }
-
-
 }

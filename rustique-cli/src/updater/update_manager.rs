@@ -1,17 +1,19 @@
+use crate::updater::github_api_args::GithubReleases;
+use crate::updater::self_update::RustiqueUpdater;
+use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
+use comfy_table::{Attribute, CellAlignment, Color};
+use reqwest::Client;
+use reqwest::header::ACCEPT;
+use rustique_core::api::client::RUSTIQUE_USER_AGENT;
+use rustique_core::information_utils::{
+    CellData, RustiqueMessage, command_output, display_table, notice, rustique_message,
+};
+use rustique_core::rustique_errors::RustiqueError;
+use rustique_core::version_management::parse_version;
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
-use comfy_table::{Attribute, CellAlignment, Color};
-use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
-use reqwest::Client;
-use reqwest::header::ACCEPT;
 use tracing::{debug, info};
-use rustique_core::api::client::RUSTIQUE_USER_AGENT;
-use rustique_core::information_utils::{command_output, display_table, notice, rustique_message, CellData, RustiqueMessage};
-use rustique_core::rustique_errors::RustiqueError;
-use rustique_core::version_management::parse_version;
-use crate::updater::github_api_args::GithubReleases;
-use crate::updater::self_update::RustiqueUpdater;
 
 // this url shows all releases for rustique published to github
 const GITHUB_RUSTIQUE_URI: &str = "https://api.github.com/repos/Tekunogosu/Rustique/releases";
@@ -25,10 +27,11 @@ impl GithubApi {
         Self {
             agent: Arc::new(
                 Client::builder()
-                .timeout(Duration::from_secs(20))
-                .user_agent(RUSTIQUE_USER_AGENT)
-                .build().expect("Failed to build Github API client")
-            )
+                    .timeout(Duration::from_secs(20))
+                    .user_agent(RUSTIQUE_USER_AGENT)
+                    .build()
+                    .expect("Failed to build Github API client"),
+            ),
         }
     }
 
@@ -39,11 +42,18 @@ impl GithubApi {
     pub async fn get_latest_release(&self) -> Result<GithubReleases, RustiqueError> {
         let uri = Self::api_url("latest");
         info!("URL: {}", &uri);
-        let response= self.agent.get(uri)
+        let response = self
+            .agent
+            .get(uri)
             .header(ACCEPT, "application/vnd.github+json")
-            .send().await.map_err(|e| RustiqueError::SimpleError(format!("get_latest_release: {e}")))?;
+            .send()
+            .await
+            .map_err(|e| RustiqueError::SimpleError(format!("get_latest_release: {e}")))?;
 
-        let text = response.text().await.map_err(|e| RustiqueError::SimpleError(format!("get_latest_release: txt {e}")))?;
+        let text = response
+            .text()
+            .await
+            .map_err(|e| RustiqueError::SimpleError(format!("get_latest_release: txt {e}")))?;
 
         debug!("get_latest_release: txt: {text}");
 
@@ -54,8 +64,10 @@ impl GithubApi {
     }
 }
 
-pub async fn check_for_update(hide_message: bool, hide_is_updated_msg: bool) -> Result<bool, RustiqueError> {
-
+pub async fn check_for_update(
+    hide_message: bool,
+    hide_is_updated_msg: bool,
+) -> Result<bool, RustiqueError> {
     let client = GithubApi::new();
 
     let latest_release = client.get_latest_release().await?;
@@ -79,19 +91,23 @@ pub async fn check_for_update(hide_message: bool, hide_is_updated_msg: bool) -> 
             });
         } else if !hide_is_updated_msg {
             display_table(
-                vec![command_output("Rustique is up-to-date!", format!("v{current_version}"))], 
-                          Some(UTF8_HORIZONTAL_ONLY)
+                vec![command_output(
+                    "Rustique is up-to-date!",
+                    format!("v{current_version}"),
+                )],
+                Some(UTF8_HORIZONTAL_ONLY),
             );
         }
     }
 
-    info!("Current Version: {current_version}, latest version {latest_version}, has-update: {has_update}");
+    info!(
+        "Current Version: {current_version}, latest version {latest_version}, has-update: {has_update}"
+    );
 
     Ok(has_update)
 }
 
 pub async fn self_update_binary(force_update: bool) -> Result<(), RustiqueError> {
-
     // get latest release based in arch
     // download it to a temp dir
     // unzip the file
@@ -101,9 +117,9 @@ pub async fn self_update_binary(force_update: bool) -> Result<(), RustiqueError>
 
     let github_client = GithubApi::new();
     let latest_release = github_client.get_latest_release().await?;
-    // 
+    //
     let latest_version = parse_version(latest_release.tag_name.as_str())?;
-    // 
+    //
     // // if we want to force the update, set the version to 0.0.0 so its always out of date.
     // // it's a hack.. but im lazy :3
     let current_version = if force_update {
@@ -112,25 +128,34 @@ pub async fn self_update_binary(force_update: bool) -> Result<(), RustiqueError>
     } else {
         parse_version(env!("CARGO_PKG_VERSION"))?
     };
-    
+
     info!("Force update: {force_update}");
 
     if !force_update && !check_for_update(true, true).await? {
         info!("Rustique already up-to-date!");
-        notice(format!("Already on latest version: {current_version}"), Some(Color::Green), vec![Attribute::Bold]);
-        return Ok(())
+        notice(
+            format!("Already on latest version: {current_version}"),
+            Some(Color::Green),
+            vec![Attribute::Bold],
+        );
+        return Ok(());
     }
-    
+
     info!("Update found, current version: {current_version}, new version: {latest_version}");
-    
-    let platform_bin_name = get_platform_bin_name(); 
+
+    let platform_bin_name = get_platform_bin_name();
 
     let archive_name = format!("{}.zip", &platform_bin_name);
 
-    let Some(download_url) = latest_release.assets.iter().find(|a| {
-        a.name == archive_name
-    }).map(|a| &a.browser_download_url) else {
-        return Err(RustiqueError::SimpleError("Failed to get download url".into()));
+    let Some(download_url) = latest_release
+        .assets
+        .iter()
+        .find(|a| a.name == archive_name)
+        .map(|a| &a.browser_download_url)
+    else {
+        return Err(RustiqueError::SimpleError(
+            "Failed to get download url".into(),
+        ));
     };
 
     let new_binary_name: String = if cfg!(windows) {
@@ -140,8 +165,7 @@ pub async fn self_update_binary(force_update: bool) -> Result<(), RustiqueError>
     };
 
     info!("new_binary_name: {new_binary_name}");
-    
-       
+
     #[cfg(windows)]
     match RustiqueUpdater::new(&new_binary_name)
         .await?
@@ -149,10 +173,13 @@ pub async fn self_update_binary(force_update: bool) -> Result<(), RustiqueError>
         .await?
         .create_update_script()
         .await?
-        .execute_update_bat() {
+        .execute_update_bat()
+    {
         Ok(()) => {}
         Err(e) => {
-            return Err(RustiqueError::SimpleError(format!("Failed execute windows update script: {e}")))
+            return Err(RustiqueError::SimpleError(format!(
+                "Failed execute windows update script: {e}"
+            )));
         }
     }
 
@@ -167,17 +194,18 @@ pub async fn self_update_binary(force_update: bool) -> Result<(), RustiqueError>
     Ok(())
 }
 
-
 pub fn get_platform_bin_name() -> String {
     let os = std::env::consts::OS;
     let arch = std::env::consts::ARCH;
 
     match (os, arch) {
-        ("linux", "x86_64")     => "rustique-linux-x86_64".into(),
-        ("linux", "aarch64")    => "rustique-linux-aarch64".into(),
-        ("macos", "x86_64")     => "rustique-macos-x86_64".into(),
-        ("macos", "aarch64")    => "rustique-macos-aarch64".into(),
-        ("windows", "x86_64")   => "rustique-windows-x86_64".into(),
-        _ => panic!("Unable to update binary, unsupported platform. Please open a github issue and state your platform.")
+        ("linux", "x86_64") => "rustique-linux-x86_64".into(),
+        ("linux", "aarch64") => "rustique-linux-aarch64".into(),
+        ("macos", "x86_64") => "rustique-macos-x86_64".into(),
+        ("macos", "aarch64") => "rustique-macos-aarch64".into(),
+        ("windows", "x86_64") => "rustique-windows-x86_64".into(),
+        _ => panic!(
+            "Unable to update binary, unsupported platform. Please open a github issue and state your platform."
+        ),
     }
 }

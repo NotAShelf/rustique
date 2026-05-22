@@ -1,13 +1,12 @@
 #![allow(unused)]
 
-use std::ops::{Deref, DerefMut};
-use std::str::FromStr;
+use crate::config::config_structs::{CellAttr, CellColor, ColumnProperties};
 use clap::ValueEnum;
 use indexmap::IndexMap;
-use serde::{Deserialize, Serialize, Serializer};
 use serde::ser::SerializeMap;
-use crate::config::config_structs::{CellAttr, CellColor, ColumnProperties};
-
+use serde::{Deserialize, Serialize, Serializer};
+use std::ops::{Deref, DerefMut};
+use std::str::FromStr;
 
 #[derive(Debug, Clone)]
 
@@ -16,7 +15,7 @@ pub struct FlattenMap(IndexMap<String, ColumnProperties>);
 impl Serialize for FlattenMap {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer
+        S: Serializer,
     {
         let mut map = serializer.serialize_map(None)?;
         for (key, value) in &self.0 {
@@ -45,14 +44,19 @@ impl DerefMut for FlattenMap {
     }
 }
 
-impl FlattenMap
-{
+impl FlattenMap {
     pub fn new() -> Self {
         Self(IndexMap::new())
     }
 
-    pub fn with(&mut self, key: &str, color: Option<CellColor>, attribute: Option<CellAttr>) -> &mut Self {
-        self.0.insert(key.to_string(), ColumnProperties { color, attribute });
+    pub fn with(
+        &mut self,
+        key: &str,
+        color: Option<CellColor>,
+        attribute: Option<CellAttr>,
+    ) -> &mut Self {
+        self.0
+            .insert(key.to_string(), ColumnProperties { color, attribute });
         self
     }
 }
@@ -82,16 +86,23 @@ impl<'de> Deserialize<'de> for FlattenMap {
                         let (column, attr) = key.split_at(dot_pos);
                         let attr = &attr[1..]; // Skip the dot
 
-                        let entry = result.entry(column.to_string())
+                        let entry = result
+                            .entry(column.to_string())
                             .or_insert_with(ColumnProperties::default);
 
                         if attr == "color" {
                             if let Some(color_str) = value.as_str() {
-                                entry.color = Option::from(<CellColor as FromStr>::from_str(color_str).unwrap_or(CellColor::Reset));
+                                entry.color = Option::from(
+                                    <CellColor as FromStr>::from_str(color_str)
+                                        .unwrap_or(CellColor::Reset),
+                                );
                             }
                         } else if attr == "attribute" {
                             if let Some(attr_str) = value.as_str() {
-                                entry.attribute = Option::from(<CellAttr as FromStr>::from_str(attr_str).unwrap_or(CellAttr::NoHidden));
+                                entry.attribute = Option::from(
+                                    <CellAttr as FromStr>::from_str(attr_str)
+                                        .unwrap_or(CellAttr::NoHidden),
+                                );
                             }
                         }
                     }

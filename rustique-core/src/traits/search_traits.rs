@@ -1,5 +1,5 @@
-use std::cmp::Ordering;
 use crate::search::{Field, SortBy};
+use std::cmp::Ordering;
 
 pub trait Searchable {
     fn matches_text(&self, query: &str) -> bool;
@@ -22,9 +22,10 @@ pub enum SortValue {
 impl PartialOrd for SortValue {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self, other) {
-            (SortValue::Number(a), SortValue::Number(b)) => a.partial_cmp(b), 
-            (SortValue::Text(a), SortValue::Text(b)) 
-            | (SortValue::Date(a), SortValue::Date(b)) => a.partial_cmp(b),
+            (SortValue::Number(a), SortValue::Number(b)) => a.partial_cmp(b),
+            (SortValue::Text(a), SortValue::Text(b)) | (SortValue::Date(a), SortValue::Date(b)) => {
+                a.partial_cmp(b)
+            }
             _ => None,
         }
     }

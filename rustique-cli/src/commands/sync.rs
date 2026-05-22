@@ -1,41 +1,51 @@
-
+use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use comfy_table::{Attribute, Color};
+use owo_colors::OwoColorize;
+use rustique_core::aliases::ModID;
+use rustique_core::api::api_structs::{Mod, ModsSearchFile};
+use rustique_core::api::client::ApiClient;
+use rustique_core::config::config_manager::{Config, Package, get_config};
+use rustique_core::consts::{FILE_GAME_VERSION_SYNC, FILE_MOD_SEARCH_SYNC, FILE_RUSTIQUE_SYNC};
+use rustique_core::information_utils::{CellData, display_table, elapsed_footer, notice};
+use rustique_core::rustique_errors::RustiqueError;
+use rustique_core::symlink_manager::SymlinkManager;
+use rustique_core::sync_structs::{GameVersionSync, ModSyncInfo, RustiqueSyncJson};
+use rustique_core::traits::ref_ext::PathRef;
+use rustique_core::utils::{
+    extract_all_mods_metadata, find_mod_id, get_current_time, parse_json_file, prettify,
+    split_modid_version, timestamp_older_than, write_json_file,
+};
+use rustique_core::version_management::{
+    parse_latest_version, parse_pinned_version, parse_version,
+};
 use std::collections::HashMap;
 use std::default::Default;
 use std::path::PathBuf;
-use std::time::{Instant};
-use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
+use std::time::Instant;
 use tracing::{debug, error, info, warn};
-use owo_colors::OwoColorize;
-use rustique_core::aliases::ModID;
-use rustique_core::config::config_manager::{get_config, Config, Package};
-use rustique_core::consts::{FILE_GAME_VERSION_SYNC, FILE_MOD_SEARCH_SYNC, FILE_RUSTIQUE_SYNC};
-use rustique_core::information_utils::{display_table, elapsed_footer, notice, CellData};
-use rustique_core::symlink_manager::SymlinkManager;
-use rustique_core::traits::ref_ext::{PathRef};
-use rustique_core::api::api_structs::{Mod, ModsSearchFile};
-use rustique_core::api::client::{ApiClient};
-use rustique_core::rustique_errors::RustiqueError;
-use rustique_core::sync_structs::{GameVersionSync, ModSyncInfo, RustiqueSyncJson};
-use rustique_core::utils::{extract_all_mods_metadata, find_mod_id, get_current_time, split_modid_version, parse_json_file, timestamp_older_than, write_json_file, prettify};
-use rustique_core::version_management::{parse_latest_version, parse_pinned_version, parse_version};
 
-
-/// Use this function to retrieve the sync file for mod_dir. 
-pub async fn get_sync_data(mod_dir: impl PathRef, quiet: bool) -> Result<RustiqueSyncJson, RustiqueError> {
+/// Use this function to retrieve the sync file for mod_dir.
+pub async fn get_sync_data(
+    mod_dir: impl PathRef,
+    quiet: bool,
+) -> Result<RustiqueSyncJson, RustiqueError> {
     let mod_dir = mod_dir.as_ref();
     let fp = mod_dir.join(PathBuf::from(FILE_RUSTIQUE_SYNC));
     if !fp.exists() {
         info!("Sync file doesn't exist, running sync");
         sync(mod_dir, quiet, vec![]).await?;
     }
-    
+
     info!("Sync file located: {fp:?}");
 
     parse_json_file::<RustiqueSyncJson>(&fp).await
 }
 
-pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_versions: V) -> Result<RustiqueSyncJson, RustiqueError> {
+pub async fn sync<V: AsRef<[Package]>>(
+    mod_dir: impl PathRef,
+    quiet: bool,
+    pin_versions: V,
+) -> Result<RustiqueSyncJson, RustiqueError> {
     let mod_dir = mod_dir.as_ref();
     let start_time = Instant::now();
     let config = get_config().read().await;
@@ -44,14 +54,26 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
 
     // notice(format!("Syncing {}...", mod_dir.display().fg::<Magenta>()), Option::from(comfy_table::Color::Yellow), vec![Attribute::Bold]);
     if !quiet {
-        display_table(vec![(
-            CellData::new("Syncing...".into(), Some(Color::Yellow), vec![Attribute::Bold], None),
-            CellData::new(mod_dir.to_string_lossy().to_string(), Some(Color::Magenta), vec![], None)
-        )], Some(UTF8_HORIZONTAL_ONLY));
+        display_table(
+            vec![(
+                CellData::new(
+                    "Syncing...".into(),
+                    Some(Color::Yellow),
+                    vec![Attribute::Bold],
+                    None,
+                ),
+                CellData::new(
+                    mod_dir.to_string_lossy().to_string(),
+                    Some(Color::Magenta),
+                    vec![],
+                    None,
+                ),
+            )],
+            Some(UTF8_HORIZONTAL_ONLY),
+        );
     }
-    
 
-    // This is THE section that creates a new sync file if one does not exist. 
+    // This is THE section that creates a new sync file if one does not exist.
     // All functions should call get_sync_data() instead of checking for sync_file manually
     //
     // check if rustique-sync.json exists
@@ -64,7 +86,7 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
         match parse_json_file::<RustiqueSyncJson>(&sync_file_path).await {
             Ok(json) => json,
             Err(e) => {
-                info!("{}",e);
+                info!("{}", e);
                 // delete the sync file because the json changed
                 tokio::fs::remove_file(&sync_file_path).await?;
                 // return a blank slate to keep going
@@ -72,7 +94,7 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
             }
         }
     } else {
-       RustiqueSyncJson::default()
+        RustiqueSyncJson::default()
     };
 
     let config_path = Config::get_path();
@@ -88,27 +110,27 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
     };
 
     let search_sync_time = config.sync_mod_search_file_every;
-    
+
     if timestamp_older_than(search_sync_time, &mods_search_data.last_sync) {
         // update the database
         daily_file_syncs(true).await?;
     }
-    
+
     let game_version_sync_file = config_path.join(FILE_GAME_VERSION_SYNC);
-    let game_version_sync_data = match parse_json_file::<GameVersionSync>(&game_version_sync_file).await {
-        Ok(json) => json,
-        Err(e) => {
-            info!("game version sync Error: {e}");
-            game_version_sync(true).await?
-        }
-    };
-    
+    let game_version_sync_data =
+        match parse_json_file::<GameVersionSync>(&game_version_sync_file).await {
+            Ok(json) => json,
+            Err(e) => {
+                info!("game version sync Error: {e}");
+                game_version_sync(true).await?
+            }
+        };
+
     let game_version_time = config.sync_latest_game_version_file_every;
     if timestamp_older_than(game_version_time, &game_version_sync_data.last_sync) {
         // update the database
         game_version_sync(true).await?;
     }
-     
 
     let installed_mods = extract_all_mods_metadata(mod_dir, false).await?;
 
@@ -118,18 +140,28 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
     sync_data.rustique_sync.clear();
 
     for (mod_filename, mod_info) in &installed_mods {
-        
         debug!("MOD_INFO in sync: {:?}", mod_info);
 
         // check if the file is a symlink
-        let version = if let Ok(parsed_version) = parse_version(&mod_info.version.clone().unwrap_or_default()) {
+        let version = if let Ok(parsed_version) =
+            parse_version(&mod_info.version.clone().unwrap_or_default())
+        {
             parsed_version.to_string()
         } else {
-            warn!("Could not parse version: {} for {}\n\rThis mod may not update correctly..", mod_info.version.clone().unwrap_or_default(), mod_filename.clone());
+            warn!(
+                "Could not parse version: {} for {}\n\rThis mod may not update correctly..",
+                mod_info.version.clone().unwrap_or_default(),
+                mod_filename.clone()
+            );
             mod_info.version.clone().unwrap_or_default()
         };
 
-        info!("{} {} for {}", "VERSION Parsed:".green(), version.magenta(), mod_info.mod_id.yellow());
+        info!(
+            "{} {} for {}",
+            "VERSION Parsed:".green(),
+            version.magenta(),
+            mod_info.mod_id.yellow()
+        );
 
         // check here for bad mod_id
         let mod_id = if mod_info.mod_id.is_empty() {
@@ -159,7 +191,7 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
                 latest_changelog: String::new(),
             });
     }
-    
+
     info!("Sync data before api call {:#?}", sync_data);
 
     let im = installed_mods.keys().clone().collect::<Vec<&String>>();
@@ -169,29 +201,56 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
     let client = ApiClient::new();
     let result: HashMap<ModID, Mod> = client
         .fetch_mods_parallel(
-            sync_data.rustique_sync.keys().map(|m|split_modid_version(m).0.clone()).collect()
-        ).await?;
-    
-    for (mod_id, res_mod) in &result {
+            sync_data
+                .rustique_sync
+                .keys()
+                .map(|m| split_modid_version(m).0.clone())
+                .collect(),
+        )
+        .await?;
 
+    for (mod_id, res_mod) in &result {
         // let (mod_id_parsed, _) = &split_modid_version(mod_id);
         // force to lowercase because some authors put uppercase chars in the modid
         let mod_id = mod_id.to_lowercase();
         let mod_asset_id = res_mod.mod_json.asset_id;
-        
+
         let pkg = if pin_versions.as_ref().is_empty() {
-            config.pkg.iter().find(|p| p.mod_id.eq(&mod_id)).cloned().unwrap_or_default()
+            config
+                .pkg
+                .iter()
+                .find(|p| p.mod_id.eq(&mod_id))
+                .cloned()
+                .unwrap_or_default()
         } else {
-            pin_versions.as_ref().iter().find(|p| p.mod_id.eq(&mod_id)).cloned().unwrap_or_default()
+            pin_versions
+                .as_ref()
+                .iter()
+                .find(|p| p.mod_id.eq(&mod_id))
+                .cloned()
+                .unwrap_or_default()
         };
-        
-        let (mod_version, download_url, game_versions, changelog) = if !pkg.mod_id.is_empty() || !config.pinned_game_version.is_empty() {
-            info!("{} {}","Parsing pinned versions for".yellow(), mod_id.blue());
-            parse_pinned_version(&res_mod.mod_json.releases, &pkg, config.pinned_game_version.clone())
-        } else {
-            info!("{} {}", "Parsing latest versions for".yellow(), mod_id.blue());
-            parse_latest_version(&res_mod.mod_json.releases)
-        };
+
+        let (mod_version, download_url, game_versions, changelog) =
+            if !pkg.mod_id.is_empty() || !config.pinned_game_version.is_empty() {
+                info!(
+                    "{} {}",
+                    "Parsing pinned versions for".yellow(),
+                    mod_id.blue()
+                );
+                parse_pinned_version(
+                    &res_mod.mod_json.releases,
+                    &pkg,
+                    config.pinned_game_version.clone(),
+                )
+            } else {
+                info!(
+                    "{} {}",
+                    "Parsing latest versions for".yellow(),
+                    mod_id.blue()
+                );
+                parse_latest_version(&res_mod.mod_json.releases)
+            };
 
         sync_data
             .rustique_sync
@@ -210,12 +269,12 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
                 asset_id: mod_asset_id,
                 game_versions,
                 latest_changelog: changelog,
-                .. Default::default()
+                ..Default::default()
             });
     }
-    
+
     sync_data.save(sync_file_path).await?;
-   
+
     if config.show_execution_time && !quiet {
         elapsed_footer(start_time, "Sync");
     }
@@ -223,9 +282,7 @@ pub async fn sync<V: AsRef<[Package]>>(mod_dir: impl PathRef, quiet: bool, pin_v
     Ok(sync_data)
 }
 
-
 pub async fn daily_file_syncs(force: bool) -> Result<ModsSearchFile, RustiqueError> {
-
     let config = get_config().read().await;
     let start_time = Instant::now();
 
@@ -234,7 +291,11 @@ pub async fn daily_file_syncs(force: bool) -> Result<ModsSearchFile, RustiqueErr
     // Sync game versions
 
     let search_file = config_dir.join(FILE_MOD_SEARCH_SYNC);
-    info!("{} {}","Search file path:".green(), search_file.to_string_lossy().yellow());
+    info!(
+        "{} {}",
+        "Search file path:".green(),
+        search_file.to_string_lossy().yellow()
+    );
 
     let mut file_data = if search_file.exists() {
         match parse_json_file::<ModsSearchFile>(&search_file).await {
@@ -253,9 +314,12 @@ pub async fn daily_file_syncs(force: bool) -> Result<ModsSearchFile, RustiqueErr
 
     let sync_time = config.sync_mod_search_file_every;
 
-    if file_data.mods.is_empty() || force || timestamp_older_than(sync_time, &file_data.last_sync){
-
-        notice("Daily Search Sync...", Some(Color::Yellow), vec![Attribute::Bold]);
+    if file_data.mods.is_empty() || force || timestamp_older_than(sync_time, &file_data.last_sync) {
+        notice(
+            "Daily Search Sync...",
+            Some(Color::Yellow),
+            vec![Attribute::Bold],
+        );
 
         let client = ApiClient::new();
         // get all mod info
@@ -264,11 +328,15 @@ pub async fn daily_file_syncs(force: bool) -> Result<ModsSearchFile, RustiqueErr
 
         debug!("file_data {:?}", file_data);
 
-        info!("{} {}", "Attempting to write Mod Search file to".yellow(), search_file.display());
+        info!(
+            "{} {}",
+            "Attempting to write Mod Search file to".yellow(),
+            search_file.display()
+        );
 
         let json = prettify(&file_data, "Mods Search DB")?;
         write_json_file(&search_file, json, &Config::get_path()).await?;
-        
+
         info!("{}", "Mods Search Sync file written successfully".green());
     }
 
@@ -280,15 +348,18 @@ pub async fn daily_file_syncs(force: bool) -> Result<ModsSearchFile, RustiqueErr
 }
 
 pub async fn game_version_sync(force: bool) -> Result<GameVersionSync, RustiqueError> {
-  
     let start_time = Instant::now();
     let config = get_config().read().await;
-    
+
     let file = Config::get_path().join(FILE_GAME_VERSION_SYNC);
-    info!("{} {}","Game version sync file path:".green(), file.to_string_lossy().yellow());
-    // if the file doesn't exit, create it 
+    info!(
+        "{} {}",
+        "Game version sync file path:".green(),
+        file.to_string_lossy().yellow()
+    );
+    // if the file doesn't exit, create it
     // otherwise check if its time to do update
-    
+
     let mut file_data = if file.exists() {
         match parse_json_file::<GameVersionSync>(&file).await {
             Ok(json) => json,
@@ -302,33 +373,34 @@ pub async fn game_version_sync(force: bool) -> Result<GameVersionSync, RustiqueE
     } else {
         GameVersionSync::new()
     };
-    
+
     let sync_time = config.sync_latest_game_version_file_every;
-    
-    if file_data.game_versions.is_empty() || force || timestamp_older_than(sync_time, &file_data.last_sync){
-        notice("Syncing latest game versions..", Some(Color::Yellow), vec![Attribute::Bold]);
-        
+
+    if file_data.game_versions.is_empty()
+        || force
+        || timestamp_older_than(sync_time, &file_data.last_sync)
+    {
+        notice(
+            "Syncing latest game versions..",
+            Some(Color::Yellow),
+            vec![Attribute::Bold],
+        );
+
         let client = ApiClient::new();
         let gvs = client.fetch_game_versions().await?;
         file_data.game_versions = gvs.into_iter().collect();
         file_data.last_sync = get_current_time();
-        
+
         let json = prettify(&file_data, "Game Version Sync")?;
-        
+
         write_json_file(&file, json, &Config::get_path()).await?;
 
         info!("{}", "Mods Search Sync file written successfully".green());
-        
     }
-    
-    
-     if config.show_execution_time && force {
+
+    if config.show_execution_time && force {
         elapsed_footer(start_time, "Game Version Sync");
-    } 
-    
+    }
+
     Ok(file_data)
 }
-
-
-
-

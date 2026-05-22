@@ -39,12 +39,11 @@ pub struct GithubAuthor {
     pub repos_url: String,
     pub events_url: String,
     pub received_events_url: String,
-    
+
     #[serde(rename = "type")]
     pub u_type: String,
     pub user_view_type: String,
     pub site_admin: bool,
-    
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

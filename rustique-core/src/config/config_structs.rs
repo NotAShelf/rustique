@@ -35,11 +35,14 @@ impl Default for Tables {
 
 impl Tables {
     pub fn with_defaults() -> Self {
-        Self { list: Self::list_defaults(), search: Self::search_defaults() }
+        Self {
+            list: Self::list_defaults(),
+            search: Self::search_defaults(),
+        }
     }
-    
+
     pub fn list_defaults() -> TableSection {
-    let mut list = TableSection::new();
+        let mut list = TableSection::new();
 
         // List headers
         list.headers
@@ -103,11 +106,11 @@ impl Tables {
                 ListColumn::Description.as_str(),
                 Some(CellColor::Reset),
                 None,
-            ); 
-        
+            );
+
         list
     }
-    
+
     pub fn search_defaults() -> TableSection {
         let mut search = TableSection::new();
 
@@ -124,7 +127,7 @@ impl Tables {
             .with("mod_id", Some(CellColor::Magenta), Some(CellAttr::Bold))
             .with("name", Some(CellColor::Reset), None)
             .with("summary", Some(CellColor::Reset), None);
-        
+
         search
     }
 }
@@ -162,8 +165,7 @@ impl TableSection {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-#[derive(Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ColumnProperties {
     pub color: Option<CellColor>,
     pub attribute: Option<CellAttr>,
@@ -241,21 +243,21 @@ impl FromStr for CellColor {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "black"         => Ok(Self::Black),
-            "blue"          => Ok(Self::Blue),
-            "dark_blue"     => Ok(Self::DarkBlue),
-            "cyan"          => Ok(Self::Cyan),
-            "dark_cyan"     => Ok(Self::DarkCyan),
-            "green"         => Ok(Self::Green),
-            "dark_green"    => Ok(Self::DarkGreen),
-            "magenta"       => Ok(Self::Magenta),
-            "dark_magenta"  => Ok(Self::DarkMagenta),
-            "red"           => Ok(Self::Red),
-            "dark_red"      => Ok(Self::DarkRed),
-            "white"         => Ok(Self::White),
-            "yellow"        => Ok(Self::Yellow),
-            "dark_yellow"   => Ok(Self::DarkYellow),
-            "reset"         => Ok(Self::Reset),
+            "black" => Ok(Self::Black),
+            "blue" => Ok(Self::Blue),
+            "dark_blue" => Ok(Self::DarkBlue),
+            "cyan" => Ok(Self::Cyan),
+            "dark_cyan" => Ok(Self::DarkCyan),
+            "green" => Ok(Self::Green),
+            "dark_green" => Ok(Self::DarkGreen),
+            "magenta" => Ok(Self::Magenta),
+            "dark_magenta" => Ok(Self::DarkMagenta),
+            "red" => Ok(Self::Red),
+            "dark_red" => Ok(Self::DarkRed),
+            "white" => Ok(Self::White),
+            "yellow" => Ok(Self::Yellow),
+            "dark_yellow" => Ok(Self::DarkYellow),
+            "reset" => Ok(Self::Reset),
             _ => Err(()),
         }
     }
@@ -265,20 +267,20 @@ impl FromStr for CellColor {
 impl From<CellColor> for Color {
     fn from(value: CellColor) -> Self {
         match value {
-            CellColor::Black        => Color::Black,
-            CellColor::Blue         => Color::Blue,
-            CellColor::DarkBlue     => Color::DarkBlue,
-            CellColor::Green        => Color::Green,
-            CellColor::DarkGreen    => Color::DarkGreen,
-            CellColor::Grey         => Color::Grey,
-            CellColor::DarkGrey     => Color::DarkGrey,
-            CellColor::Magenta      => Color::Magenta,
-            CellColor::DarkMagenta  => Color::DarkMagenta,
-            CellColor::Red          => Color::Red,
-            CellColor::DarkRed      => Color::DarkRed,
-            CellColor::White        => Color::White,
-            CellColor::Yellow       => Color::Yellow,
-            CellColor::DarkYellow   => Color::DarkYellow,
+            CellColor::Black => Color::Black,
+            CellColor::Blue => Color::Blue,
+            CellColor::DarkBlue => Color::DarkBlue,
+            CellColor::Green => Color::Green,
+            CellColor::DarkGreen => Color::DarkGreen,
+            CellColor::Grey => Color::Grey,
+            CellColor::DarkGrey => Color::DarkGrey,
+            CellColor::Magenta => Color::Magenta,
+            CellColor::DarkMagenta => Color::DarkMagenta,
+            CellColor::Red => Color::Red,
+            CellColor::DarkRed => Color::DarkRed,
+            CellColor::White => Color::White,
+            CellColor::Yellow => Color::Yellow,
+            CellColor::DarkYellow => Color::DarkYellow,
             // This covers Color::Reset by default as well
             _ => Color::Reset,
         }
@@ -288,23 +290,23 @@ impl From<CellColor> for Color {
 impl Display for CellColor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CellColor::Black        => write!(f, "black"),
-            CellColor::Blue         => write!(f, "blue"),
-            CellColor::DarkBlue     => write!(f, "dark_blue"),
-            CellColor::Cyan         => write!(f, "cyan"),
-            CellColor::DarkCyan     => write!(f, "dark_cyan"),
-            CellColor::Green        => write!(f, "green"),
-            CellColor::DarkGreen    => write!(f, "dark_green"),
-            CellColor::Grey         => write!(f, "grey"),
-            CellColor::DarkGrey     => write!(f, "dark_grey"),
-            CellColor::Magenta      => write!(f, "magenta"),
-            CellColor::DarkMagenta  => write!(f, "dark_magenta"),
-            CellColor::Red          => write!(f, "red"),
-            CellColor::DarkRed      => write!(f, "dark_red"),
-            CellColor::Reset        => write!(f, "reset"),
-            CellColor::White        => write!(f, "white"),
-            CellColor::Yellow       => write!(f, "yellow"),
-            CellColor::DarkYellow   => write!(f, "dark_yellow"),
+            CellColor::Black => write!(f, "black"),
+            CellColor::Blue => write!(f, "blue"),
+            CellColor::DarkBlue => write!(f, "dark_blue"),
+            CellColor::Cyan => write!(f, "cyan"),
+            CellColor::DarkCyan => write!(f, "dark_cyan"),
+            CellColor::Green => write!(f, "green"),
+            CellColor::DarkGreen => write!(f, "dark_green"),
+            CellColor::Grey => write!(f, "grey"),
+            CellColor::DarkGrey => write!(f, "dark_grey"),
+            CellColor::Magenta => write!(f, "magenta"),
+            CellColor::DarkMagenta => write!(f, "dark_magenta"),
+            CellColor::Red => write!(f, "red"),
+            CellColor::DarkRed => write!(f, "dark_red"),
+            CellColor::Reset => write!(f, "reset"),
+            CellColor::White => write!(f, "white"),
+            CellColor::Yellow => write!(f, "yellow"),
+            CellColor::DarkYellow => write!(f, "dark_yellow"),
         }
     }
 }
@@ -332,22 +334,22 @@ pub enum ListColumn {
 impl ListColumn {
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Name          => "name",
-            Self::ModId         => "mod_id",
-            Self::Version       => "version",
+            Self::Name => "name",
+            Self::ModId => "mod_id",
+            Self::Version => "version",
             Self::LatestVersion => "latest_version",
-            Self::GameVersion   => "game_version",
+            Self::GameVersion => "game_version",
             Self::PinnedVersion => "pinned_version",
-            Self::Deps          => "deps",
-            Self::MissingDeps   => "missing_deps",
-            Self::Changelog     => "changelog",
-            Self::Description   => "description",
-            Self::Website       => "website",
-            Self::LastUpdateLocal   => "last_update",
-            Self::LastUpdateRemote  => "last_update_remote",
-            Self::HasBackup         => "has_backup",
-            Self::Filename          => "filename",
-            Self::ModURL            => "mod_url",      
+            Self::Deps => "deps",
+            Self::MissingDeps => "missing_deps",
+            Self::Changelog => "changelog",
+            Self::Description => "description",
+            Self::Website => "website",
+            Self::LastUpdateLocal => "last_update",
+            Self::LastUpdateRemote => "last_update_remote",
+            Self::HasBackup => "has_backup",
+            Self::Filename => "filename",
+            Self::ModURL => "mod_url",
         }
     }
 }
@@ -357,22 +359,22 @@ impl FromStr for ListColumn {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "name"              => Ok(Self::Name),
-            "mod_id"            => Ok(Self::ModId),
-            "version"           => Ok(Self::Version),
-            "latest_version"    => Ok(Self::LatestVersion),
-            "deps"              => Ok(Self::Deps),
-            "missing_deps"      => Ok(Self::MissingDeps),
-            "changelog"         => Ok(Self::Changelog),
-            "description"       => Ok(Self::Description),
-            "website"           => Ok(Self::Website),
-            "game_version"      => Ok(Self::GameVersion),
+            "name" => Ok(Self::Name),
+            "mod_id" => Ok(Self::ModId),
+            "version" => Ok(Self::Version),
+            "latest_version" => Ok(Self::LatestVersion),
+            "deps" => Ok(Self::Deps),
+            "missing_deps" => Ok(Self::MissingDeps),
+            "changelog" => Ok(Self::Changelog),
+            "description" => Ok(Self::Description),
+            "website" => Ok(Self::Website),
+            "game_version" => Ok(Self::GameVersion),
             "last_update_local" => Ok(Self::LastUpdateLocal),
             "last_update_remote" => Ok(Self::LastUpdateRemote),
-            "pinned_version"     => Ok(Self::PinnedVersion),
-            "has_backup"         => Ok(Self::HasBackup),
-            "filename"           => Ok(Self::Filename),
-            "mod_url"           => Ok(Self::ModURL),
+            "pinned_version" => Ok(Self::PinnedVersion),
+            "has_backup" => Ok(Self::HasBackup),
+            "filename" => Ok(Self::Filename),
+            "mod_url" => Ok(Self::ModURL),
             _ => Err(()),
         }
     }
@@ -381,22 +383,22 @@ impl FromStr for ListColumn {
 impl Display for ListColumn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ListColumn::Name            => write!(f, "name"),
-            ListColumn::ModId           => write!(f, "mod_id"),
-            ListColumn::Version         => write!(f, "version"),
-            ListColumn::LatestVersion   => write!(f, "latest_version"),
-            ListColumn::GameVersion     => write!(f, "game_version"),
-            ListColumn::PinnedVersion   => write!(f, "pinned_version"),
-            ListColumn::Deps            => write!(f, "deps"),
-            ListColumn::MissingDeps     => write!(f, "missing_deps"),
-            ListColumn::Changelog       => write!(f, "changelog"),
-            ListColumn::Description     => write!(f, "description"),
-            ListColumn::Website         => write!(f, "website"),
+            ListColumn::Name => write!(f, "name"),
+            ListColumn::ModId => write!(f, "mod_id"),
+            ListColumn::Version => write!(f, "version"),
+            ListColumn::LatestVersion => write!(f, "latest_version"),
+            ListColumn::GameVersion => write!(f, "game_version"),
+            ListColumn::PinnedVersion => write!(f, "pinned_version"),
+            ListColumn::Deps => write!(f, "deps"),
+            ListColumn::MissingDeps => write!(f, "missing_deps"),
+            ListColumn::Changelog => write!(f, "changelog"),
+            ListColumn::Description => write!(f, "description"),
+            ListColumn::Website => write!(f, "website"),
             ListColumn::LastUpdateLocal => write!(f, "last_update"),
-            ListColumn::LastUpdateRemote    => write!(f, "last_update_remote"),
-            ListColumn::HasBackup           => write!(f, "has_backup"),
-            ListColumn::Filename            => write!(f, "filename"),
-            ListColumn::ModURL              => write!(f, "mod_url"),
+            ListColumn::LastUpdateRemote => write!(f, "last_update_remote"),
+            ListColumn::HasBackup => write!(f, "has_backup"),
+            ListColumn::Filename => write!(f, "filename"),
+            ListColumn::ModURL => write!(f, "mod_url"),
         }
     }
 }
@@ -424,21 +426,21 @@ impl SearchColumn {
     #[allow(unused)]
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Name          => "name",
-            Self::ModId         => "mod_id",
-            Self::AssetId       => "asset_id",
-            Self::Downloads     => "downloads",
-            Self::Follows       => "follows",
-            Self::Trending      => "trending",
-            Self::Comments      => "comments",
-            Self::Summary       => "summary",
-            Self::ModidStrs     => "modid_strs",
-            Self::Author        => "author",
-            Self::UrlAlias      => "url_alias",
-            Self::Side          => "side",
-            Self::Type          => "type",
-            Self::Tags          => "tags",
-            Self::LastReleased  => "last_released",
+            Self::Name => "name",
+            Self::ModId => "mod_id",
+            Self::AssetId => "asset_id",
+            Self::Downloads => "downloads",
+            Self::Follows => "follows",
+            Self::Trending => "trending",
+            Self::Comments => "comments",
+            Self::Summary => "summary",
+            Self::ModidStrs => "modid_strs",
+            Self::Author => "author",
+            Self::UrlAlias => "url_alias",
+            Self::Side => "side",
+            Self::Type => "type",
+            Self::Tags => "tags",
+            Self::LastReleased => "last_released",
         }
     }
 }
@@ -448,20 +450,20 @@ impl FromStr for SearchColumn {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "name"          => Ok(Self::Name),
-            "mod_id"        => Ok(Self::ModId),
-            "asset_id"      => Ok(Self::AssetId),
-            "downloads"     => Ok(Self::Downloads),
-            "follows"       => Ok(Self::Follows),
-            "trending"      => Ok(Self::Trending),
-            "comments"      => Ok(Self::Comments),
-            "summary"       => Ok(Self::Summary),
-            "modid_strs"    => Ok(Self::ModidStrs),
-            "author"        => Ok(Self::Author),
-            "url_alias"     => Ok(Self::UrlAlias),
-            "side"          => Ok(Self::Side),
-            "type"          => Ok(Self::Type),
-            "tags"          => Ok(Self::Tags),
+            "name" => Ok(Self::Name),
+            "mod_id" => Ok(Self::ModId),
+            "asset_id" => Ok(Self::AssetId),
+            "downloads" => Ok(Self::Downloads),
+            "follows" => Ok(Self::Follows),
+            "trending" => Ok(Self::Trending),
+            "comments" => Ok(Self::Comments),
+            "summary" => Ok(Self::Summary),
+            "modid_strs" => Ok(Self::ModidStrs),
+            "author" => Ok(Self::Author),
+            "url_alias" => Ok(Self::UrlAlias),
+            "side" => Ok(Self::Side),
+            "type" => Ok(Self::Type),
+            "tags" => Ok(Self::Tags),
             "last_released" => Ok(Self::LastReleased),
             _ => Err(()),
         }
@@ -471,28 +473,26 @@ impl FromStr for SearchColumn {
 impl Display for SearchColumn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SearchColumn::Name          => write!(f, "name"),
-            SearchColumn::ModId         => write!(f, "mod_id"),
-            SearchColumn::AssetId       => write!(f, "asset_id"),
-            SearchColumn::Downloads     => write!(f, "downloads"),
-            SearchColumn::Follows       => write!(f, "follows"),
-            SearchColumn::Trending      => write!(f, "trending"),
-            SearchColumn::Comments      => write!(f, "comments"),
-            SearchColumn::Summary       => write!(f, "summary"),
-            SearchColumn::ModidStrs     => write!(f, "modid_strs"),
-            SearchColumn::Author        => write!(f, "author"),
-            SearchColumn::UrlAlias      => write!(f, "url_alias"),
-            SearchColumn::Side          => write!(f, "side"),
-            SearchColumn::Type          => write!(f, "type"),
-            SearchColumn::Tags          => write!(f, "tags"),
-            SearchColumn::LastReleased  => write!(f, "last_released"),
+            SearchColumn::Name => write!(f, "name"),
+            SearchColumn::ModId => write!(f, "mod_id"),
+            SearchColumn::AssetId => write!(f, "asset_id"),
+            SearchColumn::Downloads => write!(f, "downloads"),
+            SearchColumn::Follows => write!(f, "follows"),
+            SearchColumn::Trending => write!(f, "trending"),
+            SearchColumn::Comments => write!(f, "comments"),
+            SearchColumn::Summary => write!(f, "summary"),
+            SearchColumn::ModidStrs => write!(f, "modid_strs"),
+            SearchColumn::Author => write!(f, "author"),
+            SearchColumn::UrlAlias => write!(f, "url_alias"),
+            SearchColumn::Side => write!(f, "side"),
+            SearchColumn::Type => write!(f, "type"),
+            SearchColumn::Tags => write!(f, "tags"),
+            SearchColumn::LastReleased => write!(f, "last_released"),
         }
     }
 }
 
-
-#[derive(Deserialize, Clone, ValueEnum)]
-#[derive(Debug)]
+#[derive(Deserialize, Clone, ValueEnum, Debug)]
 pub enum CellAttr {
     Bold,
     Italic,
@@ -506,12 +506,12 @@ impl CellAttr {
     #[allow(unused)]
     fn as_str(&self) -> &'static str {
         match self {
-            Self::Bold      => "bold",
-            Self::Italic    => "italic",
+            Self::Bold => "bold",
+            Self::Italic => "italic",
             Self::Underline => "underline",
-            Self::Reset     => "reset",
-            Self::Dim       => "dim",
-            Self::NoHidden  => "nohidden",
+            Self::Reset => "reset",
+            Self::Dim => "dim",
+            Self::NoHidden => "nohidden",
         }
     }
 }
@@ -520,12 +520,12 @@ impl FromStr for CellAttr {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "bold"      => Ok(Self::Bold),
-            "italic"    => Ok(Self::Italic),
+            "bold" => Ok(Self::Bold),
+            "italic" => Ok(Self::Italic),
             "underline" => Ok(Self::Underline),
-            "reset"     => Ok(Self::Reset),
-            "dim"       => Ok(Self::Dim),
-            "nohidden"  => Ok(Self::NoHidden),
+            "reset" => Ok(Self::Reset),
+            "dim" => Ok(Self::Dim),
+            "nohidden" => Ok(Self::NoHidden),
             _ => Err(()),
         }
     }
@@ -534,11 +534,11 @@ impl FromStr for CellAttr {
 impl From<CellAttr> for Attribute {
     fn from(attr: CellAttr) -> Self {
         match attr {
-            CellAttr::Bold      => Attribute::Bold,
-            CellAttr::Dim       => Attribute::Dim,
-            CellAttr::Italic    => Attribute::Italic,
-            CellAttr::NoHidden  => Attribute::NoHidden,
-            CellAttr::Reset     => Attribute::Reset,
+            CellAttr::Bold => Attribute::Bold,
+            CellAttr::Dim => Attribute::Dim,
+            CellAttr::Italic => Attribute::Italic,
+            CellAttr::NoHidden => Attribute::NoHidden,
+            CellAttr::Reset => Attribute::Reset,
             CellAttr::Underline => Attribute::Underlined,
         }
     }
@@ -547,12 +547,12 @@ impl From<CellAttr> for Attribute {
 impl Display for CellAttr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CellAttr::Bold      => write!(f, "bold"),
-            CellAttr::Italic    => write!(f, "italic"),
+            CellAttr::Bold => write!(f, "bold"),
+            CellAttr::Italic => write!(f, "italic"),
             CellAttr::Underline => write!(f, "underline"),
-            CellAttr::Reset     => write!(f, "reset"),
-            CellAttr::Dim       => write!(f, "dim"),
-            CellAttr::NoHidden  => write!(f, "nohidden"),
+            CellAttr::Reset => write!(f, "reset"),
+            CellAttr::Dim => write!(f, "dim"),
+            CellAttr::NoHidden => write!(f, "nohidden"),
         }
     }
 }

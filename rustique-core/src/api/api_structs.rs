@@ -1,14 +1,14 @@
+use crate::aliases::{FileName, ModID, ModVersion};
+use crate::consts::FILE_MODINFO_JSON;
+use crate::rustique_errors::RustiqueError;
+use crate::traits::ref_ext::PathRef;
+use async_zip::ZipEntryBuilder;
+use async_zip::tokio::write::ZipFileWriter;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::path::PathBuf;
 use tokio::fs::File;
-use async_zip::tokio::write::ZipFileWriter;
-use async_zip::ZipEntryBuilder;
-use crate::aliases::{FileName, ModID, ModVersion};
-use crate::consts::FILE_MODINFO_JSON;
-use crate::rustique_errors::RustiqueError;
-use crate::traits::ref_ext::PathRef;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, Hash, PartialEq)]
 #[serde(untagged)]
@@ -79,13 +79,38 @@ pub struct ModInfo {
     // instead of string for the type
     #[serde(default, rename = "type", alias = "Type")]
     pub mod_type: StringOrInt,
-    #[serde(default, rename = "modid", alias = "modId", alias = "Modid", alias = "ModId", alias = "ModID", alias = "modID", alias = "mod_id", alias = "Mod_id", alias = "Mod_ID", alias = "Mod_Id", alias = "MOD_ID")]
+    #[serde(
+        default,
+        rename = "modid",
+        alias = "modId",
+        alias = "Modid",
+        alias = "ModId",
+        alias = "ModID",
+        alias = "modID",
+        alias = "mod_id",
+        alias = "Mod_id",
+        alias = "Mod_ID",
+        alias = "Mod_Id",
+        alias = "MOD_ID"
+    )]
     pub mod_id: ModID,
     #[serde(default, alias = "Version")]
     pub version: Option<ModVersion>,
-    #[serde(default, rename = "networkVersion", alias = "NetworkVersion", alias = "Networkversion", alias = "networkversion")]
+    #[serde(
+        default,
+        rename = "networkVersion",
+        alias = "NetworkVersion",
+        alias = "Networkversion",
+        alias = "networkversion"
+    )]
     pub network_version: Option<String>,
-    #[serde(default, rename = "textureSize", alias = "TextureSize", alias = "Texturesize", alias = "texturesize")]
+    #[serde(
+        default,
+        rename = "textureSize",
+        alias = "TextureSize",
+        alias = "Texturesize",
+        alias = "texturesize"
+    )]
     pub texture_size: Option<i64>,
     #[serde(default, alias = "Description")]
     pub description: Option<String>,
@@ -97,102 +122,144 @@ pub struct ModInfo {
     pub contributors: Vec<String>,
     #[serde(default, alias = "Side")]
     pub side: Option<String>,
-    #[serde(default, rename = "requiredOnClient", alias = "RequiredOnClient", alias = "RequiredonClient", alias = "Requiredonclient", alias = "requiredonclient")]
+    #[serde(
+        default,
+        rename = "requiredOnClient",
+        alias = "RequiredOnClient",
+        alias = "RequiredonClient",
+        alias = "Requiredonclient",
+        alias = "requiredonclient"
+    )]
     pub required_on_client: Option<StringOrBool>,
-    #[serde(default, rename = "requiredOnServer", alias = "RequiredOnServer", alias = "RequiredonServer", alias = "Requiredonserver", alias = "requiredonserver")]
+    #[serde(
+        default,
+        rename = "requiredOnServer",
+        alias = "RequiredOnServer",
+        alias = "RequiredonServer",
+        alias = "Requiredonserver",
+        alias = "requiredonserver"
+    )]
     pub required_on_server: Option<StringOrBool>,
     #[serde(default, alias = "Dependencies")]
     pub dependencies: HashMap<ModID, ModVersion>,
 }
 
-impl ModInfo { 
-    pub async fn build_modpack(&self, save_path: impl PathRef, mpk_id: FileName) -> Result<PathBuf, RustiqueError> {
+impl ModInfo {
+    pub async fn build_modpack(
+        &self,
+        save_path: impl PathRef,
+        mpk_id: FileName,
+    ) -> Result<PathBuf, RustiqueError> {
         // config dir should all be setup by this point
-        
-        let zip_path = save_path.as_ref().join(mpk_id +".zip");
+
+        let zip_path = save_path.as_ref().join(mpk_id + ".zip");
         let zip_archive = File::create(&zip_path).await?;
         let mut zip = ZipFileWriter::with_tokio(zip_archive);
-       
-       
+
         // Compression needs to be set to Deflated to make it the most compatible
-       
+
         let mod_info = serde_json::to_string_pretty(&self)
-           .map_err(|e|RustiqueError::SimpleError(e.to_string()))?;
-        
-        if let Err(e) = self.add_file_to_zip(&mut zip, FILE_MODINFO_JSON, &mod_info, async_zip::Compression::Deflate).await {
+            .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
+
+        if let Err(e) = self
+            .add_file_to_zip(
+                &mut zip,
+                FILE_MODINFO_JSON,
+                &mod_info,
+                async_zip::Compression::Deflate,
+            )
+            .await
+        {
             let _ = self.delete_zip(&zip_path).await;
-           return Err(RustiqueError::SimpleError(format!("Unable to add file to zip archive {e}")));
+            return Err(RustiqueError::SimpleError(format!(
+                "Unable to add file to zip archive {e}"
+            )));
         }
-        
-        if let Err(e) = zip.close().await { 
+
+        if let Err(e) = zip.close().await {
             let _ = self.delete_zip(&zip_path).await;
             return Err(RustiqueError::ZipError {
                 context: "Failed creating modpack zip".into(),
-                source: e
+                source: e,
             });
         }
-        
-        
-       Ok(zip_path) 
-    } 
-    
-    async fn delete_zip(&self, save_path: impl PathRef) -> Result<(), RustiqueError> { 
-        tokio::fs::remove_file(save_path.as_ref()).await
+
+        Ok(zip_path)
+    }
+
+    async fn delete_zip(&self, save_path: impl PathRef) -> Result<(), RustiqueError> {
+        tokio::fs::remove_file(save_path.as_ref())
+            .await
             .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
-        
+
         Ok(())
     }
-    
-    async fn add_file_to_zip(&self, zip: &mut ZipFileWriter<File>, filename: &str, content: &str, compression: async_zip::Compression) -> Result<(), RustiqueError> {
+
+    async fn add_file_to_zip(
+        &self,
+        zip: &mut ZipFileWriter<File>,
+        filename: &str,
+        content: &str,
+        compression: async_zip::Compression,
+    ) -> Result<(), RustiqueError> {
         use async_zip::ZipEntryBuilder;
-        
+
         let entry_builder = ZipEntryBuilder::new(filename.into(), compression);
-        
-        zip.write_entry_whole(entry_builder, content.as_bytes()).await
-            .map_err(|e| RustiqueError::ZipError { 
+
+        zip.write_entry_whole(entry_builder, content.as_bytes())
+            .await
+            .map_err(|e| RustiqueError::ZipError {
                 context: format!("Unable to create: {filename}"),
-                source: e 
+                source: e,
             })?;
-        
+
         Ok(())
     }
-   
+
     #[allow(dead_code)]
-   async fn add_dir_to_zip(&self, zip: &mut ZipFileWriter<File>, dir_path: impl PathRef, zip_prefix: &str) -> Result<(), RustiqueError> {
-        
-        let mut entries = tokio::fs::read_dir(dir_path.as_ref()).await
+    async fn add_dir_to_zip(
+        &self,
+        zip: &mut ZipFileWriter<File>,
+        dir_path: impl PathRef,
+        zip_prefix: &str,
+    ) -> Result<(), RustiqueError> {
+        let mut entries = tokio::fs::read_dir(dir_path.as_ref())
+            .await
             .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
-        
-        while let Some(entry) = entries.next_entry().await
-            .map_err(|e| RustiqueError::SimpleError(e.to_string()))? {
-            
+
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|e| RustiqueError::SimpleError(e.to_string()))?
+        {
             let path = entry.path();
             let name = entry.file_name().to_string_lossy().to_string();
-            let zip_path = if zip_prefix.is_empty() { 
-                name.clone() 
-            } else { 
-                format!("{zip_prefix}/{name}") 
-            };
-            
-            if path.is_dir() {
-               Box::pin(self.add_dir_to_zip(zip, &path, &zip_path)).await?;
+            let zip_path = if zip_prefix.is_empty() {
+                name.clone()
             } else {
-                let content = tokio::fs::read(&path).await
+                format!("{zip_prefix}/{name}")
+            };
+
+            if path.is_dir() {
+                Box::pin(self.add_dir_to_zip(zip, &path, &zip_path)).await?;
+            } else {
+                let content = tokio::fs::read(&path)
+                    .await
                     .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
-                
-                let entry_builder = ZipEntryBuilder::new(zip_path.clone().into(), async_zip::Compression::Deflate);
-                zip.write_entry_whole(entry_builder, &content).await
+
+                let entry_builder =
+                    ZipEntryBuilder::new(zip_path.clone().into(), async_zip::Compression::Deflate);
+                zip.write_entry_whole(entry_builder, &content)
+                    .await
                     .map_err(|e| RustiqueError::ZipError {
                         context: format!("Unable to create: {zip_path}"),
-                        source: e
+                        source: e,
                     })?;
             }
         }
-       
-       Ok(())
-   } 
 
-    
+        Ok(())
+    }
 }
 
 // Used for endpoint /api/mods
@@ -200,13 +267,13 @@ impl ModInfo {
 pub struct Mods {
     pub mods: Vec<ModApi>,
     #[serde(default, rename = "statuscode")]
-    pub status_code: String
+    pub status_code: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ModsSearchFile {
     pub mods: Vec<ModApi>,
-    pub last_sync: String
+    pub last_sync: String,
 }
 
 impl ModsSearchFile {
@@ -237,30 +304,28 @@ pub struct ModApi {
     #[serde(default, rename = "type")]
     pub mod_type: Option<String>,
     pub logo: Option<String>,
-    #[serde(default, deserialize_with="some_array_items")]
+    #[serde(default, deserialize_with = "some_array_items")]
     pub tags: Vec<String>,
     #[serde(default, rename = "lastreleased")]
-    pub last_released: Option<String>
+    pub last_released: Option<String>,
 }
-
 
 // Used for endpoint /api/mod/mod_id
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mod {
-    #[serde(rename="mod", alias = "Mod")]
+    #[serde(rename = "mod", alias = "Mod")]
     pub mod_json: ApiModJson,
 
-    #[serde(default, rename="statuscode")]
-    pub status_code: String
+    #[serde(default, rename = "statuscode")]
+    pub status_code: String,
 }
-
 
 // Used with api/mod/modid
 #[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct ApiModJson {
-    #[serde(default, rename="modid", alias = "ModID", alias = "mod_id")]
+    #[serde(default, rename = "modid", alias = "ModID", alias = "mod_id")]
     pub mod_id: i64,
-    #[serde(default, rename="assetid")]
+    #[serde(default, rename = "assetid")]
     pub asset_id: i64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -271,25 +336,49 @@ pub struct ApiModJson {
     #[serde(default, rename = "urlalias", skip_serializing_if = "Option::is_none")]
     pub url_alias: Option<String>,
 
-    #[serde(default, rename = "logofilename", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "logofilename",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub logo_filename: Option<String>,
 
     #[serde(default, rename = "logofile", skip_serializing_if = "Option::is_none")]
     pub logo_file: Option<String>,
 
-    #[serde(default, rename = "logofiledb",skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "logofiledb",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub logo_file_db: Option<String>,
 
-    #[serde(default, rename = "homepageurl", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "homepageurl",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub home_page_url: Option<String>,
 
-    #[serde(default, rename = "sourcecodeurl", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "sourcecodeurl",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub source_code_url: Option<String>,
 
-    #[serde(default, rename = "trailervideourl", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "trailervideourl",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub trailer_video_url: Option<String>,
 
-    #[serde(default, rename = "issuetrackerurl", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "issuetrackerurl",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub issue_tracker_url: Option<String>,
 
     #[serde(default, rename = "wikiurl", skip_serializing_if = "Option::is_none")]
@@ -297,16 +386,16 @@ pub struct ApiModJson {
 
     #[serde(default)]
     pub downloads: i64,
-    
+
     #[serde(default)]
     pub follows: i64,
-    
+
     #[serde(default, rename = "trendingpoints")]
     pub trending_points: i64,
-    
+
     #[serde(default)]
     pub comments: i64,
-    
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub side: Option<String>,
 
@@ -315,11 +404,19 @@ pub struct ApiModJson {
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub created: Option<String>,
-    #[serde(default, rename = "lastreleased",skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "lastreleased",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub last_released: Option<String>,
-    #[serde(default, rename = "lastmodified",skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "lastmodified",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub last_modified: Option<String>,
-    #[serde(default, deserialize_with="some_array_items")]
+    #[serde(default, deserialize_with = "some_array_items")]
     pub tags: Vec<String>,
     #[serde(default)]
     pub releases: Vec<Release>,
@@ -343,7 +440,7 @@ pub struct Release {
 
     #[serde(default)]
     pub downloads: i64,
-    #[serde(default, deserialize_with="some_array_items")]
+    #[serde(default, deserialize_with = "some_array_items")]
     pub tags: Vec<String>,
     #[serde(default, rename = "modidstr")]
     pub modid_str: Option<String>,
@@ -369,7 +466,6 @@ pub struct Screenshots {
     pub created: Option<String>,
 }
 
-
 // /api/tags
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Tags {
@@ -389,7 +485,6 @@ pub struct Tag {
     pub color: String,
 }
 
-
 // /api/gameversions
 #[derive(Deserialize, Serialize, Debug)]
 pub struct GameVersions {
@@ -399,8 +494,7 @@ pub struct GameVersions {
     pub game_versions: Vec<GameVersion>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-#[derive(PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct GameVersion {
     #[serde(default, rename = "tagid")]
     pub tag_id: i64,
@@ -409,7 +503,6 @@ pub struct GameVersion {
     #[serde(default)]
     pub color: String,
 }
-
 
 // /api/authors
 
@@ -453,7 +546,6 @@ pub struct Comment {
     #[serde(default, rename = "lastmodified")]
     pub last_modified: String,
 }
-
 
 // /api/changelogs/{modid (optional)}
 #[derive(Deserialize, Serialize, Debug)]

@@ -1,7 +1,6 @@
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{fmt, EnvFilter};
-
+use tracing_subscriber::{EnvFilter, fmt};
 
 pub enum VerboseLevel {
     Verbose,
@@ -23,12 +22,13 @@ pub fn init_logging(verbose: &VerboseLevel) {
     };
 
     tracing_subscriber::registry()
-        .with(fmt::layer()
-            .with_thread_ids(true)
-            .with_thread_names(true)
-            .with_target(false)
-            .with_ansi_sanitization(false)
-            )
+        .with(
+            fmt::layer()
+                .with_thread_ids(true)
+                .with_thread_names(true)
+                .with_target(false)
+                .with_ansi_sanitization(false),
+        )
         .with(filter)
         .init();
 }

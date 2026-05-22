@@ -1,4 +1,3 @@
-
 use crate::traits::string_ext::StrLowerExt;
 
 #[allow(dead_code)]

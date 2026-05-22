@@ -2,7 +2,6 @@ use clap::Args;
 
 #[derive(Args)]
 pub struct UpdateArgs {
-
     /// Update specific mod, must be mod_id. Example: ./Rustique update alchemy
     #[arg(num_args = 1..)]
     pub(crate) mod_ids: Vec<String>,
@@ -13,5 +12,5 @@ pub struct UpdateArgs {
 
     /// Update mods but keep old version.
     #[arg(short, long, default_value = "false")]
-    pub(crate) keep_old_files: bool
+    pub(crate) keep_old_files: bool,
 }

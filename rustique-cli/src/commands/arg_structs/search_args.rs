@@ -1,17 +1,15 @@
-use clap::{Args};
+use clap::Args;
 use rustique_core::config::config_structs::CellColor;
 use rustique_core::search::{Field, SortBy, SortOrder};
 
 #[derive(Args)]
 pub struct SearchArgs {
-
     /// This text query will search all available text fields, author, summary, name, urlalias, tags, side, type
     #[arg(short, long)]
     pub query: Option<String>,
 
-    #[arg(short, long, )]
+    #[arg(short, long)]
     pub color: Option<CellColor>,
-
 
     /// If you know the field name from the api you can search on it directly.
     ///
@@ -23,10 +21,9 @@ pub struct SearchArgs {
 
     /// Search by specific author.
     /// Note that the API doesn't appear to include more than 1 author, so this works for just the main author
-    #[arg(short,long)]
+    #[arg(short, long)]
     pub author: Option<String>,
 
-    
     /// Search by a specific type of tag, example: Weapons or Technology
     #[arg(short, long)]
     pub tag: Option<String>,

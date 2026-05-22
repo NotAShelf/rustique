@@ -1,5 +1,6 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
+use crate::widgets::danger_btn_style;
 use human_format::Formatter;
 use iced::widget::{Column, button, column, container, row, scrollable, text, text_input};
 use iced::{Alignment, Color, Element, Fill};
@@ -42,6 +43,8 @@ pub struct BrowseView {
     pub page: usize,
     pub favorites: HashSet<String>,
     pub show_favorites_only: bool,
+    pub installing: HashSet<String>,
+    pub installed_mods: HashMap<String, String>,
 }
 
 impl Default for BrowseView {
@@ -57,6 +60,8 @@ impl Default for BrowseView {
             page: 0,
             favorites: HashSet::new(),
             show_favorites_only: false,
+            installing: HashSet::new(),
+            installed_mods: HashMap::new(),
         }
     }
 }
@@ -170,7 +175,13 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
         let page_mods = state.current_page_mods();
         let rows: Vec<Element<'_, Message>> = page_mods
             .iter()
-            .map(|m| browse_row(m, state.favorites.contains(mod_key(m).as_str())))
+            .map(|m| {
+                let key = mod_key(m);
+                let favorited = state.favorites.contains(key.as_str());
+                let installing = state.installing.contains(&key);
+                let installed_file = state.installed_mods.get(&key).cloned();
+                browse_row(m, favorited, installing, installed_file)
+            })
             .collect();
 
         let total = state.total_pages();
@@ -252,7 +263,12 @@ fn mod_key(m: &ModApi) -> String {
         .unwrap_or_else(|| m.mod_id.to_string())
 }
 
-fn browse_row(m: &ModApi, favorited: bool) -> Element<'static, Message> {
+fn browse_row(
+    m: &ModApi,
+    favorited: bool,
+    installing: bool,
+    installed_file: Option<String>,
+) -> Element<'static, Message> {
     let name = m.name.clone().unwrap_or_else(|| m.mod_id.to_string());
     let author = m.author.clone().unwrap_or_default();
     let summary = m.summary.clone().unwrap_or_default();
@@ -278,6 +294,21 @@ fn browse_row(m: &ModApi, favorited: bool) -> Element<'static, Message> {
             b: 0.45,
             a: 1.0,
         }
+    };
+
+    let action_btn: Element<'static, Message> = if installing {
+        button(text("Installing...").size(13))
+            .style(ghost_btn_style)
+            .into()
+    } else if let Some(file_name) = installed_file {
+        button(text("Uninstall").size(13))
+            .on_press(Message::DeleteMod(file_name))
+            .style(danger_btn_style)
+            .into()
+    } else {
+        button(text("Install").size(13))
+            .on_press(Message::InstallMod(mod_id_str))
+            .into()
     };
 
     container(
@@ -334,7 +365,7 @@ fn browse_row(m: &ModApi, favorited: bool) -> Element<'static, Message> {
             ]
             .spacing(3)
             .width(Fill),
-            button(text("Install").size(13)).on_press(Message::InstallMod(mod_id_str)),
+            action_btn,
         ]
         .spacing(8)
         .align_y(Alignment::Center),

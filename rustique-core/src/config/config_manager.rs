@@ -1,4 +1,9 @@
+use crate::aliases::ModVersion;
+use crate::config::config_structs::Tables;
+use crate::information_utils::{CellData, RustiqueMessage, rustique_message};
 use crate::rustique_errors::RustiqueError;
+use crate::rustique_options::RustiqueOptions;
+use crate::traits::ref_ext::PathRef;
 use chrono::Local;
 use comfy_table::{Attribute, CellAlignment, Color};
 use dirs::home_dir;
@@ -11,11 +16,6 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
-use crate::aliases::ModVersion;
-use crate::config::config_structs::Tables;
-use crate::information_utils::{rustique_message, CellData, RustiqueMessage};
-use crate::rustique_options::RustiqueOptions;
-use crate::traits::ref_ext::PathRef;
 
 #[derive(Deserialize, Serialize, Debug)]
 #[allow(clippy::struct_excessive_bools)]
@@ -39,32 +39,32 @@ pub struct Config {
     // default ~/.config/rustique/backups
     #[serde(default)]
     pub backup_mods_dir: String,
-    
+
     #[cfg(windows)]
     pub update_default_windows_loc: bool,
-    
+
     // Shows the "<operation> completed: " text after a command finishes
     #[serde(default)]
     pub show_execution_time: bool,
 
     #[serde(default)]
     pub notify_of_unzipped_mods: bool,
-    
+
     #[serde(default)]
     pub game_download_dir: String,
-    
+
     #[serde(default)]
     pub check_for_updates: bool,
 
     #[serde(default)]
     pub modpacks: ModPacks,
-    
+
     #[serde(default)]
     pub pkg: Vec<Package>,
-   
+
     #[serde(default = "default_sync_time")]
     pub sync_latest_game_version_file_every: i64,
-    
+
     #[serde(default = "default_sync_time")]
     pub sync_mod_search_file_every: i64,
 
@@ -92,7 +92,10 @@ pub struct ModPacks {
 impl Default for ModPacks {
     fn default() -> Self {
         Self {
-            modpack_dir: Config::get_path().join("modpacks").to_string_lossy().to_string(),
+            modpack_dir: Config::get_path()
+                .join("modpacks")
+                .to_string_lossy()
+                .to_string(),
             enabled: vec![],
             disabled: vec![],
         }
@@ -131,14 +134,14 @@ impl Default for Config {
         // let backup_mods_dir = get_expanded_path(PathBuf::from(CONFIG_DEFAULT_DIR).join("mod_backups"));
         let backup_mods_dir = Self::get_path().join("mod_backups");
         let modpack_dir = Self::get_path().join("modpacks");
-        
+
         match Self::setup_modpack_dir("modpacks") {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 warn!("Failed to setup modpack dir: {}", e);
             }
         }
-    
+
         info!("modpack_dir {}", modpack_dir.display());
 
         Self {
@@ -153,14 +156,17 @@ impl Default for Config {
             backup_mods_dir: backup_mods_dir.to_string_lossy().to_string(),
             show_execution_time: true,
             notify_of_unzipped_mods: false,
-            game_download_dir: dirs::download_dir().unwrap_or_default().to_string_lossy().to_string(),
+            game_download_dir: dirs::download_dir()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string(),
             sync_latest_game_version_file_every: 24,
             sync_mod_search_file_every: 24,
             pkg: Vec::default(),
             table: Tables::with_defaults(),
             modpacks: ModPacks::default(),
             check_for_updates: true,
-            
+
             #[cfg(windows)]
             update_default_windows_loc: true,
         }
@@ -184,21 +190,15 @@ impl Config {
         if !config_file_path.exists() {
             let default_config = Self::default();
             let toml_content = toml::to_string_pretty(&default_config).map_err(|e| {
-                RustiqueError::ConfigFileError(format!(
-                    "Failed to serialize default config: {e}"
-                ))
+                RustiqueError::ConfigFileError(format!("Failed to serialize default config: {e}"))
             })?;
 
             let mut file = File::create(&config_file_path).map_err(|e| {
-                RustiqueError::ConfigFileError(format!(
-                    "Failed to create config file at: {e}"
-                ))
+                RustiqueError::ConfigFileError(format!("Failed to create config file at: {e}"))
             })?;
 
             file.write_all(toml_content.as_bytes()).map_err(|e| {
-                RustiqueError::ConfigFileError(format!(
-                    "Failed writing config file: {e}"
-                ))
+                RustiqueError::ConfigFileError(format!("Failed writing config file: {e}"))
             })?;
 
             println!(
@@ -221,8 +221,6 @@ impl Config {
         file.read_to_string(&mut contents).map_err(|e| {
             RustiqueError::ConfigFileError(format!("Failed to read config file: {e}"))
         })?;
-       
-        
 
         match toml::from_str::<Config>(&contents) {
             Ok(config) => Ok(config),
@@ -237,7 +235,7 @@ impl Config {
             }
         }
     }
-    
+
     pub fn setup_modpack_dir(modpack_dir: impl PathRef) -> Result<(), RustiqueError> {
         let modpack_dir = Self::get_path().join(modpack_dir);
         // create the modpack directory if it hasn't been created
@@ -248,11 +246,15 @@ impl Config {
             for dir in ["installed", "packs", "mypacks"] {
                 info!("creating modpacks/{dir}");
                 let d = &modpack_dir.join(dir);
-                fs::create_dir_all(d)
-                    .map_err(|e| RustiqueError::SimpleError(format!("Failed to create {}: {}", d.to_string_lossy(), e)))?;
+                fs::create_dir_all(d).map_err(|e| {
+                    RustiqueError::SimpleError(format!(
+                        "Failed to create {}: {}",
+                        d.to_string_lossy(),
+                        e
+                    ))
+                })?;
             }
         }
-
 
         Ok(())
     }
@@ -278,7 +280,10 @@ impl Config {
     }
 }
 
-pub fn backup_config(config_path: impl PathRef, message: Option<String>) -> Result<(), RustiqueError> {
+pub fn backup_config(
+    config_path: impl PathRef,
+    message: Option<String>,
+) -> Result<(), RustiqueError> {
     let config_path = config_path.as_ref();
     if config_path.exists() {
         let back_name = format!("toml.bak-{}", Local::now().format("%Y%m%d_%H%M%S"));
@@ -349,4 +354,3 @@ pub fn get_config() -> &'static RwLock<Config> {
     info!("get_config() called");
     CONFIG.get_or_init(|| RwLock::new(Config::new().expect("Config has not been initialized")))
 }
-

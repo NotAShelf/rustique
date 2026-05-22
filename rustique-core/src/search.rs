@@ -1,36 +1,35 @@
-use std::cmp::Ordering;
-use std::str::FromStr;
-use clap::ValueEnum;
 use crate::api::api_structs::ModApi;
 use crate::traits::option_ext::OptionExt;
 use crate::traits::search_traits::{Searchable, SortValue, Sortable};
 use crate::traits::vec_ext::VecStringExt;
-
+use clap::ValueEnum;
+use std::cmp::Ordering;
+use std::str::FromStr;
 
 impl Searchable for ModApi {
     fn matches_text(&self, query: &str) -> bool {
         let query = query.to_lowercase();
         self.name.matches_contains(&query)
-        || self.summary.matches_contains(&query)
-        || self.author.matches_contains(&query)
-        || self.mod_type.matches_contains(&query)
-        || self.side.matches_contains(&query)
-        || self.mod_id_strs.contains(&query)
-        || self.url_alias.matches_contains(&query)
-        || self.tags.contains(&query)
+            || self.summary.matches_contains(&query)
+            || self.author.matches_contains(&query)
+            || self.mod_type.matches_contains(&query)
+            || self.side.matches_contains(&query)
+            || self.mod_id_strs.contains(&query)
+            || self.url_alias.matches_contains(&query)
+            || self.tags.contains(&query)
     }
 
     #[allow(clippy::match_wildcard_for_single_variants)]
     fn matches_field(&self, field: &Field, value: &str) -> bool {
         match field {
-            Field::Name     => self.name.matches_contains(value),
-            Field::Summary  => self.summary.matches_contains(value),
-            Field::Author   => self.author.matches_contains(value),
-            Field::ModType  => self.mod_type.matches_contains(value),
-            Field::Side     => self.side.matches_contains(value),
+            Field::Name => self.name.matches_contains(value),
+            Field::Summary => self.summary.matches_contains(value),
+            Field::Author => self.author.matches_contains(value),
+            Field::ModType => self.mod_type.matches_contains(value),
+            Field::Side => self.side.matches_contains(value),
             Field::ModIdStr => self.mod_id_strs.contains(&value.to_string()),
             Field::UrlAlias => self.url_alias.matches_contains(value),
-            _ => false
+            _ => false,
         }
     }
 
@@ -52,7 +51,7 @@ pub enum Field {
     Side,
     ModIdStr,
     UrlAlias,
-    Tags
+    Tags,
 }
 
 #[derive(ValueEnum, Clone, Debug)]
@@ -69,27 +68,25 @@ pub enum SortBy {
 }
 
 impl Sortable for ModApi {
-      fn get_sort_by(&self, field: &SortBy) -> SortValue {
+    fn get_sort_by(&self, field: &SortBy) -> SortValue {
         match *field {
-            SortBy::Name        => SortValue::Number(i64::from(self.mod_id)),
-            SortBy::AssetId     => SortValue::Number(i64::from(self.asset_id)),
-            SortBy::Downloads   => SortValue::Number(i64::from(self.downloads)),
-            SortBy::Follows     => SortValue::Number(i64::from(self.follows)),
-            SortBy::Author      => SortValue::Number(i64::from(self.trending_points)),
-            SortBy::Released    => SortValue::Number(i64::from(self.comments)),
-            SortBy::Comments    => SortValue::Text(self.name.clone().unwrap_or_default()),
-            SortBy::Trending    => SortValue::Text(self.author.clone().unwrap_or_default()),
-            SortBy::ModId       => SortValue::Date(self.last_released.clone().unwrap_or_default()),
+            SortBy::Name => SortValue::Number(i64::from(self.mod_id)),
+            SortBy::AssetId => SortValue::Number(i64::from(self.asset_id)),
+            SortBy::Downloads => SortValue::Number(i64::from(self.downloads)),
+            SortBy::Follows => SortValue::Number(i64::from(self.follows)),
+            SortBy::Author => SortValue::Number(i64::from(self.trending_points)),
+            SortBy::Released => SortValue::Number(i64::from(self.comments)),
+            SortBy::Comments => SortValue::Text(self.name.clone().unwrap_or_default()),
+            SortBy::Trending => SortValue::Text(self.author.clone().unwrap_or_default()),
+            SortBy::ModId => SortValue::Date(self.last_released.clone().unwrap_or_default()),
         }
     }
 }
 
-
-
 #[derive(Debug, Clone)]
 pub enum SearchCriteria {
     Text(String),
-    Field {field: Field, value: String},
+    Field { field: Field, value: String },
     Id(i64),
     Tag(String),
 }
@@ -97,7 +94,7 @@ pub enum SearchCriteria {
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum SortOrder {
     Asc,
-    Desc
+    Desc,
 }
 
 impl FromStr for SortOrder {
@@ -107,7 +104,7 @@ impl FromStr for SortOrder {
         match s.to_lowercase().as_str() {
             "asc" | "ascending" => Ok(SortOrder::Asc),
             "desc" | "descending" => Ok(SortOrder::Desc),
-            _ => Err(format!("Invalid sort order: {s}"))
+            _ => Err(format!("Invalid sort order: {s}")),
         }
     }
 }
@@ -136,7 +133,7 @@ impl SearchQuery {
     }
 
     pub fn add_field_search(mut self, field: Field, value: String) -> Self {
-        self.criteria.push(SearchCriteria::Field {field, value});
+        self.criteria.push(SearchCriteria::Field { field, value });
         self
     }
 
@@ -172,11 +169,13 @@ impl SearchQuery {
 
                 self.criteria.iter().all(|criterion| match criterion {
                     SearchCriteria::Text(query) => mod_item.matches_text(query),
-                    SearchCriteria::Field{field, value} => mod_item.matches_field(field, value),
+                    SearchCriteria::Field { field, value } => mod_item.matches_field(field, value),
                     SearchCriteria::Id(id) => mod_item.matches_id(*id),
                     SearchCriteria::Tag(tag) => mod_item.matches_tag(tag),
                 })
-            }).cloned().collect();
+            })
+            .cloned()
+            .collect();
 
         if let Some(sort_field) = &self.sort_by {
             results.sort_by(|a, b| {

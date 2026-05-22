@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use rustique_core::api::api_structs::{ModApi, ModsSearchFile};
+use rustique_core::api::api_structs::{ModApi, ModInfo, ModsSearchFile};
 use rustique_core::api::client::ApiClient;
 use rustique_core::config::config_manager::{Config, get_config};
 use rustique_core::consts::{FILE_MOD_SEARCH_SYNC, FILE_RUSTIQUE_SYNC};
@@ -19,8 +19,6 @@ fn err(e: impl ToString) -> String {
     e.to_string()
 }
 
-// ── Settings data ─────────────────────────────────────────────────────────────
-
 #[derive(Debug, Clone, Default)]
 pub struct SettingsData {
     pub mod_dir: String,
@@ -34,8 +32,6 @@ pub struct SettingsData {
     pub show_execution_time: bool,
     pub modpack_dir: String,
 }
-
-// ── Installed view ────────────────────────────────────────────────────────────
 
 pub async fn load_installed() -> Result<HashMap<String, ModSyncInfo>, String> {
     let mod_dir = {
@@ -162,8 +158,6 @@ pub async fn delete_mod(mod_dir: PathBuf, file_name: String) -> Result<String, S
     Ok(file_name)
 }
 
-// ── Browse view ───────────────────────────────────────────────────────────────
-
 pub async fn load_browse() -> Result<Vec<ModApi>, String> {
     let search_file_path = Config::get_path().join(FILE_MOD_SEARCH_SYNC);
 
@@ -284,8 +278,6 @@ pub async fn install_mod(mod_dir: PathBuf, mod_id: String) -> Result<String, Str
     Ok(mod_name)
 }
 
-// ── Favorites ─────────────────────────────────────────────────────────────────
-
 pub async fn load_favorites() -> Result<HashSet<String>, String> {
     let path = Config::get_path().join(FAVORITES_FILE);
     if !path.exists() {
@@ -314,8 +306,6 @@ pub async fn export_favorites(favorites: HashSet<String>) -> Result<String, Stri
     Ok(path.display().to_string())
 }
 
-// ── Modpacks (inside InstalledView) ──────────────────────────────────────────
-
 pub async fn load_packs() -> Result<(Vec<String>, Vec<String>), String> {
     let config = get_config().read().await;
     let disabled = config.modpacks.disabled.clone();
@@ -343,7 +333,61 @@ pub async fn disable_pack(id: String) -> Result<String, String> {
     Ok(format!("{id} disabled"))
 }
 
-// ── Settings view ─────────────────────────────────────────────────────────────
+pub async fn create_pack(
+    mod_dir: PathBuf,
+    name: String,
+    pack_id: String,
+    version: String,
+) -> Result<String, String> {
+    let modpack_dir = {
+        let config = get_config().read().await;
+        config.modpacks.modpack_dir.clone()
+    };
+
+    if modpack_dir.is_empty() {
+        return Err("Modpack directory not configured. Set it in Settings first.".to_string());
+    }
+
+    let installed = load_installed_from(mod_dir).await?;
+    let dependencies: HashMap<String, String> = installed
+        .into_iter()
+        .filter(|(id, _)| !id.is_empty())
+        .map(|(id, info)| (id, info.installed_version))
+        .collect();
+
+    let save_path = std::path::Path::new(&modpack_dir).join("mypacks");
+    tokio::fs::create_dir_all(&save_path).await.map_err(err)?;
+
+    let pack_info = ModInfo {
+        name: name.clone(),
+        mod_id: pack_id.clone(),
+        version: if version.is_empty() {
+            None
+        } else {
+            Some(version)
+        },
+        dependencies,
+        ..ModInfo::default()
+    };
+
+    pack_info
+        .build_modpack(save_path.clone(), pack_id.clone())
+        .await
+        .map_err(err)?;
+
+    {
+        let mut config = get_config().write().await;
+        if !config.modpacks.disabled.contains(&pack_id) {
+            config.modpacks.disabled.push(pack_id.clone());
+        }
+        config.save(None).map_err(err)?;
+    }
+
+    Ok(format!(
+        "Created modpack '{name}' at {}",
+        save_path.display()
+    ))
+}
 
 pub async fn load_settings() -> Result<SettingsData, String> {
     let config = get_config().read().await;

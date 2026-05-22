@@ -5,7 +5,7 @@ use rustique_core::config::config_structs::{CellAttr, CellColor, ListColumn, Sea
 #[derive(Args)]
 pub struct TableArgs {
     #[command(subcommand)]
-    pub subcommand: TableSubCommands
+    pub subcommand: TableSubCommands,
 }
 
 #[derive(Subcommand)]
@@ -21,9 +21,9 @@ pub enum TableSubCommands {
 
     ///
     /// Shows the current values defined in the config file
-    /// 
+    ///
     List,
-    
+
     ///
     /// Reset a table back to the Rustique defaults
     ///
@@ -33,24 +33,24 @@ pub enum TableSubCommands {
 #[derive(Args)]
 pub struct ResetArgsMiddle {
     #[command(subcommand)]
-    pub command: ResetArgs
+    pub command: ResetArgs,
 }
 
 #[derive(Subcommand)]
 pub enum ResetArgs {
     ///
     /// Reset the List table to defaults
-    List, 
-    
+    List,
+
     ///
     /// Reset the Search table to defaults
-    Search
+    Search,
 }
 
 #[derive(Args)]
 pub struct TableSetArgs {
     #[command(subcommand)]
-    pub subcommand: TableArgsSubCommands
+    pub subcommand: TableArgsSubCommands,
 }
 
 #[derive(Subcommand)]
@@ -86,8 +86,9 @@ pub enum TableArgsSubCommands {
     .required(true)
 ))]
 pub struct TableSubFlags<T>
-where T: ValueEnum + Clone + Send + Sync + 'static {
-
+where
+    T: ValueEnum + Clone + Send + Sync + 'static,
+{
     #[clap(flatten)]
     pub group: TableGroup,
 
@@ -109,17 +110,28 @@ where T: ValueEnum + Clone + Send + Sync + 'static {
     ///
     /// Set the cell color
     ///
-    /// 
-    #[arg(short = 'r',long, requires = "headers_or_cells", requires = "fields", value_name = "COLOR")]
+    ///
+    #[arg(
+        short = 'r',
+        long,
+        requires = "headers_or_cells",
+        requires = "fields",
+        value_name = "COLOR"
+    )]
     pub color: Option<CellColor>,
 
     ///
     /// Set the attribute of the cell. For now you can only specify `1` attribute at a time
     ///
-    #[arg(short, long, requires = "headers_or_cells", requires = "fields",value_name = "ATTR")]
+    #[arg(
+        short,
+        long,
+        requires = "headers_or_cells",
+        requires = "fields",
+        value_name = "ATTR"
+    )]
     pub attr: Option<CellAttr>,
 }
-
 
 #[derive(Args)]
 #[command(group(
@@ -130,7 +142,7 @@ where T: ValueEnum + Clone + Send + Sync + 'static {
 ))]
 pub struct TableGroup {
     /// Use this flag to modify the table headers
-    #[arg(short = 'H',long = "headers")]
+    #[arg(short = 'H', long = "headers")]
     pub headers: bool,
 
     /// Use this flag to modify the table cells in the body of the table

@@ -6,6 +6,8 @@ use crate::consts::{FILE_GAME_VERSION_SYNC, FILE_MODINFO_JSON, FILE_RUSTIQUE_SYN
 use crate::information_utils::{CellData, display_table, notice};
 use crate::install_manager::{Install, Installed};
 use crate::rustique_errors::RustiqueError;
+use crate::symlink_manager::SymlinkManager;
+use crate::sync_structs::{GameVersionSync, ModSyncInfo};
 use crate::traits::ref_ext::{PathRef, StrRef};
 use crate::version_management::parse_version;
 use async_zip::tokio::read::fs::ZipFileReader;
@@ -15,15 +17,13 @@ use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use dirs::home_dir;
 use futures::{StreamExt, stream};
 use owo_colors::OwoColorize;
+use serde_json::to_string_pretty;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::exit;
-use serde_json::to_string_pretty;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::{debug, error, info, warn};
-use crate::symlink_manager::SymlinkManager;
-use crate::sync_structs::{GameVersionSync, ModSyncInfo};
 
 pub fn get_current_time() -> String {
     let datetime: DateTime<Utc> = Utc::now();
@@ -554,10 +554,13 @@ pub fn html_parse(input: &mut impl StrRef, width: usize) -> Result<String, Rusti
 
 pub fn prettify<T>(data: T, command_type: impl StrRef) -> Result<String, RustiqueError>
 where
-    T: serde::Serialize {
-
+    T: serde::Serialize,
+{
     to_string_pretty(&data).map_err(|e| RustiqueError::JsonError {
-        context: format!("Failure while making the {} json pretty", command_type.as_ref()),
+        context: format!(
+            "Failure while making the {} json pretty",
+            command_type.as_ref()
+        ),
         source: serde_json5::Error::from(std::io::Error::other(e)),
     })
 }

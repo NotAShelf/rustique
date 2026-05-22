@@ -1,5 +1,3 @@
-
-
 // This trait to add helper functions to Vec<String> for ease of use in searching ignoring case
 
 #[allow(unused_variables)]

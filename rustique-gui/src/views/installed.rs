@@ -1,4 +1,4 @@
-use iced::widget::{Column, button, column, container, row, scrollable, text};
+use iced::widget::{Column, button, column, container, row, scrollable, text, text_input};
 use iced::{Alignment, Color, Element, Fill, Length};
 use rustique_core::sync_structs::ModSyncInfo;
 
@@ -22,6 +22,10 @@ pub struct InstalledView {
     pub enabled_packs: Vec<String>,
     pub loading: bool,
     pub status: Option<String>,
+    pub show_create_form: bool,
+    pub create_name: String,
+    pub create_id: String,
+    pub create_version: String,
 }
 
 pub fn view(state: &InstalledView) -> Element<'_, Message> {
@@ -117,28 +121,85 @@ fn mods_body(state: &InstalledView) -> Element<'_, Message> {
 }
 
 fn packs_body<'a>(state: &'a InstalledView) -> Element<'a, Message> {
-    if state.packs.is_empty() && state.enabled_packs.is_empty() {
+    let create_section: Element<'a, Message> = if state.show_create_form {
+        let can_submit = !state.create_name.is_empty() && !state.create_id.is_empty();
         container(
             column![
-                text("No modpacks installed").size(16),
-                text("Use `rustique modpack install <id>` from the CLI to install a modpack.")
-                    .size(13)
-                    .color(Color {
-                        r: 0.55,
-                        g: 0.55,
-                        b: 0.55,
-                        a: 1.0,
+                text("Create Modpack from Installed Mods").size(14),
+                row![
+                    text("Name").size(12).width(70),
+                    text_input("e.g. My Pack", &state.create_name)
+                        .on_input(Message::CreatePackName)
+                        .width(Fill),
+                ]
+                .spacing(8)
+                .align_y(Alignment::Center),
+                row![
+                    text("ID").size(12).width(70),
+                    text_input("e.g. mypack", &state.create_id)
+                        .on_input(Message::CreatePackId)
+                        .width(Fill),
+                ]
+                .spacing(8)
+                .align_y(Alignment::Center),
+                row![
+                    text("Version").size(12).width(70),
+                    text_input("e.g. 1.0.0", &state.create_version)
+                        .on_input(Message::CreatePackVersion)
+                        .width(Fill),
+                ]
+                .spacing(8)
+                .align_y(Alignment::Center),
+                row![
+                    button(text("Create").size(13)).on_press_maybe(if can_submit {
+                        Some(Message::CreatePackSubmit)
+                    } else {
+                        None
                     }),
+                    button(text("Cancel").size(13))
+                        .on_press(Message::ShowCreatePackForm(false))
+                        .style(ghost_btn_style),
+                ]
+                .spacing(8),
             ]
-            .spacing(6)
-            .align_x(Alignment::Center),
+            .spacing(8),
         )
-        .center(Fill)
+        .padding(12)
+        .style(card_style)
+        .into()
+    } else {
+        button(text("+ Create Modpack").size(13))
+            .on_press(Message::ShowCreatePackForm(true))
+            .style(ghost_btn_style)
+            .into()
+    };
+
+    if state.packs.is_empty() && state.enabled_packs.is_empty() {
+        column![
+            create_section,
+            container(
+                column![
+                    text("No modpacks installed").size(16),
+                    text("Create one above from your installed mods, or install via the CLI.")
+                        .size(13)
+                        .color(Color {
+                            r: 0.55,
+                            g: 0.55,
+                            b: 0.55,
+                            a: 1.0,
+                        }),
+                ]
+                .spacing(6)
+                .align_x(Alignment::Center),
+            )
+            .center(Fill)
+            .height(Fill),
+        ]
+        .spacing(10)
         .height(Fill)
         .into()
     } else {
-        // Enabled packs first, then disabled (no duplicates)
-        let mut rows: Vec<Element<'a, Message>> = Vec::new();
+        let mut rows: Vec<Element<'a, Message>> = vec![create_section];
         for id in &state.enabled_packs {
             rows.push(pack_row(id, true));
         }

@@ -40,6 +40,12 @@ pub enum Message {
     EnablePack(String),
     DisablePack(String),
     PackOpDone(Result<String, String>),
+    ShowCreatePackForm(bool),
+    CreatePackName(String),
+    CreatePackId(String),
+    CreatePackVersion(String),
+    CreatePackSubmit,
+    CreatePackDone(Result<String, String>),
 
     // Browse
     BrowseLoaded(Result<Vec<ModApi>, String>),
@@ -50,7 +56,7 @@ pub enum Message {
     BrowseNextPage,
     BrowsePrevPage,
     InstallMod(String),
-    InstallDone(Result<String, String>),
+    InstallDone(String, Result<String, String>),
     ToggleFavorite(String),
     ToggleFavoritesFilter,
     ExportFavorites,
@@ -131,6 +137,10 @@ impl App {
 
             // --- Installed: mods ---
             Message::InstalledLoaded(Ok(mods)) => {
+                self.browse.installed_mods = mods
+                    .iter()
+                    .map(|(id, info)| (id.clone(), info.file_name.clone()))
+                    .collect();
                 self.installed.mods = mods.into_values().collect();
                 self.installed
                     .mods
@@ -150,6 +160,10 @@ impl App {
                 Task::perform(crate::ops::sync_mods(mod_dir), Message::SyncDone)
             }
             Message::SyncDone(Ok(mods)) => {
+                self.browse.installed_mods = mods
+                    .iter()
+                    .map(|(id, info)| (id.clone(), info.file_name.clone()))
+                    .collect();
                 self.installed.mods = mods.into_values().collect();
                 self.installed
                     .mods
@@ -239,6 +253,47 @@ impl App {
                 self.installed.status = Some(format!("Error: {e}"));
                 Task::none()
             }
+            Message::ShowCreatePackForm(show) => {
+                self.installed.show_create_form = show;
+                Task::none()
+            }
+            Message::CreatePackName(v) => {
+                self.installed.create_name = v;
+                Task::none()
+            }
+            Message::CreatePackId(v) => {
+                self.installed.create_id = v;
+                Task::none()
+            }
+            Message::CreatePackVersion(v) => {
+                self.installed.create_version = v;
+                Task::none()
+            }
+            Message::CreatePackSubmit => {
+                let mod_dir = self.mod_dir.clone();
+                let name = self.installed.create_name.clone();
+                let id = self.installed.create_id.clone();
+                let version = self.installed.create_version.clone();
+                self.installed.loading = true;
+                self.installed.show_create_form = false;
+                Task::perform(
+                    crate::ops::create_pack(mod_dir, name, id, version),
+                    Message::CreatePackDone,
+                )
+            }
+            Message::CreatePackDone(Ok(msg)) => {
+                self.installed.loading = false;
+                self.installed.status = Some(msg);
+                self.installed.create_name.clear();
+                self.installed.create_id.clear();
+                self.installed.create_version.clear();
+                Task::perform(crate::ops::load_packs(), Message::PacksLoaded)
+            }
+            Message::CreatePackDone(Err(e)) => {
+                self.installed.loading = false;
+                self.installed.status = Some(format!("Create failed: {e}"));
+                Task::none()
+            }
 
             // --- Browse ---
             Message::BrowseLoaded(Ok(mods)) => {
@@ -284,18 +339,24 @@ impl App {
                 Task::none()
             }
             Message::InstallMod(mod_id) => {
-                self.browse.status = Some(format!("Installing {mod_id}..."));
+                self.browse.installing.insert(mod_id.clone());
+                let mod_dir = self.mod_dir.clone();
+                let id = mod_id.clone();
+                Task::perform(crate::ops::install_mod(mod_dir, mod_id), move |r| {
+                    Message::InstallDone(id, r)
+                })
+            }
+            Message::InstallDone(mod_id, Ok(name)) => {
+                self.browse.installing.remove(&mod_id);
+                self.browse.status = Some(format!("Installed {name}"));
                 let mod_dir = self.mod_dir.clone();
                 Task::perform(
-                    crate::ops::install_mod(mod_dir, mod_id),
-                    Message::InstallDone,
+                    crate::ops::load_installed_from(mod_dir),
+                    Message::InstalledLoaded,
                 )
             }
-            Message::InstallDone(Ok(name)) => {
-                self.browse.status = Some(format!("Installed {name}"));
-                Task::none()
-            }
-            Message::InstallDone(Err(e)) => {
+            Message::InstallDone(mod_id, Err(e)) => {
+                self.browse.installing.remove(&mod_id);
                 self.browse.status = Some(format!("Install failed: {e}"));
                 Task::none()
             }
