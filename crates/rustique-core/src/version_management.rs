@@ -45,7 +45,7 @@ pub fn parse_latest_version(releases: &[Release]) -> PinnedVersionInfo {
 
             // Check if this mod has a pinned version and return the max by that version
             // only clone when passing to parse_version if required
-            match parse_version(&version_str.clone()) {
+            match parse_version(version_str) {
                 Ok(version) => Some((
                     version,
                     release.main_file.clone(),
@@ -152,12 +152,7 @@ pub fn parse_pinned_version(
     let mres = if mod_pkg.pinned_version.is_some() {
         gres.iter()
             .filter(|r| {
-                // if its 0.0.0, just return true, this means the version parsed failed, prob invalid semver
                 let ver = if let Some(v) = &mod_pkg.pinned_version {
-                    if v == "0.0.0" {
-                        return true;
-                    }
-
                     v.to_string()
                 } else {
                     return true;
@@ -186,15 +181,18 @@ pub fn parse_pinned_version(
 
     let final_res = mres
         .iter()
-        .filter_map(|r| match parse_version(r.mod_version.as_ref().unwrap()) {
-            Ok(v) => Some((v, r.main_file.clone(), r.tags.clone(), r.changelog.clone())),
-            Err(e) => {
-                info!(
-                    "{} {}",
-                    "parse_pinned_version-final_res:".bright_yellow(),
-                    e.red().bold()
-                );
-                None
+        .filter_map(|r| {
+            let version_str = r.mod_version.as_ref()?;
+            match parse_version(version_str) {
+                Ok(v) => Some((v, r.main_file.clone(), r.tags.clone(), r.changelog.clone())),
+                Err(e) => {
+                    info!(
+                        "{} {}",
+                        "parse_pinned_version-final_res:".bright_yellow(),
+                        e.red().bold()
+                    );
+                    None
+                }
             }
         })
         .max_by(|(v1, _, _, _), (v2, _, _, _)| v1.cmp(v2))
