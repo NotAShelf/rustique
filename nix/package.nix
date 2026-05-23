@@ -1,21 +1,26 @@
 {
   lib,
   craneLib,
+  pkg-config,
   openssl,
   libxkbcommon,
   wayland,
+  vulkan-loader,
 }: let
   pname = "rustique";
   version = "0.6.0";
 
+  nativeBuildInputs = [pkg-config];
+
   buildInputs = [
+    openssl
     libxkbcommon
     wayland
-    openssl
+    vulkan-loader
   ];
 
   commonArgs = {
-    inherit pname version buildInputs;
+    inherit pname version buildInputs nativeBuildInputs;
     strictDeps = true;
     doCheck = false;
 

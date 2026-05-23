@@ -8,9 +8,16 @@
   mold,
   pkg-config,
   taplo,
+  libxkbcommon,
+  vulkan-loader,
+  wayland,
 }: let
   rustiquePkg = self.packages.${stdenv.hostPlatform.system}.rustique;
-  runtimeInputs = lib.makeLibraryPath rustiquePkg.buildInputs;
+  runtimeInputs = lib.makeLibraryPath [
+    libxkbcommon
+    vulkan-loader
+    wayland
+  ];
 in
   mkShell {
     name = "rustique-dev";
@@ -24,6 +31,6 @@ in
     ];
     env = {
       LIBCLANG_PATH = "${libclang.lib}/lib";
-      LD_LIBRARY_PATH = "${runtimeInputs}:$LD_LIBRARY_PATH";
+      LD_LIBRARY_PATH = "LD_LIBRARY_PATH:${runtimeInputs}/lib";
     };
   }
