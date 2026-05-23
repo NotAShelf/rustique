@@ -38,7 +38,11 @@ pub async fn download(args: &DownloadArgs) -> Result<(), RustiqueError> {
     };
 
     // verify game version
-    let game_versions = sorted_game_versions().await;
+    let Ok(game_versions) = sorted_game_versions().await else {
+        return Err(RustiqueError::SimpleError(
+            "Failed to fetch game versions. Run Rustique sync and try again.".into(),
+        ));
+    };
 
     let user_version = args.game_version.replace('v', "");
     let mut found = false;

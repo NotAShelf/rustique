@@ -173,7 +173,10 @@ async fn async_main() {
         }
         Commands::List(args) => {
             if args.game_versions.is_some() {
-                let sorted_versions = sorted_game_versions().await;
+                let Ok(sorted_versions) = sorted_game_versions().await else {
+                    warn!("Unable to get game versions. Run \"rustique sync\" and try again.");
+                    return;
+                };
                 let filter_by = &args.game_versions.clone().unwrap_or("1.20".into());
 
                 let versions: Vec<String> = sorted_versions

@@ -5,7 +5,7 @@ use comfy_table::{Attribute, Color};
 #[cfg(unix)]
 use dirs::home_dir;
 use std::path::PathBuf;
-use tracing::info;
+use tracing::{info, warn};
 
 #[cfg(windows)]
 use crate::information_utils::notice;
@@ -31,7 +31,10 @@ impl RustiqueOptions {
                 mod_dir: Some(PathBuf::from(path).join("VintagestoryData").join("Mods")),
             };
         }
-        panic!("Unable to determine default mods directory");
+        warn!(
+            "Unable to determine default mods directory (APPDATA not set). Set mod_dir manually."
+        );
+        RustiqueOptions { mod_dir: None }
     }
 
     // As of 1.21-pre*, the default location for Mac has changed to
@@ -81,7 +84,8 @@ impl RustiqueOptions {
 
             return options;
         }
-        panic!("Unable to determine user's home directory, do you have permissions??");
+        warn!("Unable to determine user home directory. Mod directory will be unset.");
+        RustiqueOptions { mod_dir: None }
     }
 
     // TODO: Finish mac migration to new config location
@@ -139,7 +143,8 @@ impl RustiqueOptions {
             }
         }
 
-        panic!("Unable to determine default home directory");
+        warn!("Unable to determine default home directory for macOS. Mod directory will be unset.");
+        RustiqueOptions { mod_dir: None }
     }
 
     pub async fn get_mod_path(&self) -> PathBuf {

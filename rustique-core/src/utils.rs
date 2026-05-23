@@ -3,7 +3,7 @@ use crate::api::api_structs::{ModApi, ModInfo};
 use crate::config::config_manager::Config;
 use crate::config::config_manager::get_config;
 use crate::consts::{FILE_GAME_VERSION_SYNC, FILE_MODINFO_JSON, FILE_RUSTIQUE_SYNC};
-use crate::information_utils::{CellData, display_table, notice};
+use crate::information_utils::{CellData, display_table};
 use crate::install_manager::{Install, Installed};
 use crate::rustique_errors::RustiqueError;
 use crate::symlink_manager::SymlinkManager;
@@ -20,7 +20,7 @@ use owo_colors::OwoColorize;
 use serde_json::to_string_pretty;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::process::exit;
+
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::{debug, error, info, warn};
@@ -45,14 +45,11 @@ pub fn timestamp_older_than(num_hours: i64, timestamp: &str) -> bool {
 // TODO: Need handle windows default
 pub fn get_expanded_path(dir: impl PathRef) -> PathBuf {
     let dir = dir.as_ref();
-    if dir.starts_with("~/") {
-        if let Some(home) = home_dir() {
-            let d = match dir.strip_prefix("~") {
-                Ok(d) => d,
-                Err(e) => panic!("{}", e),
-            };
-            return PathBuf::new().join(home).join(d);
-        }
+    if dir.starts_with("~/")
+        && let Some(home) = home_dir()
+        && let Ok(rel) = dir.strip_prefix("~")
+    {
+        return home.join(rel);
     }
 
     dir.to_path_buf()
@@ -378,20 +375,17 @@ pub async fn write_json_file(
     Ok(())
 }
 
-pub async fn sorted_game_versions() -> Vec<String> {
+pub async fn sorted_game_versions() -> Result<Vec<String>, RustiqueError> {
     let version_file_path = Config::get_path().join(FILE_GAME_VERSION_SYNC);
 
     let mut versions = if version_file_path.exists() {
-        match parse_json_file::<GameVersionSync>(&version_file_path).await {
-            Ok(file_data) => file_data.game_versions,
-            Err(e) => {
-                eprintln!("Error: {e}");
-                exit(1)
-            }
-        }
+        parse_json_file::<GameVersionSync>(&version_file_path)
+            .await?
+            .game_versions
     } else {
-        eprintln!("Unable to get latest game version by default, run Rustique sync and try again");
-        exit(1)
+        return Err(RustiqueError::SimpleError(
+            "Unable to get latest game version by default, run Rustique sync and try again".into(),
+        ));
     };
 
     versions.sort_by(|v1, v2| {
@@ -401,7 +395,7 @@ pub async fn sorted_game_versions() -> Vec<String> {
     });
 
     versions.reverse();
-    versions
+    Ok(versions)
 }
 
 /// Returns mod_id as lowercase
@@ -511,19 +505,17 @@ pub fn split_modid_version(mod_id_str: impl StrRef) -> (ModID, Option<ModVersion
         .unwrap_or(mod_id_str.as_ref())
         .split_once('@')
     {
-        let Ok(p_ver) = parse_version(version) else {
-            // version was bad, return error and quit
-            notice(
-                format!(
-                    "Failed to parse {}, invalid version. Needs to be in the format [1.2.3] (MAJOR.MINOR.PATCH)",
-                    mod_id_str.as_ref()
-                ),
-                Some(Color::Red),
-                vec![],
-            );
-            exit(1);
-        };
-        return (modid.to_string(), Some(p_ver.to_string()));
+        match parse_version(version) {
+            Ok(p_ver) => return (modid.to_string(), Some(p_ver.to_string())),
+            Err(e) => {
+                warn!(
+                    "Failed to parse version @{} from {}: {}. Version must be in MAJOR.MINOR.PATCH format.",
+                    version,
+                    mod_id_str.as_ref(),
+                    e
+                );
+            }
+        }
     }
 
     (mod_id_str.as_ref().to_string().to_lowercase(), None)
