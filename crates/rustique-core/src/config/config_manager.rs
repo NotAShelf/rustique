@@ -366,5 +366,5 @@ pub fn init_config() -> Result<(), RustiqueError> {
 
 pub fn get_config() -> &'static RwLock<Config> {
     info!("get_config() called");
-    CONFIG.get_or_init(|| RwLock::new(Config::new().expect("Config has not been initialized")))
+    CONFIG.get_or_init(|| RwLock::new(Config::new().expect("Failed to load config")))
 }
