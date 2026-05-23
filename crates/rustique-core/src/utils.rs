@@ -91,8 +91,7 @@ where
         .position(|e| {
             e.filename()
                 .as_str()
-                .unwrap()
-                .eq_ignore_ascii_case(inner_file)
+                .map_or(false, |s| s.eq_ignore_ascii_case(inner_file))
         })
         .ok_or_else(|| RustiqueError::ZipError {
             context: format!("Failed to find {} in {:?}", inner_file, entry.file_name()),
@@ -234,7 +233,7 @@ pub async fn delete_file(file: impl AsRef<Path>) -> Result<(), RustiqueError> {
             .map_err(|e| RustiqueError::IoError {
                 context: format!(
                     "Failed attempting to delete {}",
-                    file.file_name().unwrap().to_string_lossy()
+                    file.file_name().unwrap_or_default().to_string_lossy()
                 ),
                 source: e,
             })
@@ -258,13 +257,7 @@ pub fn gather_missing_dependencies<V: AsRef<[ModID]>>(
 ) -> Vec<Install> {
     // if there are reports of slowness is this section .values().par_bridge()...flat_map_iter() could be used to speed it up
     // this is prob not an issue even with a lot of mods as the data is all in memory at this point
-    let id_vec: Vec<ModID> = sync_data
-        .keys()
-        .map(|m| {
-            let p = split_modid_version(m).0; // split the version from the mod_id
-            p.clone()
-        })
-        .collect();
+    let id_vec: Vec<ModID> = sync_data.keys().map(|m| split_modid_version(m).0).collect();
 
     let mods_requested = mods_requested.as_ref();
 
@@ -380,11 +373,14 @@ pub async fn sorted_game_versions() -> Result<Vec<String>, RustiqueError> {
         ));
     };
 
-    versions.sort_by(|v1, v2| {
-        let v1_p = lenient_semver::parse(v1).unwrap();
-        let v2_p = lenient_semver::parse(v2).unwrap();
-        v1_p.cmp(&v2_p)
-    });
+    versions.sort_by(
+        |v1, v2| match (lenient_semver::parse(v1), lenient_semver::parse(v2)) {
+            (Ok(a), Ok(b)) => a.cmp(&b),
+            (Ok(_), Err(_)) => std::cmp::Ordering::Greater,
+            (Err(_), Ok(_)) => std::cmp::Ordering::Less,
+            (Err(_), Err(_)) => std::cmp::Ordering::Equal,
+        },
+    );
 
     versions.reverse();
     Ok(versions)
@@ -455,17 +451,10 @@ pub async fn backup_older_files(processed_install: &[Installed]) -> Result<(), R
     }
 
     for m in processed_install {
-        if let Some(old_file_name) = &m
-            .old_file_path
-            .clone()
-            .unwrap_or(PathBuf::new())
-            .file_name()
-        {
-            tokio::fs::copy(
-                &m.old_file_path.clone().unwrap_or(PathBuf::new()),
-                backup_dir.join(old_file_name),
-            )
-            .await?;
+        if let Some(old_path) = &m.old_file_path {
+            if let Some(old_file_name) = old_path.file_name() {
+                tokio::fs::copy(old_path, backup_dir.join(old_file_name)).await?;
+            }
         }
     }
 
@@ -515,11 +504,10 @@ pub fn split_modid_version(mod_id_str: impl AsRef<str>) -> (ModID, Option<ModVer
 
 pub fn format_for_csv(input: impl AsRef<str>) -> String {
     let input = normalize_whitespace(input.as_ref());
-    if input.contains(',') || input.contains('\n') || input.contains('\r') || input.contains('"') {
-        // wrap the text in quotes and escape internal quotes with by doubling them
-        format!("\"{}\"", input.replace(['"', '\n', '\r', ','], "\"\""))
+    if input.contains(',') || input.contains('"') {
+        format!("\"{}\"", input.replace('"', "\"\""))
     } else {
-        input.to_string()
+        input
     }
 }
 
