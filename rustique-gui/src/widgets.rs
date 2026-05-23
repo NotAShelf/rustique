@@ -69,6 +69,29 @@ pub fn ghost_btn_style(
     }
 }
 
+pub fn primary_btn_style(
+    _: &Theme,
+    _: iced::widget::button::Status,
+) -> iced::widget::button::Style {
+    iced::widget::button::Style {
+        background: Some(
+            Color {
+                r: 0.36,
+                g: 0.58,
+                b: 0.96,
+                a: 1.0,
+            }
+            .into(),
+        ),
+        text_color: Color::WHITE,
+        border: Border {
+            radius: 4.0.into(),
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
 pub fn active_tab_style(_: &Theme, _: iced::widget::button::Status) -> iced::widget::button::Style {
     iced::widget::button::Style {
         background: Some(

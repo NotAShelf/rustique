@@ -26,6 +26,9 @@ pub struct InstalledView {
     pub create_name: String,
     pub create_id: String,
     pub create_version: String,
+    pub confirm_delete: Option<String>,
+    pub expanded_mod: Option<String>,
+    pub search: String,
 }
 
 pub fn view(state: &InstalledView) -> Element<'_, Message> {
@@ -94,7 +97,7 @@ fn tab_btn(label: &str, active: bool, msg: Message) -> Element<'_, Message> {
 
 fn mods_body(state: &InstalledView) -> Element<'_, Message> {
     if state.mods.is_empty() {
-        container(
+        return container(
             column![
                 text("No mods installed").size(16),
                 text("Configure your mods directory in Settings, then click Sync.")
@@ -103,7 +106,7 @@ fn mods_body(state: &InstalledView) -> Element<'_, Message> {
                         r: 0.55,
                         g: 0.55,
                         b: 0.55,
-                        a: 1.0,
+                        a: 1.0
                     }),
             ]
             .spacing(6)
@@ -111,13 +114,41 @@ fn mods_body(state: &InstalledView) -> Element<'_, Message> {
         )
         .center(Fill)
         .height(Fill)
-        .into()
+        .into();
+    }
+
+    let search_bar = text_input("Filter installed mods...", &state.search)
+        .on_input(Message::InstalledSearchChanged)
+        .width(Fill);
+
+    let q = state.search.to_lowercase();
+    let displayed: Vec<&ModSyncInfo> = state
+        .mods
+        .iter()
+        .filter(|m| q.is_empty() || m.mod_name.to_lowercase().contains(&q))
+        .collect();
+
+    let rows: Vec<Element<'_, Message>> = displayed
+        .iter()
+        .map(|m| {
+            let pending = state.confirm_delete.as_deref() == Some(m.file_name.as_str());
+            let expanded = state.expanded_mod.as_deref() == Some(m.file_name.as_str());
+            mod_row(m, pending, expanded)
+        })
+        .collect();
+
+    let list: Element<'_, Message> = if rows.is_empty() {
+        container(text("No mods match the filter.").size(13))
+            .center(Fill)
+            .height(Fill)
+            .into()
     } else {
-        let rows: Vec<Element<'_, Message>> = state.mods.iter().map(mod_row).collect();
         scrollable(Column::with_children(rows).spacing(6))
             .height(Fill)
             .into()
-    }
+    };
+
+    column![search_bar, list].spacing(8).height(Fill).into()
 }
 
 fn packs_body<'a>(state: &'a InstalledView) -> Element<'a, Message> {
@@ -186,7 +217,7 @@ fn packs_body<'a>(state: &'a InstalledView) -> Element<'a, Message> {
                             r: 0.55,
                             g: 0.55,
                             b: 0.55,
-                            a: 1.0,
+                            a: 1.0
                         }),
                 ]
                 .spacing(6)
@@ -214,7 +245,7 @@ fn packs_body<'a>(state: &'a InstalledView) -> Element<'a, Message> {
     }
 }
 
-fn mod_row(m: &ModSyncInfo) -> Element<'_, Message> {
+fn mod_row(m: &ModSyncInfo, pending_delete: bool, expanded: bool) -> Element<'_, Message> {
     let needs_update =
         !m.latest_known_version.is_empty() && m.installed_version != m.latest_known_version;
 
@@ -246,31 +277,117 @@ fn mod_row(m: &ModSyncInfo) -> Element<'_, Message> {
         iced::widget::Space::new().into()
     };
 
-    container(
+    let delete_area: Element<'_, Message> = if pending_delete {
         row![
-            column![
-                text(&m.mod_name).size(14),
-                text(&m.installed_version).size(12).color(Color {
-                    r: 0.55,
-                    g: 0.55,
-                    b: 0.55,
-                    a: 1.0,
-                }),
-            ]
-            .spacing(2)
-            .width(Fill),
-            update_badge,
-            button(text("Delete").size(13))
+            text("Delete?").size(12).color(Color {
+                r: 0.85,
+                g: 0.35,
+                b: 0.35,
+                a: 1.0
+            }),
+            button(text("Yes").size(12))
                 .on_press(Message::DeleteMod(m.file_name.clone()))
                 .style(danger_btn_style),
+            button(text("No").size(12))
+                .on_press(Message::CancelDelete)
+                .style(ghost_btn_style),
         ]
-        .spacing(10)
-        .align_y(Alignment::Center),
-    )
-    .padding([10, 12])
-    .width(Length::Fill)
-    .style(card_style)
-    .into()
+        .spacing(6)
+        .align_y(Alignment::Center)
+        .into()
+    } else {
+        button(text("Delete").size(13))
+            .on_press(Message::RequestDelete(m.file_name.clone()))
+            .style(danger_btn_style)
+            .into()
+    };
+
+    let expand_icon = if expanded { "▼" } else { "▶" };
+    let expand_btn = button(text(expand_icon).size(10).color(Color {
+        r: 0.50,
+        g: 0.50,
+        b: 0.50,
+        a: 1.0,
+    }))
+    .on_press(Message::ToggleInstalledDetail(m.file_name.clone()))
+    .style(|_: &iced::Theme, _| iced::widget::button::Style {
+        background: None,
+        ..Default::default()
+    })
+    .padding([2, 4]);
+
+    let main_row: Element<'_, Message> = row![
+        expand_btn,
+        column![
+            text(&m.mod_name).size(14),
+            text(&m.installed_version).size(12).color(Color {
+                r: 0.55,
+                g: 0.55,
+                b: 0.55,
+                a: 1.0
+            }),
+        ]
+        .spacing(2)
+        .width(Fill),
+        update_badge,
+        delete_area,
+    ]
+    .spacing(10)
+    .align_y(Alignment::Center)
+    .into();
+
+    let body: Element<'_, Message> = if expanded {
+        let versions_str = if m.game_versions.is_empty() {
+            String::new()
+        } else {
+            format!("Game versions: {}", m.game_versions.join(", "))
+        };
+        let changelog_preview = if m.latest_changelog.is_empty() {
+            String::new()
+        } else {
+            let preview: String = m.latest_changelog.chars().take(200).collect();
+            if m.latest_changelog.len() > 200 {
+                format!("{preview}…")
+            } else {
+                preview
+            }
+        };
+
+        let detail_items: Vec<Element<'_, Message>> = [versions_str, changelog_preview]
+            .into_iter()
+            .filter(|s| !s.is_empty())
+            .map(|s| {
+                text(s)
+                    .size(11)
+                    .color(Color {
+                        r: 0.50,
+                        g: 0.50,
+                        b: 0.50,
+                        a: 1.0,
+                    })
+                    .into()
+            })
+            .collect();
+
+        if detail_items.is_empty() {
+            main_row
+        } else {
+            column![
+                main_row,
+                container(Column::with_children(detail_items).spacing(3)).padding([4, 12]),
+            ]
+            .spacing(0)
+            .into()
+        }
+    } else {
+        main_row
+    };
+
+    container(body)
+        .padding([10, 12])
+        .width(Length::Fill)
+        .style(card_style)
+        .into()
 }
 
 fn pack_row(id: &str, enabled: bool) -> Element<'_, Message> {

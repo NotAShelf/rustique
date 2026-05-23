@@ -1,13 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::widgets::danger_btn_style;
 use human_format::Formatter;
 use iced::widget::{Column, button, column, container, row, scrollable, text, text_input};
 use iced::{Alignment, Color, Element, Fill};
 use rustique_core::api::api_structs::ModApi;
 
 use crate::app::Message;
-use crate::widgets::{active_tab_style, card_style, ghost_btn_style, status_element};
+use crate::widgets::{
+    active_tab_style, card_style, danger_btn_style, ghost_btn_style, primary_btn_style,
+    status_element,
+};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum SortBy {
@@ -45,6 +47,8 @@ pub struct BrowseView {
     pub show_favorites_only: bool,
     pub installing: HashSet<String>,
     pub installed_mods: HashMap<String, String>,
+    pub confirm_delete: Option<String>,
+    pub expanded_mod: Option<String>,
 }
 
 impl Default for BrowseView {
@@ -62,6 +66,8 @@ impl Default for BrowseView {
             show_favorites_only: false,
             installing: HashSet::new(),
             installed_mods: HashMap::new(),
+            confirm_delete: None,
+            expanded_mod: None,
         }
     }
 }
@@ -88,9 +94,17 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
         iced::widget::Space::new().into()
     };
 
-    let header = row![text("Browse Mods").size(22).width(Fill), export_btn,]
-        .spacing(8)
-        .align_y(Alignment::Center);
+    let refresh_btn = button(text("↺ Refresh").size(13))
+        .on_press(Message::BrowseRefresh)
+        .style(ghost_btn_style);
+
+    let header = row![
+        text("Browse Mods").size(22).width(Fill),
+        export_btn,
+        refresh_btn,
+    ]
+    .spacing(8)
+    .align_y(Alignment::Center);
 
     let search_bar = row![
         text_input("Search mods...", &state.query)
@@ -102,7 +116,6 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
     .spacing(8)
     .align_y(Alignment::Center);
 
-    // Sort + filter controls
     let sort_controls = {
         let sorts = [
             SortBy::Downloads,
@@ -180,7 +193,17 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
                 let favorited = state.favorites.contains(key.as_str());
                 let installing = state.installing.contains(&key);
                 let installed_file = state.installed_mods.get(&key).cloned();
-                browse_row(m, favorited, installing, installed_file)
+                let pending_delete = state.confirm_delete.is_some()
+                    && state.confirm_delete.as_deref() == installed_file.as_deref();
+                let expanded = state.expanded_mod.as_deref() == Some(key.as_str());
+                browse_row(
+                    m,
+                    favorited,
+                    installing,
+                    installed_file,
+                    pending_delete,
+                    expanded,
+                )
             })
             .collect();
 
@@ -268,18 +291,19 @@ fn browse_row(
     favorited: bool,
     installing: bool,
     installed_file: Option<String>,
+    pending_delete: bool,
+    expanded: bool,
 ) -> Element<'static, Message> {
     let name = m.name.clone().unwrap_or_else(|| m.mod_id.to_string());
     let author = m.author.clone().unwrap_or_default();
     let summary = m.summary.clone().unwrap_or_default();
+    let tags = m.tags.clone();
+    let last_released = m.last_released.clone();
     let mod_id_str = mod_key(m);
     let fav_key = mod_id_str.clone();
-    let downloads = m.downloads;
-    let follows = m.follows;
-    let dl_label = format_count(downloads);
-    let fol_label = format_count(follows);
+    let dl_label = format_count(m.downloads);
+    let fol_label = format_count(m.follows);
 
-    let fav_icon = if favorited { "★" } else { "☆" };
     let fav_color = if favorited {
         Color {
             r: 1.0,
@@ -295,84 +319,160 @@ fn browse_row(
             a: 1.0,
         }
     };
+    let fav_icon = if favorited { "★" } else { "☆" };
 
-    let action_btn: Element<'static, Message> = if installing {
+    let action_btn: Element<'static, Message> = if pending_delete {
+        if let Some(file_name) = installed_file.clone() {
+            let fname2 = file_name.clone();
+            row![
+                text("Delete?").size(12).color(Color {
+                    r: 0.85,
+                    g: 0.35,
+                    b: 0.35,
+                    a: 1.0
+                }),
+                button(text("Yes").size(12))
+                    .on_press(Message::DeleteMod(fname2))
+                    .style(danger_btn_style),
+                button(text("No").size(12))
+                    .on_press(Message::CancelDelete)
+                    .style(ghost_btn_style),
+            ]
+            .spacing(6)
+            .align_y(Alignment::Center)
+            .into()
+        } else {
+            iced::widget::Space::new().into()
+        }
+    } else if installing {
         button(text("Installing...").size(13))
             .style(ghost_btn_style)
             .into()
     } else if let Some(file_name) = installed_file {
         button(text("Uninstall").size(13))
-            .on_press(Message::DeleteMod(file_name))
+            .on_press(Message::RequestDelete(file_name))
             .style(danger_btn_style)
             .into()
     } else {
         button(text("Install").size(13))
-            .on_press(Message::InstallMod(mod_id_str))
+            .on_press(Message::InstallMod(mod_id_str.clone()))
+            .style(primary_btn_style)
             .into()
     };
 
-    container(
-        row![
-            button(text(fav_icon).size(16).color(fav_color))
-                .on_press(Message::ToggleFavorite(fav_key))
-                .style(|_: &iced::Theme, _| iced::widget::button::Style {
-                    background: None,
-                    ..Default::default()
-                })
-                .padding([0, 4]),
-            column![
-                text(name).size(15),
-                row![
-                    text(format!("by {author}")).size(12).color(Color {
-                        r: 0.55,
-                        g: 0.55,
-                        b: 0.55,
-                        a: 1.0
-                    }),
-                    text("·").size(12).color(Color {
-                        r: 0.35,
-                        g: 0.35,
-                        b: 0.35,
-                        a: 1.0
-                    }),
-                    text(format!("{dl_label} ↓")).size(12).color(Color {
-                        r: 0.55,
-                        g: 0.55,
-                        b: 0.55,
-                        a: 1.0
-                    }),
-                    text("·").size(12).color(Color {
-                        r: 0.35,
-                        g: 0.35,
-                        b: 0.35,
-                        a: 1.0
-                    }),
-                    text(format!("{fol_label} ♥")).size(12).color(Color {
-                        r: 0.55,
-                        g: 0.55,
-                        b: 0.55,
-                        a: 1.0
-                    }),
-                ]
-                .spacing(6)
-                .align_y(Alignment::Center),
-                text(summary).size(12).color(Color {
-                    r: 0.65,
-                    g: 0.65,
-                    b: 0.65,
-                    a: 1.0
-                }),
-            ]
-            .spacing(3)
-            .width(Fill),
-            action_btn,
+    let expand_key = mod_id_str.clone();
+    let expand_icon = if expanded { "▼" } else { "▶" };
+    let expand_btn = button(text(expand_icon).size(10).color(Color {
+        r: 0.50,
+        g: 0.50,
+        b: 0.50,
+        a: 1.0,
+    }))
+    .on_press(Message::ToggleBrowseDetail(expand_key))
+    .style(|_: &iced::Theme, _| iced::widget::button::Style {
+        background: None,
+        ..Default::default()
+    })
+    .padding([2, 4]);
+
+    let meta_row = row![
+        text(format!("by {author}")).size(12).color(Color {
+            r: 0.55,
+            g: 0.55,
+            b: 0.55,
+            a: 1.0
+        }),
+        text("·").size(12).color(Color {
+            r: 0.35,
+            g: 0.35,
+            b: 0.35,
+            a: 1.0
+        }),
+        text(format!("{dl_label} ↓")).size(12).color(Color {
+            r: 0.55,
+            g: 0.55,
+            b: 0.55,
+            a: 1.0
+        }),
+        text("·").size(12).color(Color {
+            r: 0.35,
+            g: 0.35,
+            b: 0.35,
+            a: 1.0
+        }),
+        text(format!("{fol_label} ♥")).size(12).color(Color {
+            r: 0.55,
+            g: 0.55,
+            b: 0.55,
+            a: 1.0
+        }),
+    ]
+    .spacing(6)
+    .align_y(Alignment::Center);
+
+    let main_row: Element<'static, Message> = row![
+        button(text(fav_icon).size(16).color(fav_color))
+            .on_press(Message::ToggleFavorite(fav_key))
+            .style(|_: &iced::Theme, _| iced::widget::button::Style {
+                background: None,
+                ..Default::default()
+            })
+            .padding([0, 4]),
+        expand_btn,
+        column![
+            text(name).size(15),
+            meta_row,
+            text(summary).size(12).color(Color {
+                r: 0.65,
+                g: 0.65,
+                b: 0.65,
+                a: 1.0
+            }),
         ]
-        .spacing(8)
-        .align_y(Alignment::Center),
-    )
-    .padding([10, 12])
-    .style(card_style)
-    .into()
+        .spacing(3)
+        .width(Fill),
+        action_btn,
+    ]
+    .spacing(8)
+    .align_y(Alignment::Center)
+    .into();
+
+    let body: Element<'static, Message> = if expanded {
+        let tags_str = if tags.is_empty() {
+            String::new()
+        } else {
+            format!("Tags: {}", tags.join(", "))
+        };
+        let released_str = last_released
+            .map(|d| format!("Released: {d}"))
+            .unwrap_or_default();
+
+        let detail_parts: Vec<String> = [tags_str, released_str]
+            .into_iter()
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        if detail_parts.is_empty() {
+            main_row
+        } else {
+            column![
+                main_row,
+                container(text(detail_parts.join("  ·  ")).size(11).color(Color {
+                    r: 0.50,
+                    g: 0.50,
+                    b: 0.50,
+                    a: 1.0
+                }))
+                .padding([4, 12]),
+            ]
+            .spacing(0)
+            .into()
+        }
+    } else {
+        main_row
+    };
+
+    container(body).padding([10, 12]).style(card_style).into()
 }
 
 fn format_count(n: i64) -> String {

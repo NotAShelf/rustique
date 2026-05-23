@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+use std::time::Duration;
 
 use iced::widget::{column, container, row, rule, text};
 use iced::{Element, Fill, Task, Theme};
@@ -31,8 +32,12 @@ pub enum Message {
     SyncDone(Result<HashMap<String, ModSyncInfo>, String>),
     UpdateAll,
     UpdateDone(Result<(), String>),
+    RequestDelete(String),
+    CancelDelete,
     DeleteMod(String),
     DeleteDone(Result<String, String>),
+    InstalledSearchChanged(String),
+    ToggleInstalledDetail(String),
 
     // Installed: tabs + modpacks
     InstalledTabChanged(InstalledTab),
@@ -49,6 +54,8 @@ pub enum Message {
 
     // Browse
     BrowseLoaded(Result<Vec<ModApi>, String>),
+    BrowseRefresh,
+    BrowseRefreshed(Result<Vec<ModApi>, String>),
     BrowseQueryChanged(String),
     BrowseSearch,
     BrowseSortChanged(SortBy),
@@ -62,6 +69,12 @@ pub enum Message {
     ExportFavorites,
     ExportDone(Result<String, String>),
     FavoritesLoaded(Result<HashSet<String>, String>),
+    ToggleBrowseDetail(String),
+
+    // Status clearing
+    ClearBrowseStatus,
+    ClearInstalledStatus,
+    ClearSettingsStatus,
 
     // Settings
     SettingsLoaded(Result<SettingsData, String>),
@@ -85,6 +98,13 @@ pub struct App {
     pub installed: InstalledView,
     pub browse: BrowseView,
     pub settings: SettingsView,
+}
+
+fn clear_after(msg: Message) -> Task<Message> {
+    Task::perform(
+        async { tokio::time::sleep(Duration::from_secs(4)).await },
+        move |_| msg,
+    )
 }
 
 impl App {
@@ -151,7 +171,7 @@ impl App {
             Message::InstalledLoaded(Err(e)) => {
                 self.installed.status = Some(format!("Error: {e}"));
                 self.installed.loading = false;
-                Task::none()
+                clear_after(Message::ClearInstalledStatus)
             }
             Message::SyncMods => {
                 self.installed.loading = true;
@@ -170,12 +190,12 @@ impl App {
                     .sort_by(|a, b| a.mod_name.cmp(&b.mod_name));
                 self.installed.loading = false;
                 self.installed.status = Some("Sync complete.".to_string());
-                Task::none()
+                clear_after(Message::ClearInstalledStatus)
             }
             Message::SyncDone(Err(e)) => {
                 self.installed.loading = false;
                 self.installed.status = Some(format!("Sync failed: {e}"));
-                Task::none()
+                clear_after(Message::ClearInstalledStatus)
             }
             Message::UpdateAll => {
                 self.installed.loading = true;
@@ -187,17 +207,32 @@ impl App {
                 self.installed.loading = false;
                 self.installed.status = Some("Update complete.".to_string());
                 let mod_dir = self.mod_dir.clone();
-                Task::perform(
-                    crate::ops::load_installed_from(mod_dir),
-                    Message::InstalledLoaded,
-                )
+                Task::batch([
+                    Task::perform(
+                        crate::ops::load_installed_from(mod_dir),
+                        Message::InstalledLoaded,
+                    ),
+                    clear_after(Message::ClearInstalledStatus),
+                ])
             }
             Message::UpdateDone(Err(e)) => {
                 self.installed.loading = false;
                 self.installed.status = Some(format!("Update failed: {e}"));
+                clear_after(Message::ClearInstalledStatus)
+            }
+            Message::RequestDelete(file_name) => {
+                self.browse.confirm_delete = Some(file_name.clone());
+                self.installed.confirm_delete = Some(file_name);
+                Task::none()
+            }
+            Message::CancelDelete => {
+                self.browse.confirm_delete = None;
+                self.installed.confirm_delete = None;
                 Task::none()
             }
             Message::DeleteMod(file_name) => {
+                self.browse.confirm_delete = None;
+                self.installed.confirm_delete = None;
                 let mod_dir = self.mod_dir.clone();
                 Task::perform(
                     crate::ops::delete_mod(mod_dir, file_name),
@@ -208,10 +243,29 @@ impl App {
                 self.installed.mods.retain(|m| m.file_name != file_name);
                 self.browse.installed_mods.retain(|_, f| f != &file_name);
                 self.installed.status = Some(format!("Deleted {file_name}"));
-                Task::none()
+                let mod_dir = self.mod_dir.clone();
+                Task::batch([
+                    Task::perform(
+                        crate::ops::load_installed_from(mod_dir),
+                        Message::InstalledLoaded,
+                    ),
+                    clear_after(Message::ClearInstalledStatus),
+                ])
             }
             Message::DeleteDone(Err(e)) => {
                 self.installed.status = Some(format!("Delete failed: {e}"));
+                clear_after(Message::ClearInstalledStatus)
+            }
+            Message::InstalledSearchChanged(q) => {
+                self.installed.search = q;
+                Task::none()
+            }
+            Message::ToggleInstalledDetail(key) => {
+                if self.installed.expanded_mod.as_deref() == Some(key.as_str()) {
+                    self.installed.expanded_mod = None;
+                } else {
+                    self.installed.expanded_mod = Some(key);
+                }
                 Task::none()
             }
 
@@ -237,7 +291,7 @@ impl App {
             Message::PacksLoaded(Err(e)) => {
                 self.installed.status = Some(format!("Error: {e}"));
                 self.installed.loading = false;
-                Task::none()
+                clear_after(Message::ClearInstalledStatus)
             }
             Message::EnablePack(id) => {
                 Task::perform(crate::ops::enable_pack(id), Message::PackOpDone)
@@ -247,11 +301,14 @@ impl App {
             }
             Message::PackOpDone(Ok(msg)) => {
                 self.installed.status = Some(msg);
-                Task::perform(crate::ops::load_packs(), Message::PacksLoaded)
+                Task::batch([
+                    Task::perform(crate::ops::load_packs(), Message::PacksLoaded),
+                    clear_after(Message::ClearInstalledStatus),
+                ])
             }
             Message::PackOpDone(Err(e)) => {
                 self.installed.status = Some(format!("Error: {e}"));
-                Task::none()
+                clear_after(Message::ClearInstalledStatus)
             }
             Message::ShowCreatePackForm(show) => {
                 self.installed.show_create_form = show;
@@ -287,12 +344,15 @@ impl App {
                 self.installed.create_name.clear();
                 self.installed.create_id.clear();
                 self.installed.create_version.clear();
-                Task::perform(crate::ops::load_packs(), Message::PacksLoaded)
+                Task::batch([
+                    Task::perform(crate::ops::load_packs(), Message::PacksLoaded),
+                    clear_after(Message::ClearInstalledStatus),
+                ])
             }
             Message::CreatePackDone(Err(e)) => {
                 self.installed.loading = false;
                 self.installed.status = Some(format!("Create failed: {e}"));
-                Task::none()
+                clear_after(Message::ClearInstalledStatus)
             }
 
             // --- Browse ---
@@ -305,7 +365,24 @@ impl App {
             Message::BrowseLoaded(Err(e)) => {
                 self.browse.status = Some(format!("Failed to load mods: {e}"));
                 self.browse.loading = false;
-                Task::none()
+                clear_after(Message::ClearBrowseStatus)
+            }
+            Message::BrowseRefresh => {
+                self.browse.loading = true;
+                self.browse.status = Some("Refreshing mod database...".to_string());
+                Task::perform(crate::ops::refresh_browse(), Message::BrowseRefreshed)
+            }
+            Message::BrowseRefreshed(Ok(mods)) => {
+                self.browse.all_mods = mods;
+                self.browse.loading = false;
+                self.browse.status = Some("Mod database refreshed.".to_string());
+                apply_browse_filter(&mut self.browse);
+                clear_after(Message::ClearBrowseStatus)
+            }
+            Message::BrowseRefreshed(Err(e)) => {
+                self.browse.loading = false;
+                self.browse.status = Some(format!("Refresh failed: {e}"));
+                clear_after(Message::ClearBrowseStatus)
             }
             Message::BrowseQueryChanged(q) => {
                 self.browse.query = q;
@@ -350,15 +427,18 @@ impl App {
                 self.browse.installing.remove(&mod_id);
                 self.browse.status = Some(format!("Installed {name}"));
                 let mod_dir = self.mod_dir.clone();
-                Task::perform(
-                    crate::ops::load_installed_from(mod_dir),
-                    Message::InstalledLoaded,
-                )
+                Task::batch([
+                    Task::perform(
+                        crate::ops::load_installed_from(mod_dir),
+                        Message::InstalledLoaded,
+                    ),
+                    clear_after(Message::ClearBrowseStatus),
+                ])
             }
             Message::InstallDone(mod_id, Err(e)) => {
                 self.browse.installing.remove(&mod_id);
                 self.browse.status = Some(format!("Install failed: {e}"));
-                Task::none()
+                clear_after(Message::ClearBrowseStatus)
             }
             Message::ToggleFavorite(key) => {
                 if self.browse.favorites.contains(&key) {
@@ -384,12 +464,13 @@ impl App {
             Message::ExportDone(Ok(path)) => {
                 if !path.is_empty() {
                     self.browse.status = Some(format!("Exported favorites to {path}"));
+                    return clear_after(Message::ClearBrowseStatus);
                 }
                 Task::none()
             }
             Message::ExportDone(Err(e)) => {
                 self.browse.status = Some(format!("Export failed: {e}"));
-                Task::none()
+                clear_after(Message::ClearBrowseStatus)
             }
             Message::FavoritesLoaded(Ok(favs)) => {
                 self.browse.favorites = favs;
@@ -397,6 +478,28 @@ impl App {
                 Task::none()
             }
             Message::FavoritesLoaded(Err(_)) => Task::none(),
+            Message::ToggleBrowseDetail(key) => {
+                if self.browse.expanded_mod.as_deref() == Some(key.as_str()) {
+                    self.browse.expanded_mod = None;
+                } else {
+                    self.browse.expanded_mod = Some(key);
+                }
+                Task::none()
+            }
+
+            // --- Status clearing ---
+            Message::ClearBrowseStatus => {
+                self.browse.status = None;
+                Task::none()
+            }
+            Message::ClearInstalledStatus => {
+                self.installed.status = None;
+                Task::none()
+            }
+            Message::ClearSettingsStatus => {
+                self.settings.status = None;
+                Task::none()
+            }
 
             // --- Settings ---
             Message::SettingsLoaded(Ok(data)) => {
@@ -487,11 +590,11 @@ impl App {
                 self.settings.dirty = false;
                 self.settings.status = Some("Settings saved.".to_string());
                 self.mod_dir = PathBuf::from(&self.settings.mod_dir);
-                Task::none()
+                clear_after(Message::ClearSettingsStatus)
             }
             Message::SettingsSaved(Err(e)) => {
                 self.settings.status = Some(format!("Save failed: {e}"));
-                Task::none()
+                clear_after(Message::ClearSettingsStatus)
             }
         }
     }
