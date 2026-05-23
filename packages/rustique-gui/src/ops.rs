@@ -63,9 +63,9 @@ async fn build_basic_installed(mod_dir: &Path) -> Result<HashMap<String, ModSync
         .into_iter()
         .map(|(file_name, info)| {
             let key = if info.mod_id.is_empty() {
-                file_name.clone()
+                file_name.to_string()
             } else {
-                info.mod_id.clone()
+                info.mod_id.to_string()
             };
             let sync = ModSyncInfo {
                 file_name: file_name.clone(),
@@ -131,9 +131,9 @@ pub async fn update_all(mod_dir: PathBuf) -> Result<(), String> {
                 && info.installed_version != info.latest_known_version
         })
         .map(|(mod_id, info)| Install {
-            mod_id: mod_id.clone(),
-            mod_name: info.mod_name.clone(),
-            download_url: info.latest_download_url.clone(),
+            mod_id: mod_id.clone().into(),
+            mod_name: info.mod_name.clone().into(),
+            download_url: info.latest_download_url.clone().into(),
             version_to_install: info.latest_known_version.clone(),
             current_file_path: Some(mod_dir.join(&info.file_name)),
         })
@@ -234,8 +234,8 @@ pub async fn install_mod(mod_dir: PathBuf, mod_id: String) -> Result<String, Str
     let (version, download_url, _, _) = parse_latest_version(&mod_info.mod_json.releases);
 
     let to_install = vec![Install {
-        mod_id: mod_id.clone(),
-        mod_name: mod_name.clone(),
+        mod_id: mod_id.clone().into(),
+        mod_name: mod_name.clone().into(),
         download_url: download_url.clone(),
         version_to_install: version.clone(),
         current_file_path: None,
@@ -257,12 +257,12 @@ pub async fn install_mod(mod_dir: PathBuf, mod_id: String) -> Result<String, Str
         if file_name.is_empty() {
             continue;
         }
-        let is_primary = inst.mod_id == mod_id;
+        let is_primary = inst.mod_id.as_ref() == mod_id;
         sync_map.insert(
-            inst.mod_id.clone(),
+            inst.mod_id.to_string(),
             ModSyncInfo {
-                file_name,
-                mod_name: inst.mod_name.clone(),
+                file_name: file_name.into(),
+                mod_name: inst.mod_name.to_string(),
                 installed_version: if is_primary && inst.install_version.is_empty() {
                     version.clone()
                 } else {
@@ -274,7 +274,7 @@ pub async fn install_mod(mod_dir: PathBuf, mod_id: String) -> Result<String, Str
                     inst.install_version.clone()
                 },
                 latest_download_url: if is_primary {
-                    download_url.clone()
+                    download_url.to_string()
                 } else {
                     String::new()
                 },
@@ -366,7 +366,7 @@ pub async fn create_pack(
     let dependencies: HashMap<String, String> = installed
         .into_iter()
         .filter(|(id, _)| !id.is_empty())
-        .map(|(id, info)| (id, info.installed_version))
+        .map(|(id, info)| (id, info.installed_version.to_string()))
         .collect();
 
     let save_path = std::path::Path::new(&modpack_dir).join("mypacks");
@@ -374,18 +374,21 @@ pub async fn create_pack(
 
     let pack_info = ModInfo {
         name: name.clone(),
-        mod_id: pack_id.clone(),
+        mod_id: pack_id.clone().into(),
         version: if version.is_empty() {
             None
         } else {
-            Some(version)
+            Some(version.into())
         },
-        dependencies,
+        dependencies: dependencies
+            .into_iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect(),
         ..ModInfo::default()
     };
 
     pack_info
-        .build_modpack(save_path.clone(), pack_id.clone())
+        .build_modpack(save_path.clone(), pack_id.clone().into())
         .await
         .map_err(err)?;
 

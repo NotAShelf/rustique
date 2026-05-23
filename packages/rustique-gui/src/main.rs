@@ -1,3 +1,5 @@
+#![allow(clippy::collapsible_if, clippy::manual_div_ceil)]
+
 mod app;
 mod ops;
 mod views;

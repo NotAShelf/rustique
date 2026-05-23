@@ -8,7 +8,7 @@ name = "rustique-gui"
 path = "src/main.rs"
 
 [dependencies]
-rustique-core = { path = "../rustique-core" }
+rustique-core = { workspace = true }
 iced = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
@@ -16,4 +16,4 @@ tracing-subscriber = { workspace = true }
 dirs = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-human_format = "1.2.1"
+human_format = { workspace = true }

@@ -131,8 +131,8 @@ fn mods_body(state: &InstalledView) -> Element<'_, Message> {
     let rows: Vec<Element<'_, Message>> = displayed
         .iter()
         .map(|m| {
-            let pending = state.confirm_delete.as_deref() == Some(m.file_name.as_str());
-            let expanded = state.expanded_mod.as_deref() == Some(m.file_name.as_str());
+            let pending = state.confirm_delete.as_deref() == Some(m.file_name.as_ref());
+            let expanded = state.expanded_mod.as_deref() == Some(m.file_name.as_ref());
             mod_row(m, pending, expanded)
         })
         .collect();
@@ -286,7 +286,7 @@ fn mod_row(m: &ModSyncInfo, pending_delete: bool, expanded: bool) -> Element<'_,
                 a: 1.0
             }),
             button(text("Yes").size(12))
-                .on_press(Message::DeleteMod(m.file_name.clone()))
+                .on_press(Message::DeleteMod(m.file_name.to_string()))
                 .style(danger_btn_style),
             button(text("No").size(12))
                 .on_press(Message::CancelDelete)
@@ -297,7 +297,7 @@ fn mod_row(m: &ModSyncInfo, pending_delete: bool, expanded: bool) -> Element<'_,
         .into()
     } else {
         button(text("Delete").size(13))
-            .on_press(Message::RequestDelete(m.file_name.clone()))
+            .on_press(Message::RequestDelete(m.file_name.to_string()))
             .style(danger_btn_style)
             .into()
     };
@@ -309,7 +309,7 @@ fn mod_row(m: &ModSyncInfo, pending_delete: bool, expanded: bool) -> Element<'_,
         b: 0.50,
         a: 1.0,
     }))
-    .on_press(Message::ToggleInstalledDetail(m.file_name.clone()))
+    .on_press(Message::ToggleInstalledDetail(m.file_name.to_string()))
     .style(|_: &iced::Theme, _| iced::widget::button::Style {
         background: None,
         ..Default::default()
@@ -320,7 +320,7 @@ fn mod_row(m: &ModSyncInfo, pending_delete: bool, expanded: bool) -> Element<'_,
         expand_btn,
         column![
             text(&m.mod_name).size(14),
-            text(&m.installed_version).size(12).color(Color {
+            text(m.installed_version.to_string()).size(12).color(Color {
                 r: 0.55,
                 g: 0.55,
                 b: 0.55,

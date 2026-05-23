@@ -159,7 +159,7 @@ impl App {
             Message::InstalledLoaded(Ok(mods)) => {
                 self.browse.installed_mods = mods
                     .iter()
-                    .map(|(id, info)| (id.clone(), info.file_name.clone()))
+                    .map(|(id, info)| (id.clone(), info.file_name.to_string()))
                     .collect();
                 self.installed.mods = mods.into_values().collect();
                 self.installed
@@ -182,7 +182,7 @@ impl App {
             Message::SyncDone(Ok(mods)) => {
                 self.browse.installed_mods = mods
                     .iter()
-                    .map(|(id, info)| (id.clone(), info.file_name.clone()))
+                    .map(|(id, info)| (id.clone(), info.file_name.to_string()))
                     .collect();
                 self.installed.mods = mods.into_values().collect();
                 self.installed
