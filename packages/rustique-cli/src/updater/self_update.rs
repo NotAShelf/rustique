@@ -1,5 +1,6 @@
 use std::env;
 use std::ffi::OsStr;
+use std::path::Path;
 use std::path::PathBuf;
 
 #[cfg(windows)]
@@ -16,7 +17,6 @@ use async_zip::tokio::read::fs::ZipFileReader;
 use futures::AsyncReadExt;
 use rustique_core::api::client::ApiClient;
 use rustique_core::rustique_errors::RustiqueError;
-use rustique_core::traits::ref_ext::{PathRef, StrRef};
 use tokio::fs;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -55,7 +55,7 @@ impl RustiqueUpdater {
         &mut self,
         archive_name: &str,
         download_url: &str,
-        finish_msg: impl StrRef,
+        finish_msg: impl AsRef<str>,
     ) -> Result<&RustiqueUpdater, RustiqueError> {
         let client = ApiClient::new();
         download_file(
@@ -274,7 +274,7 @@ impl RustiqueUpdater {
     }
 
     #[allow(dead_code)]
-    pub async fn restore_backup(&self, backup_path: impl PathRef) -> Result<(), RustiqueError> {
+    pub async fn restore_backup(&self, backup_path: impl AsRef<Path>) -> Result<(), RustiqueError> {
         // with_extension("") to remove the .backup added
         fs::copy(backup_path, &self.current_binary_path.with_extension("")).await?;
         Ok(())

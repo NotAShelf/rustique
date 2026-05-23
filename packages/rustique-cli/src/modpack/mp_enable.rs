@@ -5,19 +5,18 @@ use std::path::Path;
 #[cfg(windows)]
 use is_elevated::is_elevated;
 
-use rustique_core::aliases::{FileName, ModID};
+use rustique_core::aliases::ModID;
 use rustique_core::config::config_manager::get_config;
 use rustique_core::information_utils::{CellData, display_table, notice};
 use rustique_core::rustique_errors::RustiqueError;
 use rustique_core::symlink_manager::SymlinkManager;
-use rustique_core::traits::ref_ext::PathRef;
 use rustique_core::utils::extract_all_mods_metadata;
 #[cfg(windows)]
 use std::process::exit;
 
 pub async fn mp_enable(
     mpk_id: ModID,
-    mod_dir: impl PathRef,
+    mod_dir: impl AsRef<Path>,
     force: bool,
 ) -> Result<String, RustiqueError> {
     #[cfg(windows)]
@@ -46,7 +45,12 @@ pub async fn mp_enable(
     // if so, notify the user and tell them to either disable the current one OR use modpack enable -f to force the use and warn about using multiple
 
     // Is it already enabled?
-    if config.modpacks.enabled.contains(&mpk_id) {
+    if config
+        .modpacks
+        .enabled
+        .iter()
+        .any(|m| m.eq_ignore_ascii_case(mpk_id.as_ref()))
+    {
         notice(
             format!(
                 "Modpack: [{}] is already enabled. Did you mean to disable it?",
@@ -59,7 +63,12 @@ pub async fn mp_enable(
     }
 
     // Is it even installed??
-    if !config.modpacks.disabled.contains(&mpk_id) {
+    if !config
+        .modpacks
+        .disabled
+        .iter()
+        .any(|m| m.eq_ignore_ascii_case(mpk_id.as_ref()))
+    {
         notice(
             format!(
                 "Modpack: [{}] is not installed! Use [Rustique modpack install {}] to install it first.",
@@ -111,7 +120,7 @@ pub async fn mp_enable(
     // create symlinks is the Mods folder
     // return the modpack id that was enabled
 
-    let mod_list: Vec<FileName> = extract_all_mods_metadata(&full_dir_with_mpk_id, false)
+    let mod_list: Vec<_> = extract_all_mods_metadata(&full_dir_with_mpk_id, false)
         .await?
         .keys()
         .cloned()
@@ -123,5 +132,5 @@ pub async fn mp_enable(
         SymlinkManager::create(target, link).await?;
     }
 
-    Ok(mpk_id)
+    Ok(mpk_id.to_string())
 }

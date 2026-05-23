@@ -3,7 +3,6 @@ use crate::commands::sync::{get_sync_data, sync};
 use crate::commands::update::update_mods;
 use crate::modpack::mp_install::check_if_mp_enabled;
 use comfy_table::Color;
-use rustique_core::aliases::ModID;
 use rustique_core::api::api_structs::ModInfo;
 use rustique_core::api::client::ApiClient;
 use rustique_core::api::download::download_requested_mods;
@@ -13,7 +12,7 @@ use rustique_core::information_utils::notice;
 use rustique_core::install_manager::Install;
 use rustique_core::rustique_errors::RustiqueError;
 use rustique_core::sync_structs::ModSyncInfo;
-use rustique_core::utils::{delete_file, extract_zip_metadata, split_modid_version};
+use rustique_core::utils::{delete_file, extract_zip_metadata};
 use std::collections::HashMap;
 use std::path::Path;
 use tracing::{debug, error, info};
@@ -30,11 +29,7 @@ pub async fn mp_update(args: MPUpdateArgs) -> Result<(), RustiqueError> {
 
     let modpack_sync_file = get_sync_data(&pack_dir, false).await?;
 
-    let modpack_sync_file: HashMap<ModID, ModSyncInfo> = modpack_sync_file
-        .rustique_sync
-        .into_iter()
-        .map(|(mod_id, mod_sync)| (split_modid_version(mod_id).0, mod_sync))
-        .collect();
+    let modpack_sync_file: HashMap<String, ModSyncInfo> = modpack_sync_file.rustique_sync;
 
     // check if the requested modpack is in the sync file
     if !modpack_sync_file.contains_key(&args.mpk_id) {
@@ -74,10 +69,10 @@ pub async fn mp_update(args: MPUpdateArgs) -> Result<(), RustiqueError> {
     let client = ApiClient::new();
     // we already have the latest download URL, use that
     let m_install = Install {
-        mod_id: args.mpk_id.clone(),
-        mod_name: modpack_info.mod_name.clone(),
+        mod_id: args.mpk_id.clone().into(),
+        mod_name: modpack_info.mod_name.clone().into(),
         version_to_install: modpack_info.latest_known_version.clone(),
-        download_url: modpack_info.latest_download_url.clone(),
+        download_url: modpack_info.latest_download_url.clone().into(),
         current_file_path: Some(mp_file_path.clone()),
     };
 
@@ -113,7 +108,7 @@ pub async fn mp_update(args: MPUpdateArgs) -> Result<(), RustiqueError> {
             .dependencies
             .iter()
             .map(|(mod_id, mod_version)| Package {
-                mod_id: mod_id.clone(),
+                mod_id: mod_id.to_string(),
                 pinned_version: Some(mod_version.clone()),
             })
             .collect();

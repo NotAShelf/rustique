@@ -11,7 +11,6 @@ use rustique_core::config::config_manager::get_config;
 use rustique_core::consts::FILE_MODINFO_JSON;
 use rustique_core::rustique_errors::RustiqueError;
 use rustique_core::symlink_manager::SymlinkManager;
-use rustique_core::traits::ref_ext::PathRef;
 use rustique_core::utils::{extract_all_mods_metadata, find_mod_id};
 use rustique_core::version_management::parse_version;
 use semver::Version;
@@ -25,8 +24,8 @@ pub fn collect_mp_create_args(args: &MPCreateArgs) -> Result<ModInfo, RustiqueEr
     Ok(ModInfo {
         name: args.name.clone(),
         mod_type: StringOrInt::default(),
-        mod_id: args.mpk_id.clone(),
-        version: Some(args.mpk_version.clone()),
+        mod_id: args.mpk_id.clone().into(),
+        version: Some(args.mpk_version.clone().into()),
         network_version: None,
         texture_size: None,
         description: args.description.clone(),
@@ -45,9 +44,9 @@ pub fn collect_mp_create_args(args: &MPCreateArgs) -> Result<ModInfo, RustiqueEr
 
 #[allow(clippy::fn_params_excessive_bools)]
 pub async fn mp_create(
-    mod_dir: impl PathRef + Copy,
+    mod_dir: impl AsRef<Path> + Copy,
     mod_pack: &mut ModInfo,
-    save_location: Option<impl PathRef>,
+    save_location: Option<impl AsRef<Path>>,
     copy_mods: bool,
     ignore_modpacks: bool,
 ) -> Result<(PathBuf, PathBuf), RustiqueError> {
@@ -62,8 +61,8 @@ pub async fn mp_create(
     // We DO want to ignore all the symlinks when creating a new modpack
     let all_mods = extract_all_mods_metadata(mod_dir, ignore_modpacks).await?;
     let mp_mods: HashMap<ModID, ModVersion> = all_mods.iter().filter_map(|(mod_filename, mod_info)| {
-        let mod_id = if mod_info.mod_id.is_empty() {
-            find_mod_id(&mod_info.name, mod_filename, &mods_search_data).unwrap_or_default()
+        let mod_id: ModID = if mod_info.mod_id.is_empty() {
+            find_mod_id(&mod_info.name, mod_filename, &mods_search_data).unwrap_or_default().into()
         } else {
             mod_info.mod_id.clone()
         };
@@ -77,7 +76,7 @@ pub async fn mp_create(
         let version = parse_version(&mod_info.version.clone().unwrap_or("0.0.0".into()))
             .unwrap_or(Version::new(0,0,0));
 
-        Some((mod_id, version.to_string()))
+        Some((mod_id, version.to_string().into()))
     }).collect();
 
     mod_pack.dependencies = mp_mods;
@@ -89,7 +88,7 @@ pub async fn mp_create(
     };
 
     let mod_zip_save_path = mod_pack
-        .build_modpack(save_location, mod_pack.mod_id.clone())
+        .build_modpack(save_location, mod_pack.mod_id.to_string().into())
         .await?;
 
     // copy or move the mods into a new location
@@ -151,8 +150,13 @@ pub async fn mp_create(
     // now update the config to place our new modpack into the disabled list
     let mut config = get_config().write().await;
 
-    if !config.modpacks.disabled.contains(&mod_pack.mod_id) {
-        config.modpacks.disabled.push(mod_pack.mod_id.clone());
+    if !config
+        .modpacks
+        .disabled
+        .iter()
+        .any(|m| m.eq_ignore_ascii_case(mod_pack.mod_id.as_ref()))
+    {
+        config.modpacks.disabled.push(mod_pack.mod_id.to_string());
     }
     config.save(None)?;
 

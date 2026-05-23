@@ -12,15 +12,15 @@ use crate::modpack::mp_install::{mp_install, mp_install_missing_deps};
 use crate::modpack::mp_update::mp_update;
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use comfy_table::{Attribute, Color};
+use rustique_core::aliases::{ModID, ModVersion};
 use rustique_core::config::config_manager::get_config;
 use rustique_core::information_utils::{command_output, display_table, notice};
-use rustique_core::traits::ref_ext::PathRef;
 use std::path::Path;
 use std::process::exit;
 use tracing::{error, info, warn};
 use yansi::Paint;
 
-pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl PathRef) {
+pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl AsRef<Path>) {
     match &commands.subcommand {
         ModpackSubCommands::Create(args) => {
             let mut parse_args = match collect_mp_create_args(args) {
@@ -63,11 +63,14 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
             }
         }
         ModpackSubCommands::Delete(args) => {
-            match delete_mpk_cmd(args.mpk_id.clone()).await {
+            match delete_mpk_cmd(args.mpk_id.clone().into()).await {
                 Ok(mpk_id) => {
                     // do config write things
                     let mut config = get_config().write().await;
-                    config.modpacks.disabled.retain(|m| m != &mpk_id);
+                    config
+                        .modpacks
+                        .disabled
+                        .retain(|m| !m.eq_ignore_ascii_case(mpk_id.as_ref()));
                     config.save(None).unwrap();
 
                     notice(
@@ -83,14 +86,19 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
         }
         ModpackSubCommands::Install(args) => {
             if args.missing_dependencies {
-                match mp_install_missing_deps(args.mod_id.clone()).await {
+                match mp_install_missing_deps(args.mod_id.clone().into()).await {
                     Ok(()) => {}
                     Err(e) => {
                         error!("{}", e.to_string().red());
                     }
                 }
             } else {
-                match mp_install(args.mod_id.clone(), args.mod_version.clone()).await {
+                match mp_install(
+                    args.mod_id.clone().into(),
+                    args.mod_version.clone().map(ModVersion::from),
+                )
+                .await
+                {
                     Ok(installed) => {
                         // We update the config AFTER the installation so we know the lock on the config file is up
                         let mut config = get_config().write().await;
@@ -117,7 +125,7 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
             }
         }
         ModpackSubCommands::Enable(args) => {
-            match mp_enable(args.mpk_id.clone(), mod_dir, args.force).await {
+            match mp_enable(ModID::from(args.mpk_id.clone()), mod_dir, args.force).await {
                 Ok(enabled_pack) => {
                     let mut config = get_config().write().await;
                     config.modpacks.enabled.push(enabled_pack.clone());
@@ -147,34 +155,36 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl Pa
                 }
             }
         }
-        ModpackSubCommands::Disable(args) => match mp_disable(args.mpk_id.clone(), mod_dir).await {
-            Ok(disabled_pack) => {
-                let mut config = get_config().write().await;
-                config
-                    .modpacks
-                    .enabled
-                    .retain(|m| !m.eq_ignore_ascii_case(&disabled_pack));
-                config.modpacks.disabled.push(disabled_pack.clone());
-                match config.save(None) {
-                    Ok(()) => {
-                        notice(
-                            format!("Modpack: [{disabled_pack}] has been disabled!"),
-                            Some(Color::Green),
-                            vec![Attribute::Bold],
-                        );
-                    }
-                    Err(e) => {
-                        error!("{}", e.to_string().red().bold());
+        ModpackSubCommands::Disable(args) => {
+            match mp_disable(ModID::from(args.mpk_id.clone()), mod_dir).await {
+                Ok(disabled_pack) => {
+                    let mut config = get_config().write().await;
+                    config
+                        .modpacks
+                        .enabled
+                        .retain(|m| !m.eq_ignore_ascii_case(&disabled_pack));
+                    config.modpacks.disabled.push(disabled_pack.to_string());
+                    match config.save(None) {
+                        Ok(()) => {
+                            notice(
+                                format!("Modpack: [{disabled_pack}] has been disabled!"),
+                                Some(Color::Green),
+                                vec![Attribute::Bold],
+                            );
+                        }
+                        Err(e) => {
+                            error!("{}", e.to_string().red().bold());
+                        }
                     }
                 }
+                Err(e) => {
+                    error!(
+                        "Failed to disable modpack.. :{}",
+                        e.to_string().red().bold()
+                    );
+                }
             }
-            Err(e) => {
-                error!(
-                    "Failed to disable modpack.. :{}",
-                    e.to_string().red().bold()
-                );
-            }
-        },
+        }
         ModpackSubCommands::List(args) => {
             let config = get_config().read().await;
             let packs_path = Path::new(&config.modpacks.modpack_dir).join("packs");

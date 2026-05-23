@@ -6,17 +6,16 @@ use tracing::warn;
 #[cfg(windows)]
 use is_elevated::is_elevated;
 
-use rustique_core::aliases::{FileName, ModID};
+use rustique_core::aliases::ModID;
 use rustique_core::config::config_manager::get_config;
 use rustique_core::information_utils::notice;
 use rustique_core::rustique_errors::RustiqueError;
 use rustique_core::symlink_manager::SymlinkManager;
-use rustique_core::traits::ref_ext::PathRef;
 use rustique_core::utils::extract_all_mods_metadata;
 #[cfg(windows)]
 use std::process::exit;
 
-pub async fn mp_disable(mpk_id: ModID, mod_dir: impl PathRef) -> Result<ModID, RustiqueError> {
+pub async fn mp_disable(mpk_id: ModID, mod_dir: impl AsRef<Path>) -> Result<ModID, RustiqueError> {
     #[cfg(windows)]
     if !is_elevated() {
         notice(
@@ -40,7 +39,12 @@ pub async fn mp_disable(mpk_id: ModID, mod_dir: impl PathRef) -> Result<ModID, R
         ));
     }
 
-    if !config.modpacks.enabled.contains(&mpk_id) {
+    if !config
+        .modpacks
+        .enabled
+        .iter()
+        .any(|m| m.eq_ignore_ascii_case(mpk_id.as_ref()))
+    {
         notice(
             format!(
                 "The requested modpack [{}] is not enabled, or you misstyped the ID",
@@ -56,7 +60,7 @@ pub async fn mp_disable(mpk_id: ModID, mod_dir: impl PathRef) -> Result<ModID, R
 
     // if it is, get list of mods in that modpack, then remove them from the mod_dir
 
-    let mods_in_pack: Vec<FileName> = extract_all_mods_metadata(mod_pack_dir, false)
+    let mods_in_pack: Vec<_> = extract_all_mods_metadata(mod_pack_dir, false)
         .await?
         .keys()
         .cloned()

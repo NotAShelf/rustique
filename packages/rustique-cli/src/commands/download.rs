@@ -5,7 +5,6 @@ use rustique_core::api::client::{ApiClient, VSMirrorType};
 use rustique_core::config::config_manager::get_config;
 use rustique_core::information_utils::notice;
 use rustique_core::rustique_errors::RustiqueError;
-use rustique_core::traits::ref_ext::{PathRef, StrRef};
 use rustique_core::traits::string_ext::StrLowerExt;
 use rustique_core::utils::sorted_game_versions;
 use std::path::{Path, PathBuf};
@@ -102,8 +101,8 @@ pub async fn download(args: &DownloadArgs) -> Result<(), RustiqueError> {
 pub async fn download_file(
     client: &ApiClient,
     url: &str,
-    save_loc: impl PathRef,
-    finish_message: impl StrRef,
+    save_loc: impl AsRef<Path>,
+    finish_message: impl AsRef<str>,
 ) -> Result<(), RustiqueError> {
     let response = client.head(&url).await?;
     let total_size = response

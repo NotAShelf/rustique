@@ -10,32 +10,32 @@ name = "rustique-cli"
 path = "src/main.rs"
 
 [dependencies]
-clap = {workspace = true}
-serde = {workspace = true}
-serde_json = {workspace = true}
-serde_json5 = {workspace = true}
-dirs = {workspace = true}
-chrono = {workspace = true}
-url = {workspace = true}
-lenient_semver = {workspace = true}
-semver = {workspace = true}
-toml = {workspace = true}
-tracing = {workspace = true}
-tracing-subscriber = {workspace = true}
-reqwest = {workspace = true}
-tokio = {workspace = true}
-clap_complete = {workspace = true}
-yansi = {workspace = true}
-color-eyre = {workspace = true}
-html2text = {workspace = true}
-async_zip = {workspace = true}
-futures = {workspace = true}
-num_cpus = {workspace = true}
-uuid = {workspace = true}
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_json5 = { workspace = true }
+dirs = { workspace = true }
+chrono = { workspace = true }
+url = { workspace = true }
+lenient_semver = { workspace = true }
+semver = { workspace = true }
+toml = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+reqwest = { workspace = true }
+tokio = { workspace = true }
+clap_complete = { workspace = true }
+yansi = { workspace = true }
+color-eyre = { workspace = true }
+html2text = { workspace = true }
+async_zip = { workspace = true }
+futures = { workspace = true }
+num_cpus = { workspace = true }
+uuid = { workspace = true }
 #log = {workspace = true}
-csv = {workspace = true}
-indexmap = {workspace = true}
-indicatif = {workspace = true}
-comfy-table = {workspace = true}
-rustique-core = {path = "../rustique-core" }
-is_elevated = {workspace = true}
+csv = { workspace = true }
+indexmap = { workspace = true }
+indicatif = { workspace = true }
+comfy-table = { workspace = true }
+rustique-core = { workspace = true }
+is_elevated = { workspace = true }

@@ -1,3 +1,4 @@
+use std::path::Path;
 // Delete a modpack. if the pack is enabled, return an error stating they need to disable it first,
 // this prevents people from unintentionally deleting an active modpack.
 
@@ -5,10 +6,8 @@ use rustique_core::aliases::{ModFileName, ModID};
 use rustique_core::api::api_structs::ModInfo;
 use rustique_core::config::config_manager::get_config;
 use rustique_core::rustique_errors::RustiqueError;
-use rustique_core::traits::ref_ext::PathRef;
 use rustique_core::utils::{delete_file, extract_all_mods_metadata};
 use std::collections::HashMap;
-use std::path::Path;
 use tracing::info;
 
 pub async fn delete_mpk_cmd(mpk_id: ModID) -> Result<ModID, RustiqueError> {
@@ -23,8 +22,16 @@ pub async fn delete_mpk_cmd(mpk_id: ModID) -> Result<ModID, RustiqueError> {
         (
             config.modpacks.modpack_dir.clone(),
             config.modpacks.disabled.clone(),
-            config.modpacks.enabled.contains(&mpk_id),
-            config.modpacks.disabled.contains(&mpk_id),
+            config
+                .modpacks
+                .enabled
+                .iter()
+                .any(|m| m.eq_ignore_ascii_case(mpk_id.as_ref())),
+            config
+                .modpacks
+                .disabled
+                .iter()
+                .any(|m| m.eq_ignore_ascii_case(mpk_id.as_ref())),
         )
     };
 
@@ -56,7 +63,7 @@ pub async fn delete_mpk_cmd(mpk_id: ModID) -> Result<ModID, RustiqueError> {
     match check_and_remove(&mpk_id, packs, &base_dir.join("packs")).await {
         Ok(pack_id) => {
             info!("packs retain {pack_id}");
-            disabled.retain(|m| m != pack_id);
+            disabled.retain(|m| !m.eq_ignore_ascii_case(pack_id.as_ref()));
         }
         Err(e) => {
             info!("{e}");
@@ -68,7 +75,7 @@ pub async fn delete_mpk_cmd(mpk_id: ModID) -> Result<ModID, RustiqueError> {
     match check_and_remove(&mpk_id, my_packs, &base_dir.join("mypacks")).await {
         Ok(pack_id) => {
             info!("mypacks retain {pack_id}");
-            disabled.retain(|m| m != pack_id);
+            disabled.retain(|m| !m.eq_ignore_ascii_case(pack_id.as_ref()));
         }
         Err(e) => {
             info!("{e}");
@@ -81,7 +88,7 @@ pub async fn delete_mpk_cmd(mpk_id: ModID) -> Result<ModID, RustiqueError> {
 async fn check_and_remove(
     mpk_id: &ModID,
     mpk_data: HashMap<ModFileName, ModInfo>,
-    mpk_mods_dir: impl PathRef,
+    mpk_mods_dir: impl AsRef<Path>,
 ) -> Result<&ModID, RustiqueError> {
     for (filename, mod_info) in mpk_data {
         if &mod_info.mod_id == mpk_id {

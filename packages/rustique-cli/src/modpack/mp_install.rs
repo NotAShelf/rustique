@@ -1,3 +1,4 @@
+use std::path::Path;
 // mp_install calls normal install, except it gathers a list of all the required mods before hand
 // and sets the install location to be the modpack specific folder
 
@@ -19,15 +20,14 @@ use rustique_core::version_management::{
 };
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
 use std::process::exit;
 use yansi::Paint;
 
 use std::time::Instant;
 use tracing::{debug, error, info, warn};
 
-pub fn check_if_mp_enabled(mp_id: &ModID, array: &[String]) {
-    if array.contains(mp_id) {
+pub fn check_if_mp_enabled(mp_id: &str, array: &[String]) {
+    if array.iter().any(|m| m.eq_ignore_ascii_case(mp_id)) {
         notice(
             format!(
                 "{} {}",
@@ -51,7 +51,7 @@ pub async fn mp_install(
     // to the location [modpacks/installed/modpack_id/*]
     let config = get_config().read().await;
 
-    check_if_mp_enabled(&mp_id, &config.modpacks.enabled);
+    check_if_mp_enabled(mp_id.as_ref(), &config.modpacks.enabled);
 
     let packs_path = Path::new(&config.modpacks.modpack_dir).join("mypacks");
     let local_packs = extract_all_mods_metadata(&packs_path, false)
@@ -76,7 +76,7 @@ pub async fn mp_install(
 
         Installed {
             mod_id: mp_id.clone(),
-            mod_name: local_pack.1.name.clone(),
+            mod_name: local_pack.1.name.clone().into(),
             installed_file_path: Some(
                 Path::new(&config.modpacks.modpack_dir)
                     .join("mypacks")
@@ -92,7 +92,7 @@ pub async fn mp_install(
 
         let (version, download_url, _, _) = if let Some(pin_version) = mp_version {
             let pkg = Package {
-                mod_id: mp_id.clone(),
+                mod_id: mp_id.to_string(),
                 pinned_version: Some(pin_version),
             };
             parse_pinned_version(&mod_info.mod_json.releases, &pkg, String::new())
@@ -104,8 +104,8 @@ pub async fn mp_install(
         info!("version: {}, download_url {}", version, download_url);
 
         let install_modpack = Install {
-            mod_id: mod_info.mod_json.mod_id.clone().to_string(),
-            mod_name: mod_info.mod_json.name.clone().unwrap_or_default(),
+            mod_id: mp_id.clone(),
+            mod_name: mod_info.mod_json.name.clone().unwrap_or_default().into(),
             version_to_install: version,
             download_url,
             current_file_path: None,
@@ -137,7 +137,7 @@ pub async fn mp_install(
 
         // do another check if the IDs are different, user might have installed using the numerical ID
         if !modpack_info.mod_id.eq_ignore_ascii_case(&mp_id) {
-            check_if_mp_enabled(&modpack_info.mod_id, &config.modpacks.enabled);
+            check_if_mp_enabled(modpack_info.mod_id.as_ref(), &config.modpacks.enabled);
         }
 
         // The modpack is installed to the correct place, install all dependencies
@@ -154,7 +154,7 @@ pub async fn mp_install(
             .dependencies
             .iter()
             .map(|(id, version)| Package {
-                mod_id: id.clone(),
+                mod_id: id.to_string(),
                 pinned_version: Some(version.clone()),
             })
             .collect();
@@ -184,7 +184,7 @@ pub async fn mp_install(
 
                     Some(Install {
                         mod_id: mod_id.clone(),
-                        mod_name: mod_api.mod_json.name.clone().unwrap_or_default(),
+                        mod_name: mod_api.mod_json.name.clone().unwrap_or_default().into(),
                         version_to_install: mp_mod_version.clone(),
                         download_url,
                         current_file_path: None,
@@ -215,7 +215,7 @@ pub async fn mp_install(
         );
         elapsed_footer(start_time, "Modpack Install");
 
-        return Ok(modpack_info.mod_id.clone());
+        return Ok(modpack_info.mod_id.to_string());
     }
 
     Err(RustiqueError::SimpleError(
@@ -251,8 +251,13 @@ pub async fn mp_install_missing_deps(mpk_id: ModID) -> Result<(), RustiqueError>
                 Ok(()) => {
                     let mut config = get_config().write().await;
                     // update the config file now
-                    if !config.modpacks.disabled.contains(&mpk_id) {
-                        config.modpacks.disabled.push(mpk_id.clone());
+                    if !config
+                        .modpacks
+                        .disabled
+                        .iter()
+                        .any(|m| m.eq_ignore_ascii_case(mpk_id.as_ref()))
+                    {
+                        config.modpacks.disabled.push(mpk_id.to_string());
                     }
 
                     config.save(None)?;

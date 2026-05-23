@@ -6,9 +6,9 @@ use rustique_core::information_utils::{display_installation_results, elapsed_foo
 use rustique_core::install_manager::{Install, Installed, install_manager};
 use rustique_core::rustique_errors::RustiqueError;
 use rustique_core::sync_structs::ModSyncInfo;
-use rustique_core::traits::ref_ext::PathRef;
 use rustique_core::utils::{backup_older_files, remove_older_files, split_modid_version};
 use std::collections::HashMap;
+use std::path::Path;
 use std::path::PathBuf;
 use std::time::Instant;
 use tracing::debug;
@@ -16,7 +16,7 @@ use yansi::Paint;
 
 #[allow(clippy::map_entry)]
 pub async fn update_mods<V: AsRef<[ModID]>>(
-    mod_dir: impl PathRef,
+    mod_dir: impl AsRef<Path>,
     update_mod_ids: V,
     keep_old_files: bool,
 ) -> Result<(), RustiqueError> {
@@ -54,7 +54,7 @@ pub async fn update_mods<V: AsRef<[ModID]>>(
         for typed_mod_id in update_mod_ids {
             let mod_sync_data = &sync_data;
             // user typed in a valid typed_mod_id so violet is happy now
-            let typed_mod_id = typed_mod_id.to_lowercase();
+            let typed_mod_id: ModID = typed_mod_id.to_lowercase().into();
             if mod_sync_data.contains_key(&typed_mod_id) {
                 mods_to_check_update
                     .entry(typed_mod_id.clone())
@@ -72,7 +72,10 @@ pub async fn update_mods<V: AsRef<[ModID]>>(
         )));
     }
 
-    let all_installed_mods: HashMap<ModID, ModSyncInfo> = mods_to_check_update.clone();
+    let all_installed_mods: HashMap<String, ModSyncInfo> = mods_to_check_update
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.clone()))
+        .collect();
     debug!("all_installed_mods: {:#?}", all_installed_mods);
 
     let final_mod_update_list: Vec<Install> = mods_to_check_update
@@ -83,10 +86,10 @@ pub async fn update_mods<V: AsRef<[ModID]>>(
                 && !mod_id.is_empty()
             {
                 Some(Install {
-                    mod_id: mod_id.to_lowercase(),
-                    mod_name: mod_sync_info.mod_name.clone(),
+                    mod_id: mod_id.to_lowercase().into(),
+                    mod_name: mod_sync_info.mod_name.clone().into(),
                     version_to_install: mod_sync_info.latest_known_version.clone(),
-                    download_url: mod_sync_info.latest_download_url.clone(),
+                    download_url: mod_sync_info.latest_download_url.clone().into(),
                     current_file_path: Some(mod_dir.join(mod_sync_info.file_name)),
                 })
             } else {

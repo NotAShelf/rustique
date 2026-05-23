@@ -9,19 +9,19 @@ use rustique_core::information_utils::{
 use rustique_core::install_manager::{Install, install_manager};
 use rustique_core::rustique_errors::RustiqueError;
 use rustique_core::rustique_errors::RustiqueError::SimpleError;
-use rustique_core::traits::ref_ext::PathRef;
 use rustique_core::utils::{
     extract_all_mods_metadata, gather_missing_dependencies, split_modid_version,
 };
 use rustique_core::version_management::{parse_latest_version, parse_pinned_version};
 use std::collections::HashMap;
+use std::path::Path;
 use tracing::{debug, info};
 
 // Report if trying install a mod that already exists
 // Use -f to force an installation
 // add way to set the version you want to download
 pub async fn install_cmd(
-    mod_dir: impl PathRef,
+    mod_dir: impl AsRef<Path>,
     mods_requested: Vec<ModID>,
     _force: bool,
 ) -> Result<(), RustiqueError> {
@@ -29,7 +29,14 @@ pub async fn install_cmd(
     info!("install_cmd: {mods_requested:?}");
 
     display_table(
-        vec![command_output("Installing..", mods_requested.join(", "))],
+        vec![command_output(
+            "Installing..",
+            mods_requested
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", "),
+        )],
         Some(UTF8_HORIZONTAL_ONLY),
     );
 
@@ -61,8 +68,10 @@ pub async fn install_cmd(
             let pin_ver = if let Some(mod_version) = mod_map.get(&mod_id) {
                 if mod_version.is_some() {
                     mod_version.clone()
-                } else if let Some(package) =
-                    config.pkg.iter().find(|package| package.mod_id == mod_id)
+                } else if let Some(package) = config
+                    .pkg
+                    .iter()
+                    .find(|package| package.mod_id.eq_ignore_ascii_case(mod_id.as_ref()))
                 {
                     package.pinned_version.clone()
                 } else {
@@ -73,7 +82,7 @@ pub async fn install_cmd(
             };
 
             let pkg = Package {
-                mod_id: mod_id.clone(),
+                mod_id: mod_id.to_string(),
                 pinned_version: pin_ver.clone(),
             };
 
@@ -86,9 +95,9 @@ pub async fn install_cmd(
 
             Install {
                 mod_id: mod_id.clone(),
-                mod_name: mod_info.mod_json.name.unwrap_or_default(),
+                mod_name: mod_info.mod_json.name.unwrap_or_default().into(),
                 version_to_install: version,
-                download_url: download_url.clone(),
+                download_url,
                 current_file_path: None,
             }
         })
@@ -106,9 +115,9 @@ pub async fn install_cmd(
 /// mod_dir_for_req is where the mods_requested will be searched for
 /// all dependencies will be installed to dep_install_path
 pub async fn install_missing_deps<V: AsRef<[ModID]>>(
-    mod_dir_for_req: impl PathRef,
+    mod_dir_for_req: impl AsRef<Path>,
     mods_requested: V,
-    dep_install_path: impl PathRef,
+    dep_install_path: impl AsRef<Path>,
 ) -> Result<(), RustiqueError> {
     let (mod_dir, mods_requested) = (mod_dir_for_req.as_ref(), mods_requested.as_ref());
     // get all installed mod info
@@ -146,7 +155,7 @@ pub async fn install_missing_deps<V: AsRef<[ModID]>>(
 
     for mod_info in &mut missing_deps {
         if let Some(data) = result.get(&mod_info.mod_id) {
-            mod_info.mod_name = data.mod_json.name.clone().unwrap_or_default();
+            mod_info.mod_name = data.mod_json.name.clone().unwrap_or_default().into();
             let (version, download_url, _, _) = parse_latest_version(&data.mod_json.releases);
             mod_info.download_url = download_url;
             mod_info.version_to_install = version;

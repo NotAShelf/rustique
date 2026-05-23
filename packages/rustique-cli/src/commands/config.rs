@@ -118,7 +118,7 @@ async fn set(args: &CommonArgs) {
             let mut found = false;
             for package in &mut config.pkg {
                 if package.mod_id.eq_ignore_ascii_case(with_mod) {
-                    package.pinned_version = Some(version.clone());
+                    package.pinned_version = Some(version.clone().into());
                     found = true;
                     break;
                 }
@@ -127,7 +127,7 @@ async fn set(args: &CommonArgs) {
             if !found {
                 config.pkg.push(Package {
                     mod_id: with_mod.clone().to_string(),
-                    pinned_version: Some(version.clone()),
+                    pinned_version: Some(version.clone().into()),
                 });
             }
             save = true;
@@ -316,7 +316,9 @@ async fn del(args: &DelArgs) {
         };
 
         if !config.pkg.is_empty() {
-            config.pkg.retain(|p| p.mod_id != *mod_id);
+            config
+                .pkg
+                .retain(|p| !p.mod_id.eq_ignore_ascii_case(mod_id.as_ref()));
             save = true;
             display_vec.push(command_output("Removed pinned version from: ", mod_id));
         }
@@ -463,7 +465,7 @@ async fn list() {
                 None,
             );
             let pinned_version = prep_cell(
-                pkg.pinned_version.clone().unwrap_or(String::new()),
+                pkg.pinned_version.clone().unwrap_or_default().to_string(),
                 Some(CellColor::Magenta),
                 None,
                 None,

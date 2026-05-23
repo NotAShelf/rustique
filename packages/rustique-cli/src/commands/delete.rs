@@ -8,7 +8,6 @@ use rustique_core::consts::FILE_RUSTIQUE_SYNC;
 use rustique_core::information_utils::{CellData, display_table};
 use rustique_core::rustique_errors::RustiqueError;
 use rustique_core::symlink_manager::SymlinkManager;
-use rustique_core::traits::ref_ext::PathRef;
 use rustique_core::utils::{delete_file, extract_all_mods_metadata, split_modid_version};
 use rustique_core::version_management::parse_version;
 use std::collections::HashMap;
@@ -17,7 +16,7 @@ use tokio::fs::ReadDir;
 use tracing::{info, warn};
 
 pub async fn delete_all(
-    mod_dir: impl PathRef,
+    mod_dir: impl AsRef<Path>,
     delete_type: &DeleteArgAllVals,
 ) -> Result<(), RustiqueError> {
     let config = get_config().read().await;
@@ -73,7 +72,7 @@ pub async fn iterate_and_delete(
 #[allow(dead_code)]
 pub async fn iterate_and_move_zip(
     curr_items: &mut ReadDir,
-    target_dir: impl PathRef,
+    target_dir: impl AsRef<Path>,
     ignore_symlinks: bool,
 ) -> Result<(), RustiqueError> {
     while let Some(entry) = curr_items
@@ -102,7 +101,7 @@ pub async fn iterate_and_move_zip(
 }
 
 pub async fn delete_cmd(
-    mod_dir: impl PathRef,
+    mod_dir: impl AsRef<Path>,
     mod_ids: Vec<ModID>,
     is_backup: bool,
 ) -> Result<(), RustiqueError> {
@@ -121,7 +120,7 @@ pub async fn delete_cmd(
 
     // grab only the real mods in the m_dir, ignoring the symlinks (modpacks)
     let all_metadata = extract_all_mods_metadata(mod_dir, true).await?;
-    let mut processed_mods: Vec<(ModID, ModFileName)> = Vec::new();
+    let mut processed_mods: Vec<(String, ModFileName)> = Vec::new();
 
     for (filename, modinfo) in all_metadata {
         if let Some((_, target_version)) = mod_lookup.remove_entry(&modinfo.mod_id) {
@@ -140,11 +139,7 @@ pub async fn delete_cmd(
 
             if should_delete {
                 processed_mods.push((
-                    format!(
-                        "{}@{}",
-                        modinfo.mod_id,
-                        modinfo.version.unwrap_or(String::new())
-                    ),
+                    format!("{}@{}", modinfo.mod_id, modinfo.version.unwrap_or_default()),
                     filename.clone(),
                 ));
                 delete_file(mod_dir.join(&filename)).await?;
@@ -161,11 +156,11 @@ pub async fn delete_cmd(
         for pm in &processed_mods {
             let (mod_id, version) = split_modid_version(&pm.0);
 
-            if let Some(rem_data) = sync_data.rustique_sync.remove(&mod_id) {
-                if rem_data.installed_version != version.unwrap_or(String::new()) {
+            if let Some(rem_data) = sync_data.rustique_sync.remove(&mod_id.to_string()) {
+                if rem_data.installed_version != version.unwrap_or_default() {
                     // value didn't match, put the entry back into the sync file.
                     // Sync file will only have the latest version, so this prob means it was on old version that was removed.
-                    sync_data.rustique_sync.insert(mod_id, rem_data);
+                    sync_data.rustique_sync.insert(mod_id.to_string(), rem_data);
                 }
             }
         }

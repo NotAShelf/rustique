@@ -4,7 +4,16 @@
     clippy::redundant_closure_for_method_calls,
     clippy::struct_field_names,
     clippy::doc_markdown,
-    clippy::unnecessary_wraps
+    clippy::unnecessary_wraps,
+    clippy::collapsible_if,
+    clippy::unnecessary_to_owned,
+    clippy::implicit_clone,
+    clippy::too_many_lines,
+    clippy::cmp_owned,
+    clippy::needless_borrows_for_generic_args,
+    clippy::ignored_unit_patterns,
+    clippy::needless_borrow,
+    clippy::unnecessary_semicolon
 )]
 
 mod cli_commands;
@@ -36,11 +45,11 @@ use comfy_table::{Attribute, Color};
 use commands::sync::sync;
 use commands::update::update_mods;
 use dirs::home_dir;
+use rustique_core::aliases::ModID;
 use rustique_core::config::config_manager::{get_config, init_config};
 use rustique_core::information_utils::{elapsed_footer, notice};
 use rustique_core::rustique_errors::{ErrorMsgFn, handle_err_result};
 use rustique_core::rustique_options::RustiqueOptions;
-use rustique_core::traits::ref_ext::PathRef;
 use rustique_core::traits::string_ext::StrLowerExt;
 use rustique_core::utils::{get_expanded_path, sorted_game_versions};
 use std::fs::File;
@@ -211,7 +220,8 @@ async fn async_main() -> Result<()> {
             }
         }
         Commands::Update(args) => {
-            match update_mods(&mod_dir, args.mod_ids.clone(), args.keep_old_files).await {
+            let mod_ids: Vec<ModID> = args.mod_ids.iter().cloned().map(Into::into).collect();
+            match update_mods(&mod_dir, mod_ids, args.keep_old_files).await {
                 Ok(()) => {
                     handle_sync_call(&mod_dir, false).await;
                 }
@@ -234,7 +244,8 @@ async fn async_main() -> Result<()> {
             let config = get_config().read().await;
 
             if !args.mod_ids.is_empty() {
-                match install_cmd(&mod_dir, args.mod_ids.clone(), args.missing_dependencies).await {
+                let mod_ids: Vec<ModID> = args.mod_ids.iter().cloned().map(Into::into).collect();
+                match install_cmd(&mod_dir, mod_ids, args.missing_dependencies).await {
                     Ok(()) => {
                         handle_sync_call(&mod_dir, false).await;
                     }
@@ -245,7 +256,8 @@ async fn async_main() -> Result<()> {
             }
 
             if args.missing_dependencies {
-                match install_missing_deps(&mod_dir, args.mod_ids.clone(), &mod_dir).await {
+                let mod_ids: Vec<ModID> = args.mod_ids.iter().cloned().map(Into::into).collect();
+                match install_missing_deps(&mod_dir, mod_ids, &mod_dir).await {
                     Ok(()) => {
                         handle_sync_call(&mod_dir, false).await;
                     }
@@ -325,7 +337,12 @@ async fn async_main() -> Result<()> {
         Commands::Delete(args) => {
             if !args.mod_id.is_empty() {
                 handle_err_result(
-                    delete_cmd(&mod_dir, args.mod_id.clone(), args.mod_backups).await,
+                    delete_cmd(
+                        &mod_dir,
+                        args.mod_id.iter().cloned().map(Into::into).collect(),
+                        args.mod_backups,
+                    )
+                    .await,
                     "Unable to delete mod(s)",
                     true,
                     ErrorMsgFn::Error,
@@ -347,7 +364,7 @@ async fn async_main() -> Result<()> {
     Ok(())
 }
 
-async fn handle_sync_call(mod_dir: impl PathRef, quiet: bool) {
+async fn handle_sync_call(mod_dir: impl AsRef<Path>, quiet: bool) {
     match sync(mod_dir.as_ref(), quiet, vec![]).await {
         Ok(_) => {}
         Err(e) => {

@@ -9,7 +9,6 @@ use rustique_core::information_utils::{CellData, display_table, elapsed_footer, 
 use rustique_core::rustique_errors::RustiqueError;
 use rustique_core::symlink_manager::SymlinkManager;
 use rustique_core::sync_structs::{GameVersionSync, ModSyncInfo, RustiqueSyncJson};
-use rustique_core::traits::ref_ext::PathRef;
 use rustique_core::utils::{
     extract_all_mods_metadata, find_mod_id, get_current_time, parse_json_file, prettify,
     split_modid_version, timestamp_older_than, write_json_file,
@@ -19,6 +18,7 @@ use rustique_core::version_management::{
 };
 use std::collections::HashMap;
 use std::default::Default;
+use std::path::Path;
 use std::path::PathBuf;
 use std::time::Instant;
 use tracing::{debug, error, info, warn};
@@ -26,7 +26,7 @@ use yansi::Paint;
 
 /// Use this function to retrieve the sync file for mod_dir.
 pub async fn get_sync_data(
-    mod_dir: impl PathRef,
+    mod_dir: impl AsRef<Path>,
     quiet: bool,
 ) -> Result<RustiqueSyncJson, RustiqueError> {
     let mod_dir = mod_dir.as_ref();
@@ -42,7 +42,7 @@ pub async fn get_sync_data(
 }
 
 pub async fn sync<V: AsRef<[Package]>>(
-    mod_dir: impl PathRef,
+    mod_dir: impl AsRef<Path>,
     quiet: bool,
     pin_versions: V,
 ) -> Result<RustiqueSyncJson, RustiqueError> {
@@ -111,7 +111,7 @@ pub async fn sync<V: AsRef<[Package]>>(
 
     let search_sync_time = config.sync_mod_search_file_every;
 
-    if timestamp_older_than(search_sync_time, &mods_search_data.last_sync) {
+    if timestamp_older_than(search_sync_time, &mods_search_data.last_sync).unwrap_or(true) {
         // update the database
         daily_file_syncs(true).await?;
     }
@@ -127,7 +127,7 @@ pub async fn sync<V: AsRef<[Package]>>(
         };
 
     let game_version_time = config.sync_latest_game_version_file_every;
-    if timestamp_older_than(game_version_time, &game_version_sync_data.last_sync) {
+    if timestamp_older_than(game_version_time, &game_version_sync_data.last_sync).unwrap_or(true) {
         // update the database
         game_version_sync(true).await?;
     }
@@ -153,7 +153,7 @@ pub async fn sync<V: AsRef<[Package]>>(
                 mod_info.version.clone().unwrap_or_default(),
                 mod_filename.clone()
             );
-            mod_info.version.clone().unwrap_or_default()
+            mod_info.version.clone().unwrap_or_default().to_string()
         };
 
         info!(
@@ -180,12 +180,12 @@ pub async fn sync<V: AsRef<[Package]>>(
             .rustique_sync
             .entry(mod_id)
             .or_insert_with(|| ModSyncInfo {
-                installed_version: version.clone(),
+                installed_version: version.clone().into(),
                 file_name: mod_filename.clone(),
                 mod_name: mod_info.name.clone(),
                 asset_id: 0, // will be updated when we make our api call
                 latest_download_url: String::new(),
-                latest_known_version: String::new(),
+                latest_known_version: "".into(),
                 game_versions: Vec::new(),
                 is_symlink: SymlinkManager::exists(mod_dir.join(mod_filename)),
                 latest_changelog: String::new(),
@@ -194,7 +194,7 @@ pub async fn sync<V: AsRef<[Package]>>(
 
     info!("Sync data before api call {:#?}", sync_data);
 
-    let im = installed_mods.keys().clone().collect::<Vec<&String>>();
+    let im = installed_mods.keys().clone().collect::<Vec<_>>();
     info!("Installed mods: {:?}", im);
 
     // Create API client and fetch mods in parallel using async
@@ -257,14 +257,16 @@ pub async fn sync<V: AsRef<[Package]>>(
             .entry(mod_id.clone())
             .and_modify(|sync_info| {
                 sync_info.latest_known_version.clone_from(&mod_version);
-                sync_info.latest_download_url.clone_from(&download_url);
+                sync_info
+                    .latest_download_url
+                    .clone_from(&download_url.to_string());
                 sync_info.game_versions.clone_from(&game_versions);
                 sync_info.latest_changelog.clone_from(&changelog);
                 (sync_info.asset_id).clone_from(&mod_asset_id);
             })
             .or_insert_with(|| ModSyncInfo {
                 latest_known_version: mod_version,
-                latest_download_url: download_url,
+                latest_download_url: download_url.to_string(),
                 mod_name: res_mod.mod_json.name.clone().unwrap_or_default(),
                 asset_id: mod_asset_id,
                 game_versions,
@@ -314,7 +316,10 @@ pub async fn daily_file_syncs(force: bool) -> Result<ModsSearchFile, RustiqueErr
 
     let sync_time = config.sync_mod_search_file_every;
 
-    if file_data.mods.is_empty() || force || timestamp_older_than(sync_time, &file_data.last_sync) {
+    if file_data.mods.is_empty()
+        || force
+        || timestamp_older_than(sync_time, &file_data.last_sync).unwrap_or(true)
+    {
         notice(
             "Daily Search Sync...",
             Some(Color::Yellow),
@@ -378,7 +383,7 @@ pub async fn game_version_sync(force: bool) -> Result<GameVersionSync, RustiqueE
 
     if file_data.game_versions.is_empty()
         || force
-        || timestamp_older_than(sync_time, &file_data.last_sync)
+        || timestamp_older_than(sync_time, &file_data.last_sync).unwrap_or(true)
     {
         notice(
             "Syncing latest game versions..",

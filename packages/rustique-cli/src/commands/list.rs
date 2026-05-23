@@ -4,7 +4,7 @@ use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::UTF8_FULL;
 use comfy_table::{Cell, CellAlignment, ContentArrangement, Row, Table};
 use csv::Writer;
-use rustique_core::aliases::{ModFileName, ModID};
+use rustique_core::aliases::ModFileName;
 use rustique_core::api::api_structs::ModInfo;
 use rustique_core::config::config_manager::get_config;
 use rustique_core::config::config_structs::{CellAttr, CellColor, ListColumn, TableSection};
@@ -12,10 +12,9 @@ use rustique_core::information_utils::prep_cell;
 use rustique_core::install_manager::Install;
 use rustique_core::rustique_errors::RustiqueError;
 use rustique_core::sync_structs::ModSyncInfo;
-use rustique_core::traits::ref_ext::PathRef;
 use rustique_core::utils::{
     extract_all_mods_metadata, format_for_csv, gather_dependencies, gather_missing_dependencies,
-    html_parse, sanitize_string, split_modid_version,
+    html_parse, normalize_whitespace, split_modid_version,
 };
 use rustique_core::version_management::parse_version;
 use std::collections::HashMap;
@@ -31,13 +30,7 @@ fn grab_this_mod_deps(mod_info: &ModInfo, dep_list: &[Install]) -> String {
     let mut res = dep_list
         .iter()
         .filter(|i| mod_info.dependencies.contains_key(&i.mod_id))
-        .map(|i| {
-            String::from("[")
-                + i.mod_id.clone().as_str()
-                + "@"
-                + i.version_to_install.clone().as_str()
-                + "]"
-        })
+        .map(|i| String::from("[") + i.mod_id.as_ref() + "@" + i.version_to_install.as_ref() + "]")
         .collect::<Vec<String>>();
     res.sort();
     res.dedup_by(|a, b| a.to_lowercase().eq(&b.to_lowercase()));
@@ -51,7 +44,7 @@ fn grab_this_mod_deps(mod_info: &ModInfo, dep_list: &[Install]) -> String {
     clippy::fn_params_excessive_bools
 )]
 pub async fn cmd_list(
-    mod_dir: impl PathRef,
+    mod_dir: impl AsRef<Path>,
     only_updated: bool,
     only_pinned: bool,
     modpack_call: bool,
@@ -162,7 +155,7 @@ pub async fn cmd_list(
 
     let missing_deps = gather_missing_dependencies(&installed_mods, &[], sync_hashmap);
 
-    let mut enabled_modpacks: HashMap<ModID, Vec<ModID>> = config
+    let mut enabled_modpacks: HashMap<String, Vec<String>> = config
         .modpacks
         .enabled
         .iter()
@@ -186,10 +179,10 @@ pub async fn cmd_list(
                 }
             };
 
-            let keys: Vec<ModID> = mp_sync_file
+            let keys: Vec<String> = mp_sync_file
                 .rustique_sync
                 .into_keys()
-                .map(|k| split_modid_version(k).0)
+                .map(|k| split_modid_version(k).0.to_string())
                 .collect();
             v.extend(keys);
         }
@@ -215,7 +208,10 @@ pub async fn cmd_list(
         .filter_map(|(filename, mod_info)| {
             let file_is_symlink = mod_dir.join(filename).is_symlink();
 
-            let pkg = config.pkg.iter().find(|p| p.mod_id.eq(&mod_info.mod_id));
+            let pkg = config
+                .pkg
+                .iter()
+                .find(|p| p.mod_id.eq_ignore_ascii_case(mod_info.mod_id.as_ref()));
 
             if only_pinned && pkg.is_none() {
                 return None;
@@ -228,10 +224,10 @@ pub async fn cmd_list(
                     let color = properties.color.clone();
                     let attr = properties.attribute.clone();
 
-                    let (mod_sync_id, mod_sync_data): (ModID, ModSyncInfo) = sync_hashmap
+                    let (mod_sync_id, mod_sync_data): (String, ModSyncInfo) = sync_hashmap
                         .iter()
                         .filter_map(|(mod_id, mod_sync)| {
-                            if **mod_id == mod_info.mod_id
+                            if mod_id.eq_ignore_ascii_case(mod_info.mod_id.as_ref())
                                 || mod_info.name == mod_sync.mod_name
                                 || *filename == mod_sync.file_name
                             {
@@ -253,7 +249,7 @@ pub async fn cmd_list(
                             let mid = if !mod_info.mod_id.is_empty() {
                                 mod_info.mod_id.clone().to_lowercase()
                             } else if !mod_sync_id.is_empty() {
-                                mod_sync_id.clone().to_lowercase()
+                                mod_sync_id.to_lowercase()
                             } else {
                                 String::from("UNKNOWN")
                             };
@@ -300,7 +296,7 @@ pub async fn cmd_list(
                                 pinned += " (pinned)";
                             }
 
-                            if latest == mod_info.version.clone().unwrap_or(String::new()) {
+                            if latest == mod_info.version.clone().unwrap_or_default().to_string() {
                                 Some(prep_cell(
                                     (latest + &pinned).as_str(),
                                     color,
@@ -342,7 +338,7 @@ pub async fn cmd_list(
                                 ),
                         ),
                         Ok(ListColumn::Description) => {
-                            let mut txt = sanitize_string(
+                            let mut txt = normalize_whitespace(
                                 &mod_info.description.clone().unwrap_or(String::new()),
                             );
 
@@ -383,7 +379,7 @@ pub async fn cmd_list(
                             Some(prep_cell(&missing, color, attr, table_sep, None))
                         }
                         Ok(ListColumn::Filename) => {
-                            Some(prep_cell(filename.as_str(), color, attr, None, None))
+                            Some(prep_cell(filename.to_string(), color, attr, None, None))
                         }
 
                         Ok(ListColumn::GameVersion) => {
@@ -414,7 +410,7 @@ pub async fn cmd_list(
                             | ListColumn::HasBackup,
                         ) => Some(prep_cell("NOT IMPLEMENTED", color, attr, None, None)),
                         Ok(ListColumn::Changelog) => {
-                            // let mut changelog = sanitize_string(&mod_sync_data.latest_changelog);
+                            // let mut changelog = normalize_whitespace(&mod_sync_data.latest_changelog);
                             let mut changelog = &mod_sync_data.latest_changelog;
 
                             let out = html_parse(
