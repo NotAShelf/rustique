@@ -118,16 +118,15 @@ impl RustiqueOptions {
                 mod_dir: Some(PathBuf::new()),
             };
 
+            let old_is_empty = old_default.exists()
+                && old_default
+                    .read_dir()
+                    .map_or(true, |mut d| d.next().is_none());
+
             // old exists, but is empty AND new exists, just use new location
-            if old_default.exists()
-                && old_default.read_dir().unwrap().count() <= 0
-                && new_default.exists()
-            {
+            if old_is_empty && new_default.exists() {
                 options.mod_dir = Some(new_default);
-            } else if old_default.exists()
-                && old_default.read_dir().unwrap().count() > 0
-                && new_default.exists()
-            {
+            } else if old_default.exists() && !old_is_empty && new_default.exists() {
                 // let user know that the new location should be used and ask if they want to set the
                 // default and move the mods over
                 options.mod_dir = Some(old_default);
