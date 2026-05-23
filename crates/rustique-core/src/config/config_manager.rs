@@ -3,7 +3,6 @@ use crate::config::config_structs::Tables;
 use crate::information_utils::{CellData, RustiqueMessage, rustique_message};
 use crate::rustique_errors::RustiqueError;
 use crate::rustique_options::RustiqueOptions;
-use crate::traits::ref_ext::PathRef;
 use chrono::Local;
 use comfy_table::{Attribute, CellAlignment, Color};
 use dirs::home_dir;
@@ -11,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
 use std::io::{Read, Write};
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 use tokio::sync::RwLock;
@@ -250,7 +250,7 @@ impl Config {
         }
     }
 
-    pub fn setup_modpack_dir(modpack_dir: impl PathRef) -> Result<(), RustiqueError> {
+    pub fn setup_modpack_dir(modpack_dir: impl AsRef<Path>) -> Result<(), RustiqueError> {
         let modpack_dir = Self::data_path().join(modpack_dir);
         // create the modpack directory if it hasn't been created
         debug!("Checking if {} exists", modpack_dir.to_string_lossy());
@@ -295,7 +295,7 @@ impl Config {
 }
 
 pub fn backup_config(
-    config_path: impl PathRef,
+    config_path: impl AsRef<Path>,
     message: Option<String>,
 ) -> Result<(), RustiqueError> {
     let config_path = config_path.as_ref();

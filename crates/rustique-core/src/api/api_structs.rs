@@ -1,12 +1,12 @@
 use crate::aliases::{FileName, ModID, ModVersion};
 use crate::consts::FILE_MODINFO_JSON;
 use crate::rustique_errors::RustiqueError;
-use crate::traits::ref_ext::PathRef;
 use async_zip::ZipEntryBuilder;
 use async_zip::tokio::write::ZipFileWriter;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::path::Path;
 use std::path::PathBuf;
 use tokio::fs::File;
 
@@ -147,12 +147,12 @@ pub struct ModInfo {
 impl ModInfo {
     pub async fn build_modpack(
         &self,
-        save_path: impl PathRef,
+        save_path: impl AsRef<Path>,
         mpk_id: FileName,
     ) -> Result<PathBuf, RustiqueError> {
         // config dir should all be setup by this point
 
-        let zip_path = save_path.as_ref().join(mpk_id + ".zip");
+        let zip_path = save_path.as_ref().join(format!("{mpk_id}.zip"));
         let zip_archive = File::create(&zip_path).await?;
         let mut zip = ZipFileWriter::with_tokio(zip_archive);
 
@@ -187,7 +187,7 @@ impl ModInfo {
         Ok(zip_path)
     }
 
-    async fn delete_zip(&self, save_path: impl PathRef) -> Result<(), RustiqueError> {
+    async fn delete_zip(&self, save_path: impl AsRef<Path>) -> Result<(), RustiqueError> {
         tokio::fs::remove_file(save_path.as_ref())
             .await
             .map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
@@ -220,7 +220,7 @@ impl ModInfo {
     async fn add_dir_to_zip(
         &self,
         zip: &mut ZipFileWriter<File>,
-        dir_path: impl PathRef,
+        dir_path: impl AsRef<Path>,
         zip_prefix: &str,
     ) -> Result<(), RustiqueError> {
         let mut entries = tokio::fs::read_dir(dir_path.as_ref())

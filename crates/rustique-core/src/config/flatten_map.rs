@@ -61,6 +61,12 @@ impl FlattenMap {
     }
 }
 
+impl Default for FlattenMap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'de> Deserialize<'de> for FlattenMap {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -97,13 +103,13 @@ impl<'de> Deserialize<'de> for FlattenMap {
                                         .unwrap_or(CellColor::Reset),
                                 );
                             }
-                        } else if attr == "attribute" {
-                            if let Some(attr_str) = value.as_str() {
-                                entry.attribute = Option::from(
-                                    <CellAttr as FromStr>::from_str(attr_str)
-                                        .unwrap_or(CellAttr::NoHidden),
-                                );
-                            }
+                        } else if attr == "attribute"
+                            && let Some(attr_str) = value.as_str()
+                        {
+                            entry.attribute = Option::from(
+                                <CellAttr as FromStr>::from_str(attr_str)
+                                    .unwrap_or(CellAttr::NoHidden),
+                            );
                         }
                     }
                 }

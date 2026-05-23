@@ -2,7 +2,6 @@ use crate::aliases::{DownloadURL, ModID, ModVersion, PinnedVersionInfo};
 use crate::api::api_structs::Release;
 use crate::config::config_manager::Package;
 use crate::rustique_errors::RustiqueError;
-use crate::traits::ref_ext::StrRef;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -97,6 +96,7 @@ pub fn parse_download_url_from_version<V: AsRef<[Release]>>(
                 "Version {version} not found. Use [Rustique info -m modid] for valid versions"
             ))
         })
+        .map(Into::into)
 }
 
 pub fn parse_version(mod_version: &str) -> Result<Version, RustiqueError> {
@@ -105,9 +105,9 @@ pub fn parse_version(mod_version: &str) -> Result<Version, RustiqueError> {
 
 /// retrieve a version based on version pinning information.
 pub fn parse_pinned_version(
-    releases: &Vec<Release>,
+    releases: &[Release],
     mod_pkg: &Package,
-    pinned_game_version: impl StrRef,
+    pinned_game_version: impl AsRef<str>,
 ) -> PinnedVersionInfo {
     // user should be using Rustique itself to set pinned_game_version so we trust that its valid, otherwise this function
     // will not return the correct version
@@ -118,7 +118,7 @@ pub fn parse_pinned_version(
     let gres =
         if pinned_game_version.is_empty() {
             info!("pinned_game_version was empty");
-            releases.clone()
+            releases.to_owned()
         } else {
             info!("found pinned_game_version: {pinned_game_version}");
             releases.iter().filter(|r| {
@@ -215,15 +215,16 @@ fn return_version_results(
 ) -> (ModVersion, DownloadURL, Vec<String>, String) {
     match result {
         Some(latest_versions_found) => (
-            latest_versions_found.latest_version.to_string(),
+            latest_versions_found.latest_version.to_string().into(),
             latest_versions_found
                 .download_url
                 .clone()
-                .unwrap_or_default(),
+                .unwrap_or_default()
+                .into(),
             latest_versions_found.game_versions,
             latest_versions_found.changelog.unwrap_or(String::new()),
         ),
-        None => (String::new(), String::new(), Vec::new(), String::new()),
+        None => ("".into(), "".into(), Vec::new(), String::new()),
     }
 }
 

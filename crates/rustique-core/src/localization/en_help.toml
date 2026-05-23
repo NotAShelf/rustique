@@ -26,9 +26,9 @@ windows: [%appdata%/rustique/mod-id-sync.json]
 '''
 sync_game_versions = "Sync a local list of all game versions from the api. This is used with version pinning to ensure we have accurate version numbers."
 sync_game_versions.long = [
-    "Sync a local list of all game versions from the api. This is used with version pinning to ensure we have accurate version numbers.",
-    "linux/mac: [~/.config/rustique/game-versions.json]",
-    "windows: [%appdata%/rustique/game-versions.json]"
+  "Sync a local list of all game versions from the api. This is used with version pinning to ensure we have accurate version numbers.",
+  "linux/mac: [~/.config/rustique/game-versions.json]",
+  "windows: [%appdata%/rustique/game-versions.json]",
 ]
 
 [HelpMenu.list]

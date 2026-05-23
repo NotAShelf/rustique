@@ -1,6 +1,5 @@
 use crate::config::config_structs::{CellAttr, CellColor};
 use crate::install_manager::Installed;
-use crate::traits::ref_ext::StrRef;
 use comfy_table::ContentArrangement::Dynamic;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::{UTF8_BORDERS_ONLY, UTF8_FULL_CONDENSED, UTF8_HORIZONTAL_ONLY};
@@ -19,23 +18,19 @@ pub fn rustique_message(rustique_message: RustiqueMessage) {
         .apply_modifier(UTF8_ROUND_CORNERS)
         .set_content_arrangement(Dynamic);
 
-    if rustique_message.header.is_some() {
-        let header_data = rustique_message.header;
-        if header_data.is_some() {
-            let header_data = header_data.unwrap_or_default();
-            let mut h_cell = Cell::new(header_data.text);
-            if !header_data.attributes.is_empty() {
-                h_cell = h_cell.add_attributes(header_data.attributes);
-            }
-            h_cell = h_cell
-                .fg(header_data.color.unwrap_or(Color::Green))
-                .set_alignment(header_data.alignment.unwrap_or(CellAlignment::Center));
-
-            let mut row = Row::new();
-            row.add_cell(h_cell);
-
-            table.set_header(row);
+    if let Some(header_data) = rustique_message.header {
+        let mut h_cell = Cell::new(header_data.text);
+        if !header_data.attributes.is_empty() {
+            h_cell = h_cell.add_attributes(header_data.attributes);
         }
+        h_cell = h_cell
+            .fg(header_data.color.unwrap_or(Color::Green))
+            .set_alignment(header_data.alignment.unwrap_or(CellAlignment::Center));
+
+        let mut row = Row::new();
+        row.add_cell(h_cell);
+
+        table.set_header(row);
     }
 
     let rows: Vec<Row> = rustique_message
@@ -64,7 +59,7 @@ pub fn rustique_message(rustique_message: RustiqueMessage) {
     println!("{table}");
 }
 
-pub fn notice(message: impl StrRef, fg_color: Option<Color>, attributes: Vec<Attribute>) {
+pub fn notice(message: impl AsRef<str>, fg_color: Option<Color>, attributes: Vec<Attribute>) {
     let mut table = Table::new();
     table
         .load_preset(UTF8_HORIZONTAL_ONLY)
@@ -91,7 +86,7 @@ pub fn notice(message: impl StrRef, fg_color: Option<Color>, attributes: Vec<Att
 }
 
 pub fn prep_cell(
-    text: impl StrRef,
+    text: impl AsRef<str>,
     color: Option<CellColor>,
     attribute: Option<CellAttr>,
     delimiter: Option<char>,
@@ -99,21 +94,10 @@ pub fn prep_cell(
 ) -> Cell {
     let mut cell = Cell::from(text.as_ref());
 
-    if color.is_some() {
-        cell = cell.fg(Color::from(color.unwrap_or(CellColor::Reset)));
-    }
-
-    if attribute.is_some() {
-        cell = cell.add_attribute(Attribute::from(attribute.unwrap_or(CellAttr::NoHidden)));
-    }
-
-    if delimiter.is_some() {
-        cell = cell.set_delimiter(delimiter.unwrap_or(' '));
-    }
-
-    if alignment.is_some() {
-        cell = cell.set_alignment(alignment.unwrap_or(CellAlignment::Left));
-    }
+    cell = cell.fg(Color::from(color.unwrap_or(CellColor::Reset)));
+    cell = cell.add_attribute(Attribute::from(attribute.unwrap_or(CellAttr::NoHidden)));
+    cell = cell.set_delimiter(delimiter.unwrap_or(' '));
+    cell = cell.set_alignment(alignment.unwrap_or(CellAlignment::Left));
 
     cell
 }
@@ -163,7 +147,7 @@ pub fn display_installation_results(mods_processed: Vec<Installed>) {
 
         display_table(
             vec![command_output(
-                "Total mods Installed".to_string(),
+                "Total mods Installed",
                 successful.len().to_string(),
             )],
             None,
@@ -199,7 +183,7 @@ pub fn construct_cell(dt: CellData) -> Cell {
 
     cell
 }
-pub fn command_output(option: impl StrRef, val: impl StrRef) -> (CellData, CellData) {
+pub fn command_output(option: impl AsRef<str>, val: impl AsRef<str>) -> (CellData, CellData) {
     (
         CellData::new(
             option.as_ref().into(),
@@ -267,7 +251,7 @@ impl CellData {
     }
 }
 
-pub fn elapsed_footer(start_time: Instant, operation: impl StrRef + std::fmt::Display) {
+pub fn elapsed_footer(start_time: Instant, operation: impl AsRef<str> + std::fmt::Display) {
     let mut table = Table::new();
     table
         .load_preset(UTF8_HORIZONTAL_ONLY)

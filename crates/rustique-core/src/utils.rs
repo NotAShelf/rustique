@@ -8,7 +8,6 @@ use crate::install_manager::{Install, Installed};
 use crate::rustique_errors::RustiqueError;
 use crate::symlink_manager::SymlinkManager;
 use crate::sync_structs::{GameVersionSync, ModSyncInfo};
-use crate::traits::ref_ext::{PathRef, StrRef};
 use crate::version_management::parse_version;
 use async_zip::tokio::read::fs::ZipFileReader;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
@@ -23,27 +22,27 @@ use yansi::Paint;
 
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 pub fn get_current_time() -> String {
     let datetime: DateTime<Utc> = Utc::now();
     datetime.format("%Y-%m-%d %H:%M").to_string()
 }
 
-pub fn timestamp_older_than(num_hours: i64, timestamp: &str) -> bool {
-    let naive_dt = NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%d %H:%M")
-        .map_err(|e| error!("{}", e))
-        .unwrap_or_default();
+pub fn timestamp_older_than(num_hours: i64, timestamp: &str) -> Result<bool, RustiqueError> {
+    let naive_dt = NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%d %H:%M").map_err(|e| {
+        RustiqueError::SimpleError(format!("Failed to parse timestamp '{timestamp}': {e}"))
+    })?;
     let now = Utc::now().naive_utc();
     let duration = now.signed_duration_since(naive_dt);
 
-    duration > Duration::hours(num_hours)
+    Ok(duration > Duration::hours(num_hours))
 }
 
 // if the path contains ~/, which is short for /home/<user>, then expand it, otherwise just return
 // the path,
 // TODO: Need handle windows default
-pub fn get_expanded_path(dir: impl PathRef) -> PathBuf {
+pub fn get_expanded_path(dir: impl AsRef<Path>) -> PathBuf {
     let dir = dir.as_ref();
     if dir.starts_with("~/")
         && let Some(home) = home_dir()
@@ -56,7 +55,7 @@ pub fn get_expanded_path(dir: impl PathRef) -> PathBuf {
 }
 
 pub async fn extract_zip_metadata<T>(
-    entry: impl PathRef,
+    entry: impl AsRef<Path>,
     inner_file: &str,
 ) -> Result<T, RustiqueError>
 where
@@ -147,7 +146,7 @@ where
 }
 
 pub async fn extract_all_mods_metadata(
-    mod_dir: impl PathRef,
+    mod_dir: impl AsRef<Path>,
     ignore_symlink: bool,
 ) -> Result<HashMap<ModFileName, ModInfo>, RustiqueError> {
     let mod_dir = mod_dir.as_ref();
@@ -174,7 +173,7 @@ pub async fn extract_all_mods_metadata(
         // This is to ignore modpack mods when using normal rustique commands while a modpack is enabled
         .filter(|e| futures::future::ready(!(ignore_symlink && SymlinkManager::exists(e.path()))))
         .map(|entry| async move {
-            let filename = entry.file_name().to_string_lossy().to_string();
+            let filename: ModFileName = entry.file_name().to_string_lossy().to_string().into();
             extract_zip_metadata::<ModInfo>(&entry.path(), FILE_MODINFO_JSON)
                 .await
                 .map(|mod_info| (filename, mod_info))
@@ -197,7 +196,7 @@ pub async fn extract_all_mods_metadata(
 
 // TODO: Decide if this function is needed
 #[allow(dead_code)]
-pub async fn verify_zip_file(file_path: impl PathRef) -> Result<(), RustiqueError> {
+pub async fn verify_zip_file(file_path: impl AsRef<Path>) -> Result<(), RustiqueError> {
     // Open and verify the zip file integrity
     let file_path = file_path.as_ref();
 
@@ -219,10 +218,17 @@ pub async fn verify_zip_file(file_path: impl PathRef) -> Result<(), RustiqueErro
     Ok(())
 }
 
-pub async fn delete_file(file: impl PathRef) -> Result<(), RustiqueError> {
+pub async fn delete_file(file: impl AsRef<Path>) -> Result<(), RustiqueError> {
     let file = file.as_ref();
     debug!("Trying to delete {}", file.display());
-    if file.exists() && !file.is_dir() {
+    if file.is_dir() {
+        return Err(RustiqueError::SimpleError(format!(
+            "Expected a file, found a directory: {}",
+            file.display()
+        )));
+    }
+
+    if file.exists() {
         tokio::fs::remove_file(file)
             .await
             .map_err(|e| RustiqueError::IoError {
@@ -234,24 +240,10 @@ pub async fn delete_file(file: impl PathRef) -> Result<(), RustiqueError> {
             })
     } else {
         Err(RustiqueError::SimpleError(format!(
-            "File {} is no longer there!",
+            "File {} does not exist",
             file.display()
         )))
     }
-}
-
-// Replaces all instances of the newline and tab character from text, as well as excessive spaces.
-// This is a fix for https://github.com/Tekunogosu/Rustique/issues/3
-pub fn sanitize_string(string: &str) -> String {
-    string
-        .split_whitespace()
-        .fold(String::new(), |mut acc, word| {
-            if !acc.is_empty() {
-                acc.push(' ');
-            }
-            acc.push_str(word);
-            acc
-        })
 }
 
 // Helper function to get just installed dependencies by passing empty vec and hashmap to the parts that filter out dependencies
@@ -262,7 +254,7 @@ pub fn gather_dependencies(installed_mods: &HashMap<ModFileName, ModInfo>) -> Ve
 pub fn gather_missing_dependencies<V: AsRef<[ModID]>>(
     installed_mods: &HashMap<ModFileName, ModInfo>,
     mods_requested: V,
-    sync_data: &HashMap<ModID, ModSyncInfo>,
+    sync_data: &HashMap<String, ModSyncInfo>,
 ) -> Vec<Install> {
     // if there are reports of slowness is this section .values().par_bridge()...flat_map_iter() could be used to speed it up
     // this is prob not an issue even with a lot of mods as the data is all in memory at this point
@@ -280,7 +272,7 @@ pub fn gather_missing_dependencies<V: AsRef<[ModID]>>(
         // .values()
         .iter()
         .filter(|(_, mod_info)| {
-            mods_requested.is_empty() || mods_requested.contains(&mod_info.mod_id)
+            mods_requested.is_empty() || mods_requested.iter().any(|m| m == &mod_info.mod_id)
         })
         .flat_map(|(mod_filename, mod_info)| {
             mod_info
@@ -290,13 +282,13 @@ pub fn gather_missing_dependencies<V: AsRef<[ModID]>>(
                     if !mod_id.contains("game")
                         && !mod_id.contains("survival")
                         && !mod_id.contains("creative")
-                        && !id_vec.contains(mod_id)
+                        && !id_vec.iter().any(|m| m == mod_id)
                     {
                         Some(Install {
                             mod_id: mod_id.clone(),
-                            mod_name: String::new(),
+                            mod_name: "".into(),
                             version_to_install: version.clone(),
-                            download_url: String::new(),
+                            download_url: "".into(),
                             current_file_path: Some(PathBuf::from(mod_filename)),
                         })
                     } else {
@@ -309,7 +301,7 @@ pub fn gather_missing_dependencies<V: AsRef<[ModID]>>(
         .collect()
 }
 
-pub async fn parse_json_file<T>(file_path: impl PathRef) -> Result<T, RustiqueError>
+pub async fn parse_json_file<T>(file_path: impl AsRef<Path>) -> Result<T, RustiqueError>
 where
     T: for<'de> serde::Deserialize<'de>,
 {
@@ -356,9 +348,9 @@ where
 }
 
 pub async fn write_json_file(
-    file_path: impl PathRef,
+    file_path: impl AsRef<Path>,
     json: String,
-    config_dir: impl PathRef,
+    config_dir: impl AsRef<Path>,
 ) -> Result<(), RustiqueError> {
     let (file_path, config_dir) = (file_path.as_ref(), config_dir.as_ref());
     let mut open_file = File::create(file_path)
@@ -498,7 +490,7 @@ pub async fn backup_older_files(processed_install: &[Installed]) -> Result<(), R
     Ok(())
 }
 
-pub fn split_modid_version(mod_id_str: impl StrRef) -> (ModID, Option<ModVersion>) {
+pub fn split_modid_version(mod_id_str: impl AsRef<str>) -> (ModID, Option<ModVersion>) {
     if let Some((modid, version)) = mod_id_str
         .as_ref()
         .strip_prefix("vintagestorymodinstall://")
@@ -506,7 +498,7 @@ pub fn split_modid_version(mod_id_str: impl StrRef) -> (ModID, Option<ModVersion
         .split_once('@')
     {
         match parse_version(version) {
-            Ok(p_ver) => return (modid.to_string(), Some(p_ver.to_string())),
+            Ok(p_ver) => return (modid.to_string().into(), Some(p_ver.to_string().into())),
             Err(e) => {
                 warn!(
                     "Failed to parse version @{} from {}: {}. Version must be in MAJOR.MINOR.PATCH format.",
@@ -518,10 +510,10 @@ pub fn split_modid_version(mod_id_str: impl StrRef) -> (ModID, Option<ModVersion
         }
     }
 
-    (mod_id_str.as_ref().to_string().to_lowercase(), None)
+    (mod_id_str.as_ref().to_lowercase().into(), None)
 }
 
-pub fn format_for_csv(input: impl StrRef) -> String {
+pub fn format_for_csv(input: impl AsRef<str>) -> String {
     let input = normalize_whitespace(input.as_ref());
     if input.contains(',') || input.contains('\n') || input.contains('\r') || input.contains('"') {
         // wrap the text in quotes and escape internal quotes with by doubling them
@@ -531,7 +523,7 @@ pub fn format_for_csv(input: impl StrRef) -> String {
     }
 }
 
-pub fn normalize_whitespace(input: impl StrRef) -> String {
+pub fn normalize_whitespace(input: impl AsRef<str>) -> String {
     input
         .as_ref()
         .split_whitespace()
@@ -539,12 +531,12 @@ pub fn normalize_whitespace(input: impl StrRef) -> String {
         .join(" ")
 }
 
-pub fn html_parse(input: &mut impl StrRef, width: usize) -> Result<String, RustiqueError> {
+pub fn html_parse(input: &mut impl AsRef<str>, width: usize) -> Result<String, RustiqueError> {
     html2text::from_read(&mut input.as_ref().as_bytes(), width)
         .map_err(|_| RustiqueError::SimpleError("html2txt failed".to_string()))
 }
 
-pub fn prettify<T>(data: T, command_type: impl StrRef) -> Result<String, RustiqueError>
+pub fn prettify<T>(data: T, command_type: impl AsRef<str>) -> Result<String, RustiqueError>
 where
     T: serde::Serialize,
 {

@@ -15,15 +15,17 @@ pub struct RustiqueOptions {
     pub mod_dir: Option<PathBuf>,
 }
 
-impl RustiqueOptions {
-    pub fn default() -> Self {
+impl Default for RustiqueOptions {
+    fn default() -> Self {
         #[cfg(windows)]
         return Self::windows();
 
         #[cfg(unix)]
         return Self::unix();
     }
+}
 
+impl RustiqueOptions {
     #[cfg(windows)]
     pub fn windows() -> Self {
         if let Some(path) = std::env::var_os("APPDATA") {

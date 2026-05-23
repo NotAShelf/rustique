@@ -6,13 +6,13 @@ use crate::config::config_manager::get_config;
 use crate::consts::FILE_MODINFO_JSON;
 use crate::rustique_errors::RustiqueError;
 use crate::sync_structs::ModSyncInfo;
-use crate::traits::ref_ext::PathRef;
 use crate::traits::string_ext::StrLowerExt;
 use crate::utils::{extract_zip_metadata, split_modid_version};
 use crate::version_management::{parse_latest_version, parse_pinned_version};
 use futures::stream::{self, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::{debug, error, info};
@@ -50,20 +50,20 @@ impl Default for Installed {
 impl Installed {
     pub fn new() -> Self {
         Self {
-            mod_id: String::new(),
-            mod_name: String::new(),
+            mod_id: "".into(),
+            mod_name: "".into(),
             installed_file_path: None,
             old_file_path: None,
-            install_version: String::new(),
+            install_version: "".into(),
             success: false,
         }
     }
 }
 
 pub async fn install_manager(
-    mod_dir: impl PathRef,
+    mod_dir: impl AsRef<Path>,
     mods_requested: Vec<Install>,
-    installed_mods: HashMap<ModID, ModSyncInfo>,
+    installed_mods: HashMap<String, ModSyncInfo>,
 ) -> Result<Vec<Installed>, RustiqueError> {
     let mod_dir = mod_dir.as_ref();
     // this is the combined list of all mods installed, once download is completed, new mods will be
@@ -79,7 +79,7 @@ pub async fn install_manager(
             mod_id.clone(),
             Installed {
                 mod_id: mod_id.clone(),
-                mod_name: mod_sync_info.mod_name.clone(),
+                mod_name: mod_sync_info.mod_name.clone().into(),
                 installed_file_path: Some(mod_dir.join(mod_sync_info.file_name.clone())),
                 success: true,
                 old_file_path: Some(mod_dir.join(mod_sync_info.file_name.clone())),
@@ -145,7 +145,7 @@ pub async fn install_manager(
 
         let metadata_cache = Arc::new(std::sync::Mutex::new(HashMap::<PathBuf, ModInfo>::new()));
 
-        let dep_map: Vec<HashMap<String, String>> = stream::iter(recently_installed.clone())
+        let dep_map: Vec<HashMap<ModID, ModVersion>> = stream::iter(recently_installed.clone())
             .map(|installed_mod| {
                 let seen_mod_ids = seen_mod_ids.clone(); // this cheaper than cloning the entire hashmap, logic stays the same
                 let metadata_cache = Arc::clone(&metadata_cache);
@@ -195,7 +195,7 @@ pub async fn install_manager(
                 }
             })
             .buffer_unordered(concurrent_limit)
-            .filter_map(|res| futures::future::ready(res))
+            .filter_map(futures::future::ready)
             .collect()
             .await;
 
@@ -204,9 +204,9 @@ pub async fn install_manager(
             .flat_map(|deps| deps.into_iter())
             .map(|(mod_id, mod_version)| Install {
                 mod_id,
-                mod_name: String::new(),
+                mod_name: "".into(),
                 version_to_install: mod_version,
-                download_url: String::new(),
+                download_url: "".into(),
                 current_file_path: None,
             })
             .collect();
@@ -235,8 +235,8 @@ pub async fn install_manager(
 
         //TODO: double check needed values are present
         for mod_to_install in &mut needed_dependencies {
-            if let Some(res_mod) = result.get(mod_to_install.mod_id.as_str()) {
-                mod_to_install.mod_name = res_mod.mod_json.name.clone().unwrap_or_default();
+            if let Some(res_mod) = result.get(&mod_to_install.mod_id) {
+                mod_to_install.mod_name = res_mod.mod_json.name.clone().unwrap_or_default().into();
 
                 let pkg = config
                     .pkg

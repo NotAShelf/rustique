@@ -132,7 +132,7 @@ impl Tables {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Default)]
 pub struct TableSection {
     pub headers: FlattenMap,
     pub cells: FlattenMap,
@@ -147,15 +147,6 @@ impl Serialize for TableSection {
         map.serialize_entry("headers", &self.headers)?;
         map.serialize_entry("cells", &self.cells)?;
         map.end()
-    }
-}
-
-impl Default for TableSection {
-    fn default() -> Self {
-        Self {
-            headers: FlattenMap::new(),
-            cells: FlattenMap::new(),
-        }
     }
 }
 

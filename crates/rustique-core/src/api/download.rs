@@ -2,7 +2,6 @@ use crate::api::client::ApiClient;
 use crate::install_manager::{Install, Installed};
 use crate::rustique_errors::RustiqueError;
 use crate::rustique_errors::RustiqueError::UrlParseError;
-use crate::traits::ref_ext::PathRef;
 use indicatif::ProgressBar;
 use std::path::{Path, PathBuf};
 use tokio::io::AsyncWriteExt;
@@ -42,7 +41,7 @@ pub async fn download_requested_mods(
                 success: false,
             };
 
-            match download_mod(&dir, mod_request.download_url.clone(), &client).await {
+            match download_mod(&dir, mod_request.download_url.to_string(), &client).await {
                 Ok(installed_path) => {
                     info!(
                         "{} {}: {}",
@@ -142,14 +141,14 @@ pub async fn download_mod(
                 warn!("Download attempt {} failed for {}: {}", attempt, url, e);
 
                 // Clean up any partial downloads
-                if requested_file_path.exists() {
-                    if let Err(clean_err) = tokio::fs::remove_file(&requested_file_path).await {
-                        warn!(
-                            "Failed to clean up partial download {}: {}",
-                            requested_file_path.display(),
-                            clean_err
-                        );
-                    }
+                if requested_file_path.exists()
+                    && let Err(clean_err) = tokio::fs::remove_file(&requested_file_path).await
+                {
+                    warn!(
+                        "Failed to clean up partial download {}: {}",
+                        requested_file_path.display(),
+                        clean_err
+                    );
                 }
 
                 info!(
@@ -175,7 +174,7 @@ pub async fn download_mod(
 
 pub async fn download_and_verify(
     url: &Url,
-    file_path: impl PathRef,
+    file_path: impl AsRef<Path>,
     api_client: &ApiClient,
 ) -> Result<PathBuf, RustiqueError> {
     let file_path = file_path.as_ref();

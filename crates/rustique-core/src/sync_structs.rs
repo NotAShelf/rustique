@@ -1,10 +1,10 @@
 use crate::aliases::{ModFileName, ModID, ModName, ModVersion};
 use crate::rustique_errors::RustiqueError;
-use crate::traits::ref_ext::PathRef;
 use crate::utils::{get_current_time, prettify};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::default::Default;
+use std::path::Path;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tracing::debug;
@@ -12,7 +12,7 @@ use tracing::debug;
 #[derive(Deserialize, Serialize, Debug)]
 pub struct RustiqueSyncJson {
     #[serde(rename = "RustiqueSync")]
-    pub rustique_sync: HashMap<ModID, ModSyncInfo>,
+    pub rustique_sync: HashMap<String, ModSyncInfo>,
     pub last_sync: String,
 }
 
@@ -27,7 +27,7 @@ impl Default for RustiqueSyncJson {
 
 impl RustiqueSyncJson {
     // Let the calling function tell us where the sync file is located
-    pub async fn save(&self, file_location: impl PathRef) -> Result<(), RustiqueError> {
+    pub async fn save(&self, file_location: impl AsRef<Path>) -> Result<(), RustiqueError> {
         debug!("Attempting to save {:?}", self);
 
         let json = prettify(self, "Sync")?;

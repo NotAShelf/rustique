@@ -5,14 +5,17 @@ use tokio::fs::symlink;
 use tokio::fs::{symlink_dir, symlink_file};
 
 use crate::rustique_errors::RustiqueError;
-use crate::traits::ref_ext::PathRef;
 use std::fs;
+use std::path::Path;
 
 pub struct SymlinkManager;
 
 impl SymlinkManager {
     /// Manage symlink creation
-    pub async fn create(target: impl PathRef, link: impl PathRef) -> Result<(), RustiqueError> {
+    pub async fn create(
+        target: impl AsRef<Path>,
+        link: impl AsRef<Path>,
+    ) -> Result<(), RustiqueError> {
         let (target, link) = (target.as_ref(), link.as_ref());
         #[cfg(unix)]
         symlink(target, link)
@@ -33,14 +36,14 @@ impl SymlinkManager {
         Ok(())
     }
 
-    pub fn remove(path: impl PathRef) -> Result<(), RustiqueError> {
+    pub fn remove(path: impl AsRef<Path>) -> Result<(), RustiqueError> {
         fs::remove_file(path.as_ref()).map_err(|e| RustiqueError::SimpleError(e.to_string()))?;
 
         Ok(())
     }
 
     /// Checks if `path` is a symlink
-    pub fn exists(path: impl PathRef) -> bool {
+    pub fn exists(path: impl AsRef<Path>) -> bool {
         path.as_ref().is_symlink()
     }
 }

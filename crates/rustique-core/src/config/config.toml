@@ -29,7 +29,6 @@ mod_id = "armory"
 prevent_updates = true
 
 
-
 [modpack]
 
 # Modpack file will be downloaded from the mods website to here, at this point they are considered `installed`
@@ -56,39 +55,39 @@ pinned_game_version = "1.20.*"
 
 # this is just an example of all valid column names
 valid_columns_list = [
-    "name",
-    "mod_id",
-    "version",
-    "latest_version",
-    "dependencies",
-    "missing_dependencies",
-    "last_changelog",
-    "description",
-    "website",
-    "game_version",
-    "last_updated_local",
-    "last_updated_remote",
-    "pinned_version",
-    "has_backup",
-    "filename"
+  "name",
+  "mod_id",
+  "version",
+  "latest_version",
+  "dependencies",
+  "missing_dependencies",
+  "last_changelog",
+  "description",
+  "website",
+  "game_version",
+  "last_updated_local",
+  "last_updated_remote",
+  "pinned_version",
+  "has_backup",
+  "filename",
 ]
 
-valid_columns_search =[
-    "mod_id",
-    "asset_id",
-    "downloads",
-    "follows",
-    "trending",
-    "comments",
-    "name",
-    "summary",
-    "modid_strs",
-    "author",
-    "url_alias",
-    "side",
-    "type",
-    "tags",
-    "last_released"
+valid_columns_search = [
+  "mod_id",
+  "asset_id",
+  "downloads",
+  "follows",
+  "trending",
+  "comments",
+  "name",
+  "summary",
+  "modid_strs",
+  "author",
+  "url_alias",
+  "side",
+  "type",
+  "tags",
+  "last_released",
 ]
 
 

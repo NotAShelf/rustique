@@ -194,3 +194,9 @@ impl SearchQuery {
         results
     }
 }
+
+impl Default for SearchQuery {
+    fn default() -> Self {
+        Self::new()
+    }
+}

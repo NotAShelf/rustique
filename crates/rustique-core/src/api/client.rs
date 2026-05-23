@@ -2,7 +2,6 @@ use crate::aliases::{FileName, ModID, UrlString};
 use crate::api::api_structs::{GameVersions, Mod, Mods};
 use crate::consts::FILE_MODINFO_JSON;
 use crate::rustique_errors::RustiqueError;
-use crate::traits::ref_ext::StrRef;
 use clap::ValueEnum;
 use futures::future::join_all;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -12,8 +11,8 @@ use std::fmt::Display;
 use std::fmt::Write;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Semaphore;
 use tokio::task::JoinHandle;
-use tokio::time::sleep;
 use tracing::{debug, error, info};
 use yansi::Paint;
 
@@ -30,6 +29,12 @@ pub const RUSTIQUE_USER_AGENT: &str = concat!(
 #[derive(Debug, Clone)]
 pub struct ApiClient {
     agent: Arc<reqwest::Client>,
+}
+
+impl Default for ApiClient {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -115,7 +120,7 @@ impl ApiClient {
             })
     }
 
-    pub async fn fetch_mod(&self, mod_id: impl StrRef) -> Result<Mod, RustiqueError> {
+    pub async fn fetch_mod(&self, mod_id: impl AsRef<str>) -> Result<Mod, RustiqueError> {
         let mod_id = mod_id.as_ref();
         if mod_id.is_empty() {
             error!("Mod id is empty {}", mod_id);
@@ -200,15 +205,18 @@ impl ApiClient {
 
         // Create a vector to hold all our task handles
         let mut tasks: Vec<JoinHandle<Option<(ModID, Mod)>>> = Vec::with_capacity(valid_ids.len());
+        let semaphore = Arc::new(Semaphore::new(5));
 
         // Spawn a task for each mod
-        for (i, mod_id) in valid_ids.into_iter().enumerate() {
+        for mod_id in valid_ids {
             info!("ModID: {}", mod_id);
 
             let client = self.clone();
             let pb_clone = pb.clone();
+            let semaphore = semaphore.clone();
             // Spawn an async task for this mod
             let task = tokio::spawn(async move {
+                let _permit = semaphore.acquire_owned().await.ok()?;
                 match client.fetch_mod(&mod_id).await {
                     Ok(the_mod) => {
                         pb_clone.set_message(mod_id.to_string());
@@ -217,7 +225,7 @@ impl ApiClient {
                     }
                     Err(e) => {
                         error!("{mod_id} {e}");
-                        pb_clone.set_message(format!("Failed: {}", mod_id.red()));
+                        pb_clone.set_message(format!("Failed: {}", mod_id.to_string().red()));
                         pb_clone.inc(1);
                         None
                     }
@@ -225,11 +233,6 @@ impl ApiClient {
             });
 
             tasks.push(task);
-
-            // slight pause every 10 requests to not overwhelm the api
-            if i % 10 == 9 {
-                sleep(Duration::from_millis(100)).await;
-            }
         }
 
         let results_vec = join_all(tasks).await;
@@ -337,7 +340,7 @@ impl ApiClient {
             Self::cdn_uri_unstable(&download_str)
         };
 
-        Ok((cdn, download_str))
+        Ok((cdn.into(), download_str.into()))
     }
 
     pub async fn head(&self, uri: &str) -> Result<Response, RustiqueError> {
