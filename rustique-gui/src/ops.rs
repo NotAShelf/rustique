@@ -151,11 +151,25 @@ pub async fn update_all(mod_dir: PathBuf) -> Result<(), String> {
 
 pub async fn delete_mod(mod_dir: PathBuf, file_name: String) -> Result<String, String> {
     let file_path = mod_dir.join(&file_name);
-    if !file_path.exists() {
-        return Err(format!("{file_name} not found in {}", mod_dir.display()));
+    if file_path.exists() {
+        tokio::fs::remove_file(&file_path).await.map_err(err)?;
     }
-    tokio::fs::remove_file(&file_path).await.map_err(err)?;
+
+    let sync_file = mod_dir.join(FILE_RUSTIQUE_SYNC);
+    if sync_file.exists() {
+        if let Ok(mut data) = parse_json_file::<RustiqueSyncJson>(&sync_file).await {
+            data.rustique_sync
+                .retain(|_, info| info.file_name != file_name);
+            let _ = data.save(&sync_file).await;
+        }
+    }
+
     Ok(file_name)
+}
+
+pub async fn refresh_browse() -> Result<Vec<ModApi>, String> {
+    let path = Config::get_path().join(FILE_MOD_SEARCH_SYNC);
+    fetch_and_cache_mods(&path).await
 }
 
 pub async fn load_browse() -> Result<Vec<ModApi>, String> {
