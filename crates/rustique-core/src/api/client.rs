@@ -120,6 +120,27 @@ impl ApiClient {
             })
     }
 
+    /// Fetches mods compatible with the given MAJOR.MINOR game version (e.g. "1.20").
+    pub async fn fetch_mods_with_gameversion(&self, version: &str) -> Result<Mods, RustiqueError> {
+        let response = self
+            .agent
+            .get(Self::api_uri(&format!("mods?gameversion={version}")))
+            .send()
+            .await
+            .map_err(|e| RustiqueError::ApiError {
+                context: format!("fetch_mods_with_gameversion ({version}): "),
+                source: e,
+            })?;
+
+        response
+            .json::<Mods>()
+            .await
+            .map_err(|e| RustiqueError::ApiError {
+                context: format!("fetch_mods_with_gameversion (json) ({version}): "),
+                source: e,
+            })
+    }
+
     pub async fn fetch_mod(&self, mod_id: impl AsRef<str>) -> Result<Mod, RustiqueError> {
         let mod_id = mod_id.as_ref();
         if mod_id.is_empty() {

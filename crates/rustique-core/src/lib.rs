@@ -11,4 +11,5 @@ pub mod symlink_manager;
 pub mod sync_structs;
 pub mod traits;
 pub mod utils;
+pub mod version_filter;
 pub mod version_management;
