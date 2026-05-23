@@ -1,8 +1,8 @@
 [package]
-name = "rustique-cli"
+name    = "rustique-cli"
 version = "0.5.16"
 edition = "2024"
-authors = ["tekunogosu", "Violet4"]
+authors = [ "tekunogosu", "Violet4" ]
 
 
 [[bin]]
@@ -10,32 +10,32 @@ name = "rustique-cli"
 path = "src/main.rs"
 
 [dependencies]
-clap = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-serde_json5 = { workspace = true }
-dirs = { workspace = true }
-chrono = { workspace = true }
-url = { workspace = true }
-lenient_semver = { workspace = true }
-semver = { workspace = true }
-toml = { workspace = true }
-tracing = { workspace = true }
+async_zip          = { workspace = true }
+chrono             = { workspace = true }
+clap               = { workspace = true }
+clap_complete      = { workspace = true }
+color-eyre         = { workspace = true }
+dirs               = { workspace = true }
+futures            = { workspace = true }
+html2text          = { workspace = true }
+lenient_semver     = { workspace = true }
+num_cpus           = { workspace = true }
+reqwest            = { workspace = true }
+semver             = { workspace = true }
+serde              = { workspace = true }
+serde_json         = { workspace = true }
+serde_json5        = { workspace = true }
+tokio              = { workspace = true }
+toml               = { workspace = true }
+tracing            = { workspace = true }
 tracing-subscriber = { workspace = true }
-reqwest = { workspace = true }
-tokio = { workspace = true }
-clap_complete = { workspace = true }
-yansi = { workspace = true }
-color-eyre = { workspace = true }
-html2text = { workspace = true }
-async_zip = { workspace = true }
-futures = { workspace = true }
-num_cpus = { workspace = true }
-uuid = { workspace = true }
+url                = { workspace = true }
+uuid               = { workspace = true }
+yansi              = { workspace = true }
 #log = {workspace = true}
-csv = { workspace = true }
-indexmap = { workspace = true }
-indicatif = { workspace = true }
-comfy-table = { workspace = true }
+comfy-table   = { workspace = true }
+csv           = { workspace = true }
+indexmap      = { workspace = true }
+indicatif     = { workspace = true }
+is_elevated   = { workspace = true }
 rustique-core = { workspace = true }
-is_elevated = { workspace = true }
