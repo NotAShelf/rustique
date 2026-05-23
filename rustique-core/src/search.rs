@@ -70,15 +70,15 @@ pub enum SortBy {
 impl Sortable for ModApi {
     fn get_sort_by(&self, field: &SortBy) -> SortValue {
         match *field {
-            SortBy::Name => SortValue::Number(i64::from(self.mod_id)),
-            SortBy::AssetId => SortValue::Number(i64::from(self.asset_id)),
-            SortBy::Downloads => SortValue::Number(i64::from(self.downloads)),
-            SortBy::Follows => SortValue::Number(i64::from(self.follows)),
-            SortBy::Author => SortValue::Number(i64::from(self.trending_points)),
-            SortBy::Released => SortValue::Number(i64::from(self.comments)),
-            SortBy::Comments => SortValue::Text(self.name.clone().unwrap_or_default()),
-            SortBy::Trending => SortValue::Text(self.author.clone().unwrap_or_default()),
-            SortBy::ModId => SortValue::Date(self.last_released.clone().unwrap_or_default()),
+            SortBy::ModId => SortValue::Number(self.mod_id),
+            SortBy::AssetId => SortValue::Number(self.asset_id),
+            SortBy::Downloads => SortValue::Number(self.downloads),
+            SortBy::Follows => SortValue::Number(self.follows),
+            SortBy::Trending => SortValue::Number(self.trending_points),
+            SortBy::Comments => SortValue::Number(self.comments),
+            SortBy::Name => SortValue::Text(self.name.clone().unwrap_or_default()),
+            SortBy::Author => SortValue::Text(self.author.clone().unwrap_or_default()),
+            SortBy::Released => SortValue::Date(self.last_released.clone().unwrap_or_default()),
         }
     }
 }
