@@ -14,6 +14,7 @@ use futures::stream::{self, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tracing::{debug, error, info};
 
 // install & update both will obtain the info needed to fill this struct
@@ -142,34 +143,51 @@ pub async fn install_manager(
         let seen_mod_ids: std::collections::HashSet<String> =
             total_mods_seen.keys().map(|k| k.to_lowercase()).collect();
 
+        let metadata_cache = Arc::new(std::sync::Mutex::new(HashMap::<PathBuf, ModInfo>::new()));
+
         let dep_map: Vec<HashMap<String, String>> = stream::iter(recently_installed.clone())
             .map(|installed_mod| {
                 let seen_mod_ids = seen_mod_ids.clone(); // this cheaper than cloning the entire hashmap, logic stays the same
+                let metadata_cache = Arc::clone(&metadata_cache);
                 async move {
                     let path = installed_mod.installed_file_path?;
-                    match extract_zip_metadata::<ModInfo>(&path, FILE_MODINFO_JSON).await {
-                        Ok(mod_info) => {
-                            let filtered_deps: HashMap<_, _> = mod_info
-                                .dependencies
-                                .into_iter()
-                                .filter(|(dep_id, _)| {
-                                    !dep_id.lower_contains("game")
-                                        && !dep_id.lower_contains("creative")
-                                        && !dep_id.lower_contains("survival")
-                                        && !seen_mod_ids.contains(dep_id.to_lowercase().as_str())
-                                })
-                                .collect();
 
-                            if filtered_deps.is_empty() {
-                                None
-                            } else {
-                                Some(filtered_deps)
-                            }
+                    let mod_info: ModInfo = {
+                        let cached = {
+                            let lock = metadata_cache.lock().unwrap();
+                            lock.get(&path).cloned()
+                        };
+                        if let Some(cached) = cached {
+                            cached
+                        } else {
+                            extract_zip_metadata::<ModInfo>(&path, FILE_MODINFO_JSON)
+                                .await
+                                .inspect(|info| {
+                                    metadata_cache.lock().unwrap().insert(path.clone(), info.clone());
+                                })
+                                .map_err(|err| {
+                                    error!("Failed to extract zip metadata: {:?}", err);
+                                    err
+                                })
+                                .ok()?
                         }
-                        Err(err) => {
-                            error!("Failed to extract zip metadata: {:?}", err);
-                            None
-                        }
+                    };
+
+                    let filtered_deps: HashMap<_, _> = mod_info
+                        .dependencies
+                        .into_iter()
+                        .filter(|(dep_id, _)| {
+                            !dep_id.lower_contains("game")
+                                && !dep_id.lower_contains("creative")
+                                && !dep_id.lower_contains("survival")
+                                && !seen_mod_ids.contains(dep_id.to_lowercase().as_str())
+                        })
+                        .collect();
+
+                    if filtered_deps.is_empty() {
+                        None
+                    } else {
+                        Some(filtered_deps)
                     }
                 }
             })
