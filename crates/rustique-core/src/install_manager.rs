@@ -163,7 +163,10 @@ pub async fn install_manager(
                             extract_zip_metadata::<ModInfo>(&path, FILE_MODINFO_JSON)
                                 .await
                                 .inspect(|info| {
-                                    metadata_cache.lock().unwrap().insert(path.clone(), info.clone());
+                                    metadata_cache
+                                        .lock()
+                                        .unwrap()
+                                        .insert(path.clone(), info.clone());
                                 })
                                 .map_err(|err| {
                                     error!("Failed to extract zip metadata: {:?}", err);
