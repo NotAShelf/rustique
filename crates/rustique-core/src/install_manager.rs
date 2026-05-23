@@ -93,7 +93,7 @@ pub async fn install_manager(
 
     // This vec is filled and then consumed within download_requested_mods
     // each iteration of the loop will add new mods from dependencies to be processed next
-    let mut mods_requested = mods_requested.clone();
+    let mut mods_requested = mods_requested;
 
     // Hold all the mods that were processed during this request.
     // We let the calling function handle what to do with failed installs
@@ -121,11 +121,7 @@ pub async fn install_manager(
                     mods_processed.extend(processed_mods.clone());
                     processed_mods
                 }
-                Err(err) => {
-                    // TODO: This needs to be handled better I think..
-                    error!("Failed to install mods: {:?}", err);
-                    Vec::new()
-                }
+                Err(err) => return Err(err),
             };
 
         // add recently seen to total_mods_seen
@@ -154,7 +150,7 @@ pub async fn install_manager(
 
                     let mod_info: ModInfo = {
                         let cached = {
-                            let lock = metadata_cache.lock().unwrap();
+                            let lock = metadata_cache.lock().unwrap_or_else(|e| e.into_inner());
                             lock.get(&path).cloned()
                         };
                         if let Some(cached) = cached {
@@ -165,7 +161,7 @@ pub async fn install_manager(
                                 .inspect(|info| {
                                     metadata_cache
                                         .lock()
-                                        .unwrap()
+                                        .unwrap_or_else(|e| e.into_inner())
                                         .insert(path.clone(), info.clone());
                                 })
                                 .map_err(|err| {
