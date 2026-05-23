@@ -3,11 +3,11 @@ pub trait StrLowerExt {
     fn contains_str_only(&self, needle: &str) -> bool;
 }
 
-impl StrLowerExt for String {
+impl<T: AsRef<str>> StrLowerExt for T {
     /// checks if needs is in string and ignores case
     fn lower_contains(&self, needle: &str) -> bool {
         let needle_lower = needle.to_lowercase();
-        self.to_lowercase().contains(&needle_lower)
+        self.as_ref().to_lowercase().contains(&needle_lower)
     }
 
     /// Checks if needle is in string. Strips all special characters and whitespaces
@@ -23,6 +23,7 @@ impl StrLowerExt for String {
             .collect::<String>()
             .replace(&replace_chars[..], "");
         let me = self
+            .as_ref()
             .to_lowercase()
             .split_whitespace()
             .collect::<String>()
