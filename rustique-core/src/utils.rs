@@ -16,10 +16,10 @@ use comfy_table::Color;
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use dirs::home_dir;
 use futures::{StreamExt, stream};
-use owo_colors::OwoColorize;
 use serde_json::to_string_pretty;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use yansi::Paint;
 
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};

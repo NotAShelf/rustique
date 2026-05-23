@@ -3,7 +3,6 @@ use crate::commands::sync::daily_file_syncs;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::UTF8_FULL_CONDENSED;
 use comfy_table::{Cell, CellAlignment, ContentArrangement, Row, Table};
-use owo_colors::OwoColorize;
 use rustique_core::api::api_structs::{ModApi, ModsSearchFile};
 use rustique_core::config::config_manager::{Config, get_config};
 use rustique_core::config::config_structs::SearchColumn;
@@ -15,6 +14,7 @@ use rustique_core::search::{Field, SearchQuery, SortOrder};
 use rustique_core::utils::parse_json_file;
 use std::str::FromStr;
 use tracing::{debug, warn};
+use yansi::Paint;
 
 pub async fn parse_search_file() -> Result<ModsSearchFile, RustiqueError> {
     let file_path = Config::get_path().join(FILE_MOD_SEARCH_SYNC);

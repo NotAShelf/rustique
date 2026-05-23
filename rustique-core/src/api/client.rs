@@ -6,7 +6,6 @@ use crate::traits::ref_ext::StrRef;
 use clap::ValueEnum;
 use futures::future::join_all;
 use indicatif::{ProgressBar, ProgressStyle};
-use owo_colors::OwoColorize;
 use reqwest::Response;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
@@ -16,6 +15,7 @@ use std::time::Duration;
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::{debug, error, info};
+use yansi::Paint;
 
 const API_BASE_URL: &str = "https://mods.vintagestory.at/api";
 const VS_CDN_STABLE_RELEASE: &str = "https://cdn.vintagestory.at/gamefiles/stable";

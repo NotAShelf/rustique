@@ -4,7 +4,6 @@ use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::UTF8_FULL;
 use comfy_table::{Cell, CellAlignment, ContentArrangement, Row, Table};
 use csv::Writer;
-use owo_colors::OwoColorize;
 use rustique_core::aliases::{ModFileName, ModID};
 use rustique_core::api::api_structs::ModInfo;
 use rustique_core::config::config_manager::get_config;
@@ -26,6 +25,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Instant;
 use tracing::{debug, info};
+use yansi::Paint;
 
 fn grab_this_mod_deps(mod_info: &ModInfo, dep_list: &[Install]) -> String {
     let mut res = dep_list
@@ -484,7 +484,7 @@ pub async fn cmd_list(
         print!(
             "{} {}",
             "Total Mod Count:".bright_green().bold().on_black(),
-            installed_mods.len().to_string().bright_purple().on_black()
+            installed_mods.len().to_string().magenta().on_black()
         );
 
         if config.show_execution_time {
@@ -492,7 +492,7 @@ pub async fn cmd_list(
             println!(
                 " - {}: {}{}",
                 "List operation took".bright_green().bold().on_black(),
-                elapsed.bright_purple().on_black(),
+                elapsed.magenta().on_black(),
                 "s".bright_yellow().on_black()
             );
         }

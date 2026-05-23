@@ -25,7 +25,8 @@ tracing-subscriber = {workspace = true}
 reqwest = {workspace = true}
 tokio = {workspace = true}
 clap_complete = {workspace = true}
-owo-colors = {workspace = true}
+yansi = {workspace = true}
+color-eyre = {workspace = true}
 html2text = {workspace = true}
 async_zip = {workspace = true}
 futures = {workspace = true}

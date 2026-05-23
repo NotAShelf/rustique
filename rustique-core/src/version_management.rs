@@ -3,11 +3,11 @@ use crate::api::api_structs::Release;
 use crate::config::config_manager::Package;
 use crate::rustique_errors::RustiqueError;
 use crate::traits::ref_ext::StrRef;
-use owo_colors::OwoColorize;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use tracing::{debug, error, info};
+use yansi::Paint;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct RustiquePkgs {

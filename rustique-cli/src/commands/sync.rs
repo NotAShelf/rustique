@@ -1,6 +1,5 @@
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use comfy_table::{Attribute, Color};
-use owo_colors::OwoColorize;
 use rustique_core::aliases::ModID;
 use rustique_core::api::api_structs::{Mod, ModsSearchFile};
 use rustique_core::api::client::ApiClient;
@@ -23,6 +22,7 @@ use std::default::Default;
 use std::path::PathBuf;
 use std::time::Instant;
 use tracing::{debug, error, info, warn};
+use yansi::Paint;
 
 /// Use this function to retrieve the sync file for mod_dir.
 pub async fn get_sync_data(
@@ -137,7 +137,7 @@ pub async fn sync<V: AsRef<[Package]>>(
     debug!("INSTALLED_MODS in sync: {:?}", installed_mods);
 
     // clean sync data first so latest info takes priority
-    sync_data.rustique_sync.clear();
+    std::collections::HashMap::clear(&mut sync_data.rustique_sync);
 
     for (mod_filename, mod_info) in &installed_mods {
         debug!("MOD_INFO in sync: {:?}", mod_info);

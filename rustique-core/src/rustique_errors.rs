@@ -1,107 +1,65 @@
 use crate::consts::FILE_MODINFO_JSON;
 use crate::information_utils::notice;
 use comfy_table::{Attribute, Color};
-use owo_colors::OwoColorize;
-use std::fmt;
+use thiserror::Error;
 use tracing::{debug, error, info, warn};
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum RustiqueError {
+    #[error("Api Error: {context}: {source}")]
     ApiError {
         context: String,
+        #[source]
         source: reqwest::Error,
     },
+    #[error("Download Error: {0}")]
     DownloadError(String),
+    #[error("{context}: {source}")]
     IoError {
         context: String,
+        #[source]
         source: std::io::Error,
     },
+    #[error("Parse Error: {0}")]
     UrlParseError(url::ParseError),
+    #[error("Version Parse Error: {context}: {source}")]
     VersionError {
         context: String,
+        #[source]
         source: semver::Error,
     },
+    #[error("No Version Found: {0}")]
     NoVersionFound(String),
+    #[error("JsonParseError: {context}: {source}")]
     JsonError {
         context: String,
+        #[source]
         source: serde_json5::Error,
     },
+    #[error("{0}")]
     SimpleError(String),
+    #[error("Expected .zip, found folder. Did you forget to zip your mod? {0}")]
     ModNotZipped(String),
+    #[error("ZipError: {context}: {source}")]
     ZipError {
         context: String,
+        #[source]
         source: async_zip::error::ZipError,
     },
+    #[error("Config File Error: {0}")]
     ConfigFileError(String),
+    #[error(
+        "Malformed {FILE_MODINFO_JSON} discovered for {0}: Please contact the mod author. Rustique cannot process this mod."
+    )]
     MalformedModInfoJson(String),
+    #[error("{context}: {source}")]
     TomlError {
         context: String,
+        #[source]
         source: toml::de::Error,
     },
 }
-
-impl fmt::Display for RustiqueError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            RustiqueError::ApiError { context, source } => write!(
-                f,
-                "Api Error: {}: {}",
-                context,
-                source.to_string().red().bold()
-            ),
-            RustiqueError::DownloadError(e) => {
-                write!(f, "Download Error: {}", e.to_string().red().bold())
-            }
-            RustiqueError::IoError { context, source } => {
-                write!(f, "{}: {}", context, source.to_string().red().bold())
-            }
-            RustiqueError::UrlParseError(e) => {
-                write!(f, "Parse Error: {}", e.to_string().red().bold())
-            }
-            RustiqueError::SimpleError(e) => write!(f, "{e}"),
-            RustiqueError::ZipError { context, source } => write!(
-                f,
-                "ZipError: {}, {}",
-                context,
-                source.to_string().red().bold()
-            ),
-            RustiqueError::JsonError { context, source } => write!(
-                f,
-                "JsonParseError: {}, {}",
-                context,
-                source.to_string().red().bold()
-            ),
-            RustiqueError::VersionError { context, source } => write!(
-                f,
-                "Version Parse Error: {}, {}",
-                context,
-                source.to_string().red().bold()
-            ),
-            RustiqueError::NoVersionFound(e) => {
-                write!(f, "No Version Found: {}", e.to_string().red().bold())
-            }
-            RustiqueError::ModNotZipped(e) => write!(
-                f,
-                "Expected .zip, found folder. Did you forget to zip your mod? {}",
-                e.to_string().yellow().bold()
-            ),
-            RustiqueError::ConfigFileError(e) => {
-                write!(f, "Config File Error: {}", e.to_string().red().bold())
-            }
-            RustiqueError::MalformedModInfoJson(e) => write!(
-                f,
-                "Malformed {FILE_MODINFO_JSON} discovered for {}: Please contact the mod author. Rustique cannot process this mod.",
-                e.to_string().red().bold()
-            ),
-            RustiqueError::TomlError { context, source } => {
-                write!(f, "{}: {}", context, source.to_string().red().bold())
-            }
-        }
-    }
-}
-
-impl std::error::Error for RustiqueError {}
 
 impl From<std::io::Error> for RustiqueError {
     fn from(e: std::io::Error) -> Self {
@@ -129,25 +87,25 @@ pub fn handle_err_result<T>(
         let color = match msg_fn {
             ErrorMsgFn::Debug => {
                 if !nice_error {
-                    debug!("{} :{}", context.yellow().bold(), e.to_string().red())
+                    debug!("{context}: {e}")
                 }
                 Color::DarkYellow
             }
             ErrorMsgFn::Error => {
                 if !nice_error {
-                    error!("{} :{}", context.yellow().bold(), e.to_string().red())
+                    error!("{context}: {e}")
                 }
                 Color::Red
             }
             ErrorMsgFn::Info => {
                 if !nice_error {
-                    info!("{} :{}", context.yellow().bold(), e.to_string().red())
+                    info!("{context}: {e}")
                 }
                 Color::Blue
             }
             ErrorMsgFn::Warn => {
                 if !nice_error {
-                    warn!("{} :{}", context.yellow().bold(), e.to_string().red())
+                    warn!("{context}: {e}")
                 }
                 Color::Yellow
             }

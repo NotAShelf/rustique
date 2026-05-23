@@ -14,7 +14,6 @@ use comfy_table::{Attribute, Color};
 use crate::commands::download::download_file;
 use async_zip::tokio::read::fs::ZipFileReader;
 use futures::AsyncReadExt;
-use owo_colors::OwoColorize;
 use rustique_core::api::client::ApiClient;
 use rustique_core::rustique_errors::RustiqueError;
 use rustique_core::traits::ref_ext::{PathRef, StrRef};
@@ -23,6 +22,7 @@ use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tracing::info;
 use uuid::Uuid;
+use yansi::Paint;
 
 pub struct RustiqueUpdater {
     /// This is the name of the binary inside the archive

@@ -5,7 +5,6 @@
 
 use crate::commands::arg_structs::modpack_args::MPCreateArgs;
 use crate::commands::search::parse_search_file;
-use owo_colors::OwoColorize;
 use rustique_core::aliases::{ModID, ModVersion};
 use rustique_core::api::api_structs::{ModInfo, StringOrInt};
 use rustique_core::config::config_manager::get_config;
@@ -20,6 +19,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::{info, warn};
+use yansi::Paint;
 
 pub fn collect_mp_create_args(args: &MPCreateArgs) -> Result<ModInfo, RustiqueError> {
     Ok(ModInfo {

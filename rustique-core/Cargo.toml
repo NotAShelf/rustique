@@ -13,7 +13,8 @@ serde_json = {workspace = true}
 tokio = {workspace = true}
 async_zip = {workspace = true}
 reqwest = {workspace = true}
-owo-colors = {workspace = true}
+yansi = {workspace = true}
+thiserror = {workspace = true}
 chrono = {workspace = true}
 indicatif = {workspace = true}
 futures = {workspace = true}

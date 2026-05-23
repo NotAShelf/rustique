@@ -1,6 +1,5 @@
 use crate::commands::sync::get_sync_data;
 use comfy_table::{Attribute, Color};
-use owo_colors::OwoColorize;
 use rustique_core::aliases::ModID;
 use rustique_core::config::config_manager::get_config;
 use rustique_core::information_utils::{display_installation_results, elapsed_footer, notice};
@@ -13,6 +12,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Instant;
 use tracing::debug;
+use yansi::Paint;
 
 #[allow(clippy::map_entry)]
 pub async fn update_mods<V: AsRef<[ModID]>>(

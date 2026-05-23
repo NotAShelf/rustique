@@ -12,13 +12,13 @@ use crate::modpack::mp_install::{mp_install, mp_install_missing_deps};
 use crate::modpack::mp_update::mp_update;
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use comfy_table::{Attribute, Color};
-use owo_colors::OwoColorize;
 use rustique_core::config::config_manager::get_config;
 use rustique_core::information_utils::{command_output, display_table, notice};
 use rustique_core::traits::ref_ext::PathRef;
 use std::path::Path;
 use std::process::exit;
 use tracing::{error, info, warn};
+use yansi::Paint;
 
 pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl PathRef) {
     match &commands.subcommand {

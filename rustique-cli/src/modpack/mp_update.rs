@@ -3,7 +3,6 @@ use crate::commands::sync::{get_sync_data, sync};
 use crate::commands::update::update_mods;
 use crate::modpack::mp_install::check_if_mp_enabled;
 use comfy_table::Color;
-use owo_colors::OwoColorize;
 use rustique_core::aliases::ModID;
 use rustique_core::api::api_structs::ModInfo;
 use rustique_core::api::client::ApiClient;
@@ -18,6 +17,7 @@ use rustique_core::utils::{delete_file, extract_zip_metadata, split_modid_versio
 use std::collections::HashMap;
 use std::path::Path;
 use tracing::{debug, error, info};
+use yansi::Paint;
 
 pub async fn mp_update(args: MPUpdateArgs) -> Result<(), RustiqueError> {
     let config = get_config().read().await;

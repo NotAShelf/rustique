@@ -31,11 +31,11 @@ use crate::updater::update_manager;
 use crate::updater::update_manager::check_for_update;
 use clap::{CommandFactory, FromArgMatches};
 use clap_complete::{Shell, generate};
+use color_eyre::Result;
 use comfy_table::{Attribute, Color};
 use commands::sync::sync;
 use commands::update::update_mods;
 use dirs::home_dir;
-use owo_colors::OwoColorize;
 use rustique_core::config::config_manager::{get_config, init_config};
 use rustique_core::information_utils::{elapsed_footer, notice};
 use rustique_core::rustique_errors::{ErrorMsgFn, handle_err_result};
@@ -49,19 +49,22 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, exit};
 use std::time::Instant;
 use tracing::{debug, error, info, warn};
+use yansi::Paint;
 
-fn main() {
+fn main() -> Result<()> {
+    color_eyre::install()?;
+
     // Initialize the Tokio runtime
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .expect("Failed to create Tokio runtime");
 
-    rt.block_on(async_main());
+    rt.block_on(async_main())
 }
 
 #[allow(clippy::too_many_lines)]
-async fn async_main() {
+async fn async_main() -> Result<()> {
     let cmd = Cli::command();
     let cli = Cli::from_arg_matches(&cmd.get_matches()).unwrap_or_else(|_| {
         error!("Error attempting to parse CLI arguments: ");
@@ -175,7 +178,7 @@ async fn async_main() {
             if args.game_versions.is_some() {
                 let Ok(sorted_versions) = sorted_game_versions().await else {
                     warn!("Unable to get game versions. Run \"rustique sync\" and try again.");
-                    return;
+                    return Ok(());
                 };
                 let filter_by = &args.game_versions.clone().unwrap_or("1.20".into());
 
@@ -341,6 +344,7 @@ async fn async_main() {
             }
         }
     }
+    Ok(())
 }
 
 async fn handle_sync_call(mod_dir: impl PathRef, quiet: bool) {

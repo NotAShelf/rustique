@@ -4,7 +4,6 @@
 use crate::commands::install::install_missing_deps;
 use crate::commands::sync::sync;
 use comfy_table::{Attribute, Color};
-use owo_colors::OwoColorize;
 use rustique_core::aliases::{ModID, ModVersion};
 use rustique_core::api::api_structs::ModInfo;
 use rustique_core::api::client::ApiClient;
@@ -22,6 +21,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::process::exit;
+use yansi::Paint;
 
 use std::time::Instant;
 use tracing::{debug, error, info, warn};

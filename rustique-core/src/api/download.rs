@@ -4,11 +4,11 @@ use crate::rustique_errors::RustiqueError;
 use crate::rustique_errors::RustiqueError::UrlParseError;
 use crate::traits::ref_ext::PathRef;
 use indicatif::ProgressBar;
-use owo_colors::OwoColorize;
 use std::path::{Path, PathBuf};
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info, warn};
 use url::Url;
+use yansi::Paint;
 
 pub async fn download_requested_mods(
     mod_dir: &Path,
@@ -96,22 +96,22 @@ pub async fn download_mod(
     download_url: String,
     api_client: &ApiClient,
 ) -> Result<PathBuf, RustiqueError> {
-    let filename_from_api = &download_url
-        .split('=')
-        .next_back()
-        .unwrap_or_default()
+    let url = Url::parse(download_url.as_str()).map_err(UrlParseError)?;
+    debug!("Trying to download url: {}", url.to_string());
+
+    let filename_from_api = url
+        .path_segments()
+        .and_then(|mut s| s.next_back())
+        .unwrap_or("download.zip")
         .replace(' ', "_");
 
     // Replace any spaces in the downloaded file with _ . This makes it easier to process later
     let filename_fix = mod_dir
         .to_path_buf()
-        .join(filename_from_api)
+        .join(&filename_from_api)
         .to_string_lossy()
         .to_string();
     let requested_file_path = PathBuf::from(filename_fix);
-
-    let url = Url::parse(download_url.as_str()).map_err(UrlParseError)?;
-    debug!("Trying to download url: {}", url.clone().to_string());
 
     // Retry logic - attempt download up to 3 times
     let max_retries = 3;
@@ -161,7 +161,8 @@ pub async fn download_mod(
 
                 // Add a small delay between retries
                 if attempt < max_retries {
-                    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                    let delay = std::time::Duration::from_secs(2u64.pow((attempt - 1) as u32));
+                    tokio::time::sleep(delay).await;
                 }
             }
         }

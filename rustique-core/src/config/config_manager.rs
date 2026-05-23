@@ -7,7 +7,6 @@ use crate::traits::ref_ext::PathRef;
 use chrono::Local;
 use comfy_table::{Attribute, CellAlignment, Color};
 use dirs::home_dir;
-use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
@@ -16,6 +15,7 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
+use yansi::Paint;
 
 #[derive(Deserialize, Serialize, Debug)]
 #[allow(clippy::struct_excessive_bools)]
