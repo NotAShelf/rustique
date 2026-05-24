@@ -1,7 +1,7 @@
 use crate::aliases::{DownloadURL, ModID, ModVersion, PinnedVersionInfo};
-use crate::api::api_structs::Release;
-use crate::config::config_manager::Package;
-use crate::rustique_errors::RustiqueError;
+use crate::api::structs::Release;
+use crate::config::manager::Package;
+use crate::errors::RustiqueError;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

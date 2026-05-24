@@ -5,8 +5,8 @@ use iced::widget::{
     Column, button, column, container, pick_list, row, scrollable, text, text_input,
 };
 use iced::{Alignment, Color, Element, Fill};
-use rustique_core::api::api_structs::ModApi;
-use rustique_core::version_filter::VersionFilter;
+use rustique_core::api::structs::ModApi;
+use rustique_core::version::filter::VersionFilter;
 
 use crate::app::Message;
 use crate::widgets::{

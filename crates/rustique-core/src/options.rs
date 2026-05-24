@@ -1,4 +1,4 @@
-use crate::config::config_manager::get_config;
+use crate::config::manager::get_config;
 use crate::utils::get_expanded_path;
 #[cfg(windows)]
 use comfy_table::{Attribute, Color};

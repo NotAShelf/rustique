@@ -13,7 +13,7 @@ use crate::modpack::mp_update::mp_update;
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use comfy_table::{Attribute, Color};
 use rustique_core::aliases::{ModID, ModVersion};
-use rustique_core::config::config_manager::get_config;
+use rustique_core::config::manager::get_config;
 use rustique_core::information_utils::{command_output, display_table, notice};
 use std::path::Path;
 use std::process::exit;

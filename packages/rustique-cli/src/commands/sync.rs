@@ -1,21 +1,19 @@
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use comfy_table::{Attribute, Color};
 use rustique_core::aliases::ModID;
-use rustique_core::api::api_structs::{Mod, ModsSearchFile};
 use rustique_core::api::client::ApiClient;
-use rustique_core::config::config_manager::{Config, Package, get_config};
+use rustique_core::api::structs::{Mod, ModsSearchFile};
+use rustique_core::config::manager::{Config, Package, get_config};
 use rustique_core::consts::{FILE_GAME_VERSION_SYNC, FILE_MOD_SEARCH_SYNC, FILE_RUSTIQUE_SYNC};
+use rustique_core::errors::RustiqueError;
 use rustique_core::information_utils::{CellData, display_table, elapsed_footer, notice};
-use rustique_core::rustique_errors::RustiqueError;
 use rustique_core::symlink_manager::SymlinkManager;
-use rustique_core::sync_structs::{GameVersionSync, ModSyncInfo, RustiqueSyncJson};
+use rustique_core::sync::structs::{GameVersionSync, ModSyncInfo, RustiqueSyncJson};
 use rustique_core::utils::{
     extract_all_mods_metadata, find_mod_id, get_current_time, parse_json_file, prettify,
     split_modid_version, timestamp_older_than, write_json_file,
 };
-use rustique_core::version_management::{
-    parse_latest_version, parse_pinned_version, parse_version,
-};
+use rustique_core::version::manager::{parse_latest_version, parse_pinned_version, parse_version};
 use std::collections::HashMap;
 use std::default::Default;
 use std::path::Path;

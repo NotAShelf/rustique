@@ -1,6 +1,6 @@
 use iced::widget::{button, checkbox, column, row, scrollable, text, text_input};
 use iced::{Alignment, Color, Element, Fill};
-use rustique_core::version_filter::minor_version;
+use rustique_core::version::filter::minor_version;
 
 use crate::app::Message;
 use crate::widgets::{section_card, section_label, status_element};

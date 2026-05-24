@@ -1,7 +1,7 @@
 use crate::api::client::ApiClient;
-use crate::install_manager::{Install, Installed};
-use crate::rustique_errors::RustiqueError;
-use crate::rustique_errors::RustiqueError::UrlParseError;
+use crate::errors::RustiqueError;
+use crate::errors::RustiqueError::UrlParseError;
+use crate::installer::manager::{Install, Installed};
 use indicatif::ProgressBar;
 use std::path::{Path, PathBuf};
 use tokio::io::AsyncWriteExt;

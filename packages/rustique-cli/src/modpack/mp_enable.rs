@@ -6,9 +6,9 @@ use std::path::Path;
 use is_elevated::is_elevated;
 
 use rustique_core::aliases::ModID;
-use rustique_core::config::config_manager::get_config;
+use rustique_core::config::manager::get_config;
+use rustique_core::errors::RustiqueError;
 use rustique_core::information_utils::{CellData, display_table, notice};
-use rustique_core::rustique_errors::RustiqueError;
 use rustique_core::symlink_manager::SymlinkManager;
 use rustique_core::utils::extract_all_mods_metadata;
 #[cfg(windows)]

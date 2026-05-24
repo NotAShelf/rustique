@@ -3,11 +3,9 @@ use crate::commands::arg_structs::config_table_args::{
 };
 use clap::ValueEnum;
 use comfy_table::{Attribute, CellAlignment, Color};
-use rustique_core::config::config_manager::get_config;
-use rustique_core::config::config_structs::{
-    CellAttr, CellColor, ColumnProperties, TableSection, Tables,
-};
 use rustique_core::config::flatten_map::FlattenMap;
+use rustique_core::config::manager::get_config;
+use rustique_core::config::structs::{CellAttr, CellColor, ColumnProperties, TableSection, Tables};
 use rustique_core::information_utils::{CellData, display_table, notice};
 use std::fmt::Display;
 use std::process::exit;

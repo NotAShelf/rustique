@@ -6,16 +6,16 @@ use crate::commands::install::install_missing_deps;
 use crate::commands::sync::sync;
 use comfy_table::{Attribute, Color};
 use rustique_core::aliases::{ModID, ModVersion};
-use rustique_core::api::api_structs::ModInfo;
 use rustique_core::api::client::ApiClient;
 use rustique_core::api::download::download_requested_mods;
-use rustique_core::config::config_manager::{Package, get_config};
+use rustique_core::api::structs::ModInfo;
+use rustique_core::config::manager::{Package, get_config};
 use rustique_core::consts::FILE_MODINFO_JSON;
+use rustique_core::errors::RustiqueError;
 use rustique_core::information_utils::{command_output, display_table, elapsed_footer, notice};
-use rustique_core::install_manager::{Install, Installed, install_manager};
-use rustique_core::rustique_errors::RustiqueError;
+use rustique_core::installer::manager::{Install, Installed, install_manager};
 use rustique_core::utils::{extract_all_mods_metadata, extract_zip_metadata};
-use rustique_core::version_management::{
+use rustique_core::version::manager::{
     parse_download_url_from_version, parse_latest_version, parse_pinned_version,
 };
 use std::collections::HashMap;

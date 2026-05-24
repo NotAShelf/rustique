@@ -1,6 +1,6 @@
 use crate::aliases::{FileName, ModID, ModVersion};
 use crate::consts::FILE_MODINFO_JSON;
-use crate::rustique_errors::RustiqueError;
+use crate::errors::RustiqueError;
 use async_zip::ZipEntryBuilder;
 use async_zip::tokio::write::ZipFileWriter;
 use serde::{Deserialize, Deserializer, Serialize};

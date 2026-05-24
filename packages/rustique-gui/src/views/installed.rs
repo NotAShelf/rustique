@@ -1,7 +1,7 @@
 use iced::widget::{Column, button, column, container, row, scrollable, text, text_input};
 use iced::{Alignment, Color, Element, Fill, Length};
-use rustique_core::sync_structs::ModSyncInfo;
-use rustique_core::version_filter::minor_version;
+use rustique_core::sync::structs::ModSyncInfo;
+use rustique_core::version::filter::minor_version;
 
 use crate::app::Message;
 use crate::widgets::{

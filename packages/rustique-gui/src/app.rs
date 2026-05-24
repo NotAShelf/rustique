@@ -5,9 +5,9 @@ use std::time::Duration;
 use iced::widget::{column, container, row, rule, text};
 use iced::{Element, Fill, Task, Theme};
 
-use rustique_core::api::api_structs::ModApi;
-use rustique_core::sync_structs::ModSyncInfo;
-use rustique_core::version_filter::{VersionFilter, minor_version};
+use rustique_core::api::structs::ModApi;
+use rustique_core::sync::structs::ModSyncInfo;
+use rustique_core::version::filter::{VersionFilter, minor_version};
 
 use crate::ops::SettingsData;
 use crate::views::browse::{BrowseView, SortBy};
@@ -113,7 +113,7 @@ fn clear_after(msg: Message) -> Task<Message> {
 
 impl App {
     pub fn new() -> (Self, Task<Message>) {
-        let _ = rustique_core::config::config_manager::init_config();
+        let _ = rustique_core::config::manager::init_config();
         let app = App {
             current_view: View::Browse,
             mod_dir: PathBuf::new(),

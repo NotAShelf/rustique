@@ -1,5 +1,5 @@
 use clap::{Args, ValueEnum};
-use rustique_core::config::config_structs::ListColumn;
+use rustique_core::config::structs::ListColumn;
 use std::path::PathBuf;
 
 #[derive(Args, Debug, Clone)]

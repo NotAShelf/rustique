@@ -1,7 +1,7 @@
 use clap::ArgGroup;
 use clap::Args;
 use rustique_core::api::client::{VSExecutabletype, VSOSType, VSWinInstallerType};
-use rustique_core::rustique_errors::RustiqueError;
+use rustique_core::errors::RustiqueError;
 
 #[derive(Args, Debug)]
 pub struct DownloadArgs {

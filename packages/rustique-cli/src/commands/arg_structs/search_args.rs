@@ -1,5 +1,5 @@
 use clap::Args;
-use rustique_core::config::config_structs::CellColor;
+use rustique_core::config::structs::CellColor;
 use rustique_core::search::{Field, SortBy, SortOrder};
 
 #[derive(Args)]

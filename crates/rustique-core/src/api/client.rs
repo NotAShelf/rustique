@@ -1,7 +1,7 @@
 use crate::aliases::{FileName, ModID, UrlString};
-use crate::api::api_structs::{GameVersions, Mod, Mods};
+use crate::api::structs::{GameVersions, Mod, Mods};
 use crate::consts::FILE_MODINFO_JSON;
-use crate::rustique_errors::RustiqueError;
+use crate::errors::RustiqueError;
 use clap::ValueEnum;
 use futures::future::join_all;
 use indicatif::{ProgressBar, ProgressStyle};

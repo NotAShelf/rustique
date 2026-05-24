@@ -16,7 +16,7 @@ use crate::commands::download::download_file;
 use async_zip::tokio::read::fs::ZipFileReader;
 use futures::AsyncReadExt;
 use rustique_core::api::client::ApiClient;
-use rustique_core::rustique_errors::RustiqueError;
+use rustique_core::errors::RustiqueError;
 use tokio::fs;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;

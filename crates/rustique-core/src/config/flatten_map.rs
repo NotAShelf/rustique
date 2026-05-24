@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use crate::config::config_structs::{CellAttr, CellColor, ColumnProperties};
+use crate::config::structs::{CellAttr, CellColor, ColumnProperties};
 use clap::ValueEnum;
 use indexmap::IndexMap;
 use serde::ser::SerializeMap;

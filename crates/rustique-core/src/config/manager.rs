@@ -1,8 +1,8 @@
 use crate::aliases::ModVersion;
-use crate::config::config_structs::Tables;
+use crate::config::structs::Tables;
+use crate::errors::RustiqueError;
 use crate::information_utils::{CellData, RustiqueMessage, rustique_message};
-use crate::rustique_errors::RustiqueError;
-use crate::rustique_options::RustiqueOptions;
+use crate::options::RustiqueOptions;
 use chrono::Local;
 use comfy_table::{Attribute, CellAlignment, Color};
 use dirs::home_dir;

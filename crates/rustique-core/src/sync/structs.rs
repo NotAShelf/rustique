@@ -1,5 +1,5 @@
 use crate::aliases::{ModFileName, ModID, ModName, ModVersion};
-use crate::rustique_errors::RustiqueError;
+use crate::errors::RustiqueError;
 use crate::utils::{get_current_time, prettify};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

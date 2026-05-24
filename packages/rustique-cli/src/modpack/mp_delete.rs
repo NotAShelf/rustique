@@ -3,9 +3,9 @@ use std::path::Path;
 // this prevents people from unintentionally deleting an active modpack.
 
 use rustique_core::aliases::{ModFileName, ModID};
-use rustique_core::api::api_structs::ModInfo;
-use rustique_core::config::config_manager::get_config;
-use rustique_core::rustique_errors::RustiqueError;
+use rustique_core::api::structs::ModInfo;
+use rustique_core::config::manager::get_config;
+use rustique_core::errors::RustiqueError;
 use rustique_core::utils::{delete_file, extract_all_mods_metadata};
 use std::collections::HashMap;
 use tracing::info;

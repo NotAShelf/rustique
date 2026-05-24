@@ -6,13 +6,13 @@
 use crate::commands::arg_structs::modpack_args::MPCreateArgs;
 use crate::commands::search::parse_search_file;
 use rustique_core::aliases::{ModID, ModVersion};
-use rustique_core::api::api_structs::{ModInfo, StringOrInt};
-use rustique_core::config::config_manager::get_config;
+use rustique_core::api::structs::{ModInfo, StringOrInt};
+use rustique_core::config::manager::get_config;
 use rustique_core::consts::FILE_MODINFO_JSON;
-use rustique_core::rustique_errors::RustiqueError;
+use rustique_core::errors::RustiqueError;
 use rustique_core::symlink_manager::SymlinkManager;
 use rustique_core::utils::{extract_all_mods_metadata, find_mod_id};
-use rustique_core::version_management::parse_version;
+use rustique_core::version::manager::parse_version;
 use semver::Version;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

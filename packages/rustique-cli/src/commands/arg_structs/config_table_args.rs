@@ -1,6 +1,6 @@
 use clap::{ArgGroup, ValueEnum};
 use clap::{Args, Subcommand};
-use rustique_core::config::config_structs::{CellAttr, CellColor, ListColumn, SearchColumn};
+use rustique_core::config::structs::{CellAttr, CellColor, ListColumn, SearchColumn};
 
 #[derive(Args)]
 pub struct TableArgs {

@@ -1,6 +1,6 @@
-use crate::api::api_structs::ModApi;
+use crate::api::structs::ModApi;
 use crate::traits::option_ext::OptionExt;
-use crate::traits::search_traits::{Searchable, SortValue, Sortable};
+use crate::traits::search::{Searchable, SortValue, Sortable};
 use crate::traits::vec_ext::VecStringExt;
 use clap::ValueEnum;
 use std::cmp::Ordering;

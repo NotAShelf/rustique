@@ -4,7 +4,7 @@ use tokio::fs::symlink;
 #[cfg(windows)]
 use tokio::fs::{symlink_dir, symlink_file};
 
-use crate::rustique_errors::RustiqueError;
+use crate::errors::RustiqueError;
 use std::fs;
 use std::path::Path;
 

@@ -5,18 +5,18 @@ use comfy_table::presets::UTF8_FULL;
 use comfy_table::{Cell, CellAlignment, ContentArrangement, Row, Table};
 use csv::Writer;
 use rustique_core::aliases::ModFileName;
-use rustique_core::api::api_structs::ModInfo;
-use rustique_core::config::config_manager::get_config;
-use rustique_core::config::config_structs::{CellAttr, CellColor, ListColumn, TableSection};
+use rustique_core::api::structs::ModInfo;
+use rustique_core::config::manager::get_config;
+use rustique_core::config::structs::{CellAttr, CellColor, ListColumn, TableSection};
+use rustique_core::errors::RustiqueError;
 use rustique_core::information_utils::prep_cell;
-use rustique_core::install_manager::Install;
-use rustique_core::rustique_errors::RustiqueError;
-use rustique_core::sync_structs::ModSyncInfo;
+use rustique_core::installer::manager::Install;
+use rustique_core::sync::structs::ModSyncInfo;
 use rustique_core::utils::{
     extract_all_mods_metadata, format_for_csv, gather_dependencies, gather_missing_dependencies,
     html_parse, normalize_whitespace, split_modid_version,
 };
-use rustique_core::version_management::parse_version;
+use rustique_core::version::manager::parse_version;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Write, stdout};

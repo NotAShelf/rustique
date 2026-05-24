@@ -1,5 +1,5 @@
-use crate::config::config_structs::{CellAttr, CellColor};
-use crate::install_manager::Installed;
+use crate::config::structs::{CellAttr, CellColor};
+use crate::installer::manager::Installed;
 use comfy_table::ContentArrangement::Dynamic;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::{UTF8_BORDERS_ONLY, UTF8_FULL_CONDENSED, UTF8_HORIZONTAL_ONLY};

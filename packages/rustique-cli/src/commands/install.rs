@@ -2,17 +2,17 @@ use crate::commands::sync::get_sync_data;
 use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use rustique_core::aliases::{ModID, ModVersion};
 use rustique_core::api::client::ApiClient;
-use rustique_core::config::config_manager::{Package, get_config};
+use rustique_core::config::manager::{Package, get_config};
+use rustique_core::errors::RustiqueError;
+use rustique_core::errors::RustiqueError::SimpleError;
 use rustique_core::information_utils::{
     command_output, display_installation_results, display_table,
 };
-use rustique_core::install_manager::{Install, install_manager};
-use rustique_core::rustique_errors::RustiqueError;
-use rustique_core::rustique_errors::RustiqueError::SimpleError;
+use rustique_core::installer::manager::{Install, install_manager};
 use rustique_core::utils::{
     extract_all_mods_metadata, gather_missing_dependencies, split_modid_version,
 };
-use rustique_core::version_management::{parse_latest_version, parse_pinned_version};
+use rustique_core::version::manager::{parse_latest_version, parse_pinned_version};
 use std::collections::HashMap;
 use std::path::Path;
 use tracing::{debug, info};

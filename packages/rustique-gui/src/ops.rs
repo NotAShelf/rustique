@@ -2,20 +2,20 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use futures::future::join_all;
-use rustique_core::api::api_structs::{ModApi, ModInfo, ModsSearchFile};
 use rustique_core::api::client::ApiClient;
-use rustique_core::config::config_manager::{Config, get_config};
+use rustique_core::api::structs::{ModApi, ModInfo, ModsSearchFile};
+use rustique_core::config::manager::{Config, get_config};
 use rustique_core::consts::{FILE_GAME_VERSION_SYNC, FILE_MOD_SEARCH_SYNC, FILE_RUSTIQUE_SYNC};
-use rustique_core::install_manager::{Install, install_manager};
+use rustique_core::installer::manager::{Install, install_manager};
 use rustique_core::search::SearchQuery;
-use rustique_core::sync_structs::{GameVersionSync, ModSyncInfo, RustiqueSyncJson};
+use rustique_core::sync::structs::{GameVersionSync, ModSyncInfo, RustiqueSyncJson};
 use rustique_core::utils::{
     extract_all_mods_metadata, get_current_time, parse_json_file, prettify, write_json_file,
 };
-use rustique_core::version_filter::{
+use rustique_core::version::filter::{
     VersionFilter, minor_versions_at_least, unique_minor_versions,
 };
-use rustique_core::version_management::parse_latest_version;
+use rustique_core::version::manager::parse_latest_version;
 
 const FAVORITES_FILE: &str = "rustique-gui-favorites.json";
 

@@ -1,11 +1,11 @@
 use crate::commands::sync::get_sync_data;
 use comfy_table::{Attribute, Color};
 use rustique_core::aliases::ModID;
-use rustique_core::config::config_manager::get_config;
+use rustique_core::config::manager::get_config;
+use rustique_core::errors::RustiqueError;
 use rustique_core::information_utils::{display_installation_results, elapsed_footer, notice};
-use rustique_core::install_manager::{Install, Installed, install_manager};
-use rustique_core::rustique_errors::RustiqueError;
-use rustique_core::sync_structs::ModSyncInfo;
+use rustique_core::installer::manager::{Install, Installed, install_manager};
+use rustique_core::sync::structs::ModSyncInfo;
 use rustique_core::utils::{backup_older_files, remove_older_files, split_modid_version};
 use std::collections::HashMap;
 use std::path::Path;

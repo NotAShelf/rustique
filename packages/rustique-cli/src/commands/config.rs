@@ -5,15 +5,15 @@ use crate::commands::config_table::config_table;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::UTF8_FULL_CONDENSED;
 use comfy_table::{Attribute, CellAlignment, Color, ContentArrangement, Row, Table};
-use rustique_core::config::config_manager::{Config, Package, get_config};
-use rustique_core::config::config_structs::{CellAttr, CellColor};
+use rustique_core::config::manager::{Config, Package, get_config};
+use rustique_core::config::structs::{CellAttr, CellColor};
 use rustique_core::consts::FILE_GAME_VERSION_SYNC;
 use rustique_core::information_utils::{
     CellData, command_output, display_table, notice, prep_cell,
 };
-use rustique_core::sync_structs::GameVersionSync;
+use rustique_core::sync::structs::GameVersionSync;
 use rustique_core::utils::{get_expanded_path, parse_json_file};
-use rustique_core::version_management::parse_version;
+use rustique_core::version::manager::parse_version;
 use std::path::PathBuf;
 use std::process::exit;
 use tracing::warn;

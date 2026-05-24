@@ -5,11 +5,11 @@ use comfy_table::{Attribute, CellAlignment, Color};
 use reqwest::Client;
 use reqwest::header::ACCEPT;
 use rustique_core::api::client::RUSTIQUE_USER_AGENT;
+use rustique_core::errors::RustiqueError;
 use rustique_core::information_utils::{
     CellData, RustiqueMessage, command_output, display_table, notice, rustique_message,
 };
-use rustique_core::rustique_errors::RustiqueError;
-use rustique_core::version_management::parse_version;
+use rustique_core::version::manager::parse_version;
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
