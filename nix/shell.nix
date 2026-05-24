@@ -12,7 +12,7 @@
   vulkan-loader,
   wayland,
 }: let
-  rustiquePkg = self.packages.${stdenv.hostPlatform.system}.rustique;
+  lithicPkg = self.packages.${stdenv.hostPlatform.system}.lithic;
   runtimeInputs = lib.makeLibraryPath [
     libxkbcommon
     vulkan-loader
@@ -20,8 +20,8 @@
   ];
 in
   mkShell {
-    name = "rustique-dev";
-    inputsFrom = [rustiquePkg];
+    name = "lithic-dev";
+    inputsFrom = [lithicPkg];
 
     nativeBuildInputs = [
       clang

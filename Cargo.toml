@@ -4,7 +4,7 @@ resolver = "3"
 
 
 [workspace.dependencies]
-rustique-core = { path = "crates/rustique-core", version = "0.5.16" }
+lithic-core = { path = "crates/lithic-core", version = "0.5.16" }
 
 async_zip          = { version = "0.0.18", features = [ "tokio", "tokio-fs", "deflate" ] }
 chrono             = { version = "0.4.42" }

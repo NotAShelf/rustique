@@ -44,8 +44,8 @@
         pkgs = pkgsForEach system;
         craneLib = mkCraneLib pkgs;
       in {
-        rustique = pkgs.callPackage ./nix/package.nix {inherit craneLib;};
-        default = self.packages.${system}.rustique;
+        lithic = pkgs.callPackage ./nix/package.nix {inherit craneLib;};
+        default = self.packages.${system}.lithic;
       }
     );
 

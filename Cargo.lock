@@ -2403,6 +2403,84 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
 
 [[package]]
+name = "lithic-cli"
+version = "0.5.16"
+dependencies = [
+ "async_zip",
+ "chrono",
+ "clap",
+ "clap_complete",
+ "color-eyre",
+ "comfy-table",
+ "csv",
+ "dirs",
+ "futures",
+ "html2text",
+ "indexmap",
+ "indicatif",
+ "is_elevated",
+ "lenient_semver",
+ "lithic-core",
+ "num_cpus",
+ "reqwest",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_json5",
+ "tokio",
+ "toml",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+ "yansi",
+]
+
+[[package]]
+name = "lithic-core"
+version = "0.5.16"
+dependencies = [
+ "async_zip",
+ "chrono",
+ "clap",
+ "comfy-table",
+ "dirs",
+ "futures",
+ "html2text",
+ "indexmap",
+ "indicatif",
+ "lenient_semver",
+ "num_cpus",
+ "reqwest",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_json5",
+ "thiserror 2.0.18",
+ "tokio",
+ "toml",
+ "tracing",
+ "url",
+ "yansi",
+]
+
+[[package]]
+name = "lithic-gui"
+version = "0.5.16"
+dependencies = [
+ "dirs",
+ "futures",
+ "human_format",
+ "iced",
+ "lithic-core",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "litrs"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3666,84 +3744,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
 dependencies = [
  "semver",
-]
-
-[[package]]
-name = "rustique-cli"
-version = "0.5.16"
-dependencies = [
- "async_zip",
- "chrono",
- "clap",
- "clap_complete",
- "color-eyre",
- "comfy-table",
- "csv",
- "dirs",
- "futures",
- "html2text",
- "indexmap",
- "indicatif",
- "is_elevated",
- "lenient_semver",
- "num_cpus",
- "reqwest",
- "rustique-core",
- "semver",
- "serde",
- "serde_json",
- "serde_json5",
- "tokio",
- "toml",
- "tracing",
- "tracing-subscriber",
- "url",
- "uuid",
- "yansi",
-]
-
-[[package]]
-name = "rustique-core"
-version = "0.5.16"
-dependencies = [
- "async_zip",
- "chrono",
- "clap",
- "comfy-table",
- "dirs",
- "futures",
- "html2text",
- "indexmap",
- "indicatif",
- "lenient_semver",
- "num_cpus",
- "reqwest",
- "semver",
- "serde",
- "serde_json",
- "serde_json5",
- "thiserror 2.0.18",
- "tokio",
- "toml",
- "tracing",
- "url",
- "yansi",
-]
-
-[[package]]
-name = "rustique-gui"
-version = "0.5.16"
-dependencies = [
- "dirs",
- "futures",
- "human_format",
- "iced",
- "rustique-core",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

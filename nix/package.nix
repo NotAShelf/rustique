@@ -7,7 +7,7 @@
   wayland,
   vulkan-loader,
 }: let
-  pname = "rustique";
+  pname = "lithic";
   version = "0.6.0";
 
   nativeBuildInputs = [pkg-config];
@@ -53,11 +53,11 @@ in
 
       meta = {
         description = "Fast, cross-platform mod manager for Vintage Story";
-        homepage = "https://github.com/notashelf/rustique";
+        homepage = "https://github.com/notashelf/lithic";
         license = lib.licenses.mit;
         maintainers = with lib.maintainers; [NotAShelf];
         platforms = lib.platforms.linux ++ lib.platforms.darwin;
-        mainProgram = "rustique";
+        mainProgram = "lithic";
       };
     }
   )
