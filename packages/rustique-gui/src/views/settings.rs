@@ -1,5 +1,6 @@
 use iced::widget::{button, checkbox, column, row, scrollable, text, text_input};
-use iced::{Alignment, Element, Fill};
+use iced::{Alignment, Color, Element, Fill};
+use rustique_core::version_filter::minor_version;
 
 use crate::app::Message;
 use crate::widgets::{section_card, section_label, status_element};
@@ -46,6 +47,30 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
         .spacing(16),
     );
 
+    let browse_gate_note: Element<'_, Message> = if state.pinned_game_version.is_empty() {
+        iced::widget::Space::new().into()
+    } else if let Some(minor) = minor_version(&state.pinned_game_version) {
+        text(format!("Browse will filter to v{minor}"))
+            .size(11)
+            .color(Color {
+                r: 0.45,
+                g: 0.75,
+                b: 0.50,
+                a: 1.0,
+            })
+            .into()
+    } else {
+        text("Invalid version format. Try a valid format, e.g., 1.20.0")
+            .size(11)
+            .color(Color {
+                r: 0.75,
+                g: 0.40,
+                b: 0.40,
+                a: 1.0,
+            })
+            .into()
+    };
+
     let game_card = section_card(
         column![
             section_label("GAME VERSION"),
@@ -53,6 +78,7 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
                 section_label("PINNED GAME VERSION  (leave empty for latest)"),
                 text_input("e.g. 1.20.0", &state.pinned_game_version)
                     .on_input(Message::SettingGameVersion),
+                browse_gate_note,
             ]
             .spacing(6),
         ]

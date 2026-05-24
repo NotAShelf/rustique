@@ -7,6 +7,7 @@ use iced::{Element, Fill, Task, Theme};
 
 use rustique_core::api::api_structs::ModApi;
 use rustique_core::sync_structs::ModSyncInfo;
+use rustique_core::version_filter::{VersionFilter, minor_version};
 
 use crate::ops::SettingsData;
 use crate::views::browse::{BrowseView, SortBy};
@@ -70,6 +71,9 @@ pub enum Message {
     ExportDone(Result<String, String>),
     FavoritesLoaded(Result<HashSet<String>, String>),
     ToggleBrowseDetail(String),
+    BrowseVersionFilterChanged(VersionFilter),
+    BrowseVersionFilterLoaded(Result<Vec<ModApi>, String>),
+    GameVersionsLoaded(Result<Vec<String>, String>),
 
     // Status clearing
     ClearBrowseStatus,
@@ -128,6 +132,10 @@ impl App {
             Task::perform(crate::ops::load_settings(), Message::SettingsLoaded),
             Task::perform(crate::ops::load_browse(), Message::BrowseLoaded),
             Task::perform(crate::ops::load_favorites(), Message::FavoritesLoaded),
+            Task::perform(
+                crate::ops::load_game_versions(),
+                Message::GameVersionsLoaded,
+            ),
         ]);
         (app, task)
     }
@@ -357,6 +365,7 @@ impl App {
 
             // --- Browse ---
             Message::BrowseLoaded(Ok(mods)) => {
+                self.browse.full_mods = mods.clone();
                 self.browse.all_mods = mods;
                 self.browse.loading = false;
                 apply_browse_filter(&mut self.browse);
@@ -373,11 +382,24 @@ impl App {
                 Task::perform(crate::ops::refresh_browse(), Message::BrowseRefreshed)
             }
             Message::BrowseRefreshed(Ok(mods)) => {
-                self.browse.all_mods = mods;
-                self.browse.loading = false;
+                self.browse.full_mods = mods.clone();
                 self.browse.status = Some("Mod database refreshed.".to_string());
-                apply_browse_filter(&mut self.browse);
-                clear_after(Message::ClearBrowseStatus)
+                if matches!(self.browse.version_filter, VersionFilter::Any) {
+                    self.browse.all_mods = mods;
+                    self.browse.loading = false;
+                    apply_browse_filter(&mut self.browse);
+                    clear_after(Message::ClearBrowseStatus)
+                } else {
+                    let filter = self.browse.version_filter.clone();
+                    let versions = self.browse.available_minor_versions.clone();
+                    Task::batch([
+                        Task::perform(
+                            crate::ops::fetch_versioned_browse(filter, versions),
+                            Message::BrowseVersionFilterLoaded,
+                        ),
+                        clear_after(Message::ClearBrowseStatus),
+                    ])
+                }
             }
             Message::BrowseRefreshed(Err(e)) => {
                 self.browse.loading = false;
@@ -505,7 +527,7 @@ impl App {
             Message::SettingsLoaded(Ok(data)) => {
                 self.settings.mod_dir = data.mod_dir.clone();
                 self.settings.game_download_dir = data.game_download_dir;
-                self.settings.pinned_game_version = data.pinned_game_version;
+                self.settings.pinned_game_version = data.pinned_game_version.clone();
                 self.settings.zip_mod_files = data.zip_mod_files;
                 self.settings.backup_mods = data.backup_mods;
                 self.settings.backup_mods_dir = data.backup_mods_dir;
@@ -515,6 +537,18 @@ impl App {
                 self.settings.modpack_dir = data.modpack_dir;
                 self.settings.dirty = false;
                 self.mod_dir = PathBuf::from(data.mod_dir);
+                if let Some(minor) = minor_version(&data.pinned_game_version) {
+                    self.browse.version_filter = VersionFilter::Exact(minor);
+                    if !self.browse.available_minor_versions.is_empty() {
+                        let filter = self.browse.version_filter.clone();
+                        let versions = self.browse.available_minor_versions.clone();
+                        self.browse.loading = true;
+                        return Task::perform(
+                            crate::ops::fetch_versioned_browse(filter, versions),
+                            Message::BrowseVersionFilterLoaded,
+                        );
+                    }
+                }
                 Task::none()
             }
             Message::SettingsLoaded(Err(e)) => {
@@ -590,11 +624,81 @@ impl App {
                 self.settings.dirty = false;
                 self.settings.status = Some("Settings saved.".to_string());
                 self.mod_dir = PathBuf::from(&self.settings.mod_dir);
+                let new_filter = minor_version(&self.settings.pinned_game_version)
+                    .map(VersionFilter::Exact)
+                    .unwrap_or(VersionFilter::Any);
+                if new_filter != self.browse.version_filter {
+                    self.browse.version_filter = new_filter.clone();
+                    match new_filter {
+                        VersionFilter::Any => {
+                            self.browse.all_mods = self.browse.full_mods.clone();
+                            apply_browse_filter(&mut self.browse);
+                        }
+                        _ if !self.browse.available_minor_versions.is_empty() => {
+                            self.browse.loading = true;
+                            let versions = self.browse.available_minor_versions.clone();
+                            return Task::batch([
+                                Task::perform(
+                                    crate::ops::fetch_versioned_browse(new_filter, versions),
+                                    Message::BrowseVersionFilterLoaded,
+                                ),
+                                clear_after(Message::ClearSettingsStatus),
+                            ]);
+                        }
+                        _ => {}
+                    }
+                }
                 clear_after(Message::ClearSettingsStatus)
             }
             Message::SettingsSaved(Err(e)) => {
                 self.settings.status = Some(format!("Save failed: {e}"));
                 clear_after(Message::ClearSettingsStatus)
+            }
+
+            // --- Version filtering ---
+            Message::GameVersionsLoaded(Ok(versions)) => {
+                self.browse.available_minor_versions = versions;
+                if !matches!(self.browse.version_filter, VersionFilter::Any) {
+                    let filter = self.browse.version_filter.clone();
+                    let vers = self.browse.available_minor_versions.clone();
+                    self.browse.loading = true;
+                    Task::perform(
+                        crate::ops::fetch_versioned_browse(filter, vers),
+                        Message::BrowseVersionFilterLoaded,
+                    )
+                } else {
+                    Task::none()
+                }
+            }
+            Message::GameVersionsLoaded(Err(_)) => Task::none(),
+            Message::BrowseVersionFilterChanged(filter) => {
+                self.browse.version_filter = filter.clone();
+                match filter {
+                    VersionFilter::Any => {
+                        self.browse.all_mods = self.browse.full_mods.clone();
+                        apply_browse_filter(&mut self.browse);
+                        Task::none()
+                    }
+                    _ => {
+                        self.browse.loading = true;
+                        let versions = self.browse.available_minor_versions.clone();
+                        Task::perform(
+                            crate::ops::fetch_versioned_browse(filter, versions),
+                            Message::BrowseVersionFilterLoaded,
+                        )
+                    }
+                }
+            }
+            Message::BrowseVersionFilterLoaded(Ok(mods)) => {
+                self.browse.all_mods = mods;
+                self.browse.loading = false;
+                apply_browse_filter(&mut self.browse);
+                Task::none()
+            }
+            Message::BrowseVersionFilterLoaded(Err(e)) => {
+                self.browse.loading = false;
+                self.browse.status = Some(format!("Version filter failed: {e}"));
+                clear_after(Message::ClearBrowseStatus)
             }
         }
     }
@@ -653,7 +757,7 @@ impl App {
 
         let content: Element<'_, Message> = match &self.current_view {
             View::Browse => browse::view(&self.browse),
-            View::Installed => installed::view(&self.installed),
+            View::Installed => installed::view(&self.installed, &self.settings.pinned_game_version),
             View::Settings => settings::view(&self.settings),
         };
 

@@ -1,9 +1,12 @@
 use std::collections::{HashMap, HashSet};
 
 use human_format::Formatter;
-use iced::widget::{Column, button, column, container, row, scrollable, text, text_input};
+use iced::widget::{
+    Column, button, column, container, pick_list, row, scrollable, text, text_input,
+};
 use iced::{Alignment, Color, Element, Fill};
 use rustique_core::api::api_structs::ModApi;
+use rustique_core::version_filter::VersionFilter;
 
 use crate::app::Message;
 use crate::widgets::{
@@ -37,6 +40,7 @@ pub const PAGE_SIZE: usize = 30;
 pub struct BrowseView {
     pub query: String,
     pub all_mods: Vec<ModApi>,
+    pub full_mods: Vec<ModApi>,
     pub filtered: Vec<ModApi>,
     pub loading: bool,
     pub status: Option<String>,
@@ -49,6 +53,8 @@ pub struct BrowseView {
     pub installed_mods: HashMap<String, String>,
     pub confirm_delete: Option<String>,
     pub expanded_mod: Option<String>,
+    pub version_filter: VersionFilter,
+    pub available_minor_versions: Vec<String>,
 }
 
 impl Default for BrowseView {
@@ -56,6 +62,7 @@ impl Default for BrowseView {
         Self {
             query: String::new(),
             all_mods: Vec::new(),
+            full_mods: Vec::new(),
             filtered: Vec::new(),
             loading: false,
             status: None,
@@ -68,6 +75,8 @@ impl Default for BrowseView {
             installed_mods: HashMap::new(),
             confirm_delete: None,
             expanded_mod: None,
+            version_filter: VersionFilter::Any,
+            available_minor_versions: Vec::new(),
         }
     }
 }
@@ -116,6 +125,60 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
     .spacing(8)
     .align_y(Alignment::Center);
 
+    let version_controls = {
+        let version_options: Vec<String> = std::iter::once("All versions".to_string())
+            .chain(state.available_minor_versions.iter().cloned())
+            .collect();
+
+        let selected_label = match &state.version_filter {
+            VersionFilter::Any => "All versions".to_string(),
+            VersionFilter::Exact(v) | VersionFilter::AtLeast(v) => v.clone(),
+        };
+
+        let current_is_at_least = matches!(state.version_filter, VersionFilter::AtLeast(_));
+        let vlist = pick_list(version_options, Some(selected_label), move |s: String| {
+            if s == "All versions" {
+                Message::BrowseVersionFilterChanged(VersionFilter::Any)
+            } else if current_is_at_least {
+                Message::BrowseVersionFilterChanged(VersionFilter::AtLeast(s))
+            } else {
+                Message::BrowseVersionFilterChanged(VersionFilter::Exact(s))
+            }
+        })
+        .width(140);
+
+        let mode_btn: Element<'_, Message> = match &state.version_filter {
+            VersionFilter::Any => iced::widget::Space::new().into(),
+            VersionFilter::Exact(v) => button(text("=").size(12))
+                .on_press(Message::BrowseVersionFilterChanged(VersionFilter::AtLeast(
+                    v.clone(),
+                )))
+                .padding([5, 8])
+                .style(active_tab_style)
+                .into(),
+            VersionFilter::AtLeast(v) => button(text("≥").size(12))
+                .on_press(Message::BrowseVersionFilterChanged(VersionFilter::Exact(
+                    v.clone(),
+                )))
+                .padding([5, 8])
+                .style(active_tab_style)
+                .into(),
+        };
+
+        row![
+            text("Version:").size(12).color(Color {
+                r: 0.55,
+                g: 0.55,
+                b: 0.55,
+                a: 1.0,
+            }),
+            vlist,
+            mode_btn,
+        ]
+        .spacing(6)
+        .align_y(Alignment::Center)
+    };
+
     let sort_controls = {
         let sorts = [
             SortBy::Downloads,
@@ -151,7 +214,11 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
         let count_label = if state.loading {
             String::new()
         } else {
-            format!("{} mods", state.filtered.len())
+            match &state.version_filter {
+                VersionFilter::Any => format!("{} mods", state.filtered.len()),
+                VersionFilter::Exact(v) => format!("{} mods · v{v}", state.filtered.len()),
+                VersionFilter::AtLeast(v) => format!("{} mods · v{v}+", state.filtered.len()),
+            }
         };
 
         row(sort_btns.collect::<Vec<_>>())
@@ -174,11 +241,13 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
             .into()
     } else if state.filtered.is_empty() {
         let msg = if state.show_favorites_only && state.favorites.is_empty() {
-            "No favorites yet. Click ☆ on any mod to add it."
+            "No favorites yet. Click ☆ on any mod to add it.".to_string()
+        } else if !matches!(state.version_filter, VersionFilter::Any) && state.query.is_empty() {
+            format!("No mods found for {}.", state.version_filter.label())
         } else if !state.query.is_empty() {
-            "No results found."
+            "No results found.".to_string()
         } else {
-            "No mods found."
+            "No mods found.".to_string()
         };
         container(text(msg).size(14))
             .center(Fill)
@@ -240,6 +309,7 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
     column![
         header,
         search_bar,
+        version_controls,
         sort_controls,
         status_element(state.status.as_deref()),
         body,

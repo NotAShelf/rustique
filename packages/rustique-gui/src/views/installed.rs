@@ -1,6 +1,7 @@
 use iced::widget::{Column, button, column, container, row, scrollable, text, text_input};
 use iced::{Alignment, Color, Element, Fill, Length};
 use rustique_core::sync_structs::ModSyncInfo;
+use rustique_core::version_filter::minor_version;
 
 use crate::app::Message;
 use crate::widgets::{
@@ -31,7 +32,7 @@ pub struct InstalledView {
     pub search: String,
 }
 
-pub fn view(state: &InstalledView) -> Element<'_, Message> {
+pub fn view<'a>(state: &'a InstalledView, pinned_game_version: &str) -> Element<'a, Message> {
     let header = row![
         text("Installed").size(22).width(Fill),
         button("Sync").on_press(Message::SyncMods),
@@ -61,7 +62,7 @@ pub fn view(state: &InstalledView) -> Element<'_, Message> {
             .into()
     } else {
         match state.tab {
-            InstalledTab::Mods => mods_body(state),
+            InstalledTab::Mods => mods_body(state, pinned_game_version),
             InstalledTab::Modpacks => packs_body(state),
         }
     };
@@ -95,7 +96,7 @@ fn tab_btn(label: &str, active: bool, msg: Message) -> Element<'_, Message> {
     }
 }
 
-fn mods_body(state: &InstalledView) -> Element<'_, Message> {
+fn mods_body<'a>(state: &'a InstalledView, pinned_game_version: &str) -> Element<'a, Message> {
     if state.mods.is_empty() {
         return container(
             column![
@@ -128,12 +129,13 @@ fn mods_body(state: &InstalledView) -> Element<'_, Message> {
         .filter(|m| q.is_empty() || m.mod_name.to_lowercase().contains(&q))
         .collect();
 
+    let pinned_minor = minor_version(pinned_game_version);
     let rows: Vec<Element<'_, Message>> = displayed
         .iter()
         .map(|m| {
             let pending = state.confirm_delete.as_deref() == Some(m.file_name.as_ref());
             let expanded = state.expanded_mod.as_deref() == Some(m.file_name.as_ref());
-            mod_row(m, pending, expanded)
+            mod_row(m, pending, expanded, pinned_minor.as_deref())
         })
         .collect();
 
@@ -245,7 +247,12 @@ fn packs_body<'a>(state: &'a InstalledView) -> Element<'a, Message> {
     }
 }
 
-fn mod_row(m: &ModSyncInfo, pending_delete: bool, expanded: bool) -> Element<'_, Message> {
+fn mod_row<'a>(
+    m: &'a ModSyncInfo,
+    pending_delete: bool,
+    expanded: bool,
+    pinned_minor: Option<&str>,
+) -> Element<'a, Message> {
     let needs_update =
         !m.latest_known_version.is_empty() && m.installed_version != m.latest_known_version;
 
@@ -316,6 +323,61 @@ fn mod_row(m: &ModSyncInfo, pending_delete: bool, expanded: bool) -> Element<'_,
     })
     .padding([2, 4]);
 
+    let compat_chip: Element<'_, Message> = match pinned_minor {
+        None => iced::widget::Space::new().into(),
+        Some(minor) => {
+            let compatible = m
+                .game_versions
+                .iter()
+                .any(|v| minor_version(v).as_deref() == Some(minor));
+            let unknown = m.game_versions.is_empty();
+
+            let (symbol, bg) = if unknown {
+                (
+                    "?",
+                    Color {
+                        r: 0.30,
+                        g: 0.30,
+                        b: 0.35,
+                        a: 1.0,
+                    },
+                )
+            } else if compatible {
+                (
+                    "✓",
+                    Color {
+                        r: 0.15,
+                        g: 0.50,
+                        b: 0.20,
+                        a: 1.0,
+                    },
+                )
+            } else {
+                (
+                    "✗",
+                    Color {
+                        r: 0.55,
+                        g: 0.18,
+                        b: 0.18,
+                        a: 1.0,
+                    },
+                )
+            };
+
+            container(text(symbol).size(11).color(Color::WHITE))
+                .padding([3, 7])
+                .style(move |_: &iced::Theme| iced::widget::container::Style {
+                    background: Some(bg.into()),
+                    border: iced::Border {
+                        radius: 10.0.into(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .into()
+        }
+    };
+
     let main_row: Element<'_, Message> = row![
         expand_btn,
         column![
@@ -329,6 +391,7 @@ fn mod_row(m: &ModSyncInfo, pending_delete: bool, expanded: bool) -> Element<'_,
         ]
         .spacing(2)
         .width(Fill),
+        compat_chip,
         update_badge,
         delete_area,
     ]

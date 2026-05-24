@@ -9,6 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 dirs               = { workspace = true }
+futures            = { workspace = true }
 human_format       = { workspace = true }
 iced               = { workspace = true }
 rustique-core      = { workspace = true }
