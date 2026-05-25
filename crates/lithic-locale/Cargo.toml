@@ -1,0 +1,13 @@
+[package]
+name                   = "lithic-locale"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+readme.workspace       = true
+
+[dependencies]
+fluent      = { workspace = true }
+unic-langid = { workspace = true }
+
+[build-dependencies]
