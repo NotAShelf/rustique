@@ -5,6 +5,7 @@ pub mod consts;
 pub mod errors;
 pub mod information_utils;
 pub mod installer;
+pub mod instance;
 pub mod options;
 pub mod search;
 pub mod symlink_manager;

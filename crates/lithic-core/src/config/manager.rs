@@ -2,6 +2,7 @@ use crate::aliases::ModVersion;
 use crate::config::structs::Tables;
 use crate::errors::LithicError;
 use crate::information_utils::{CellData, LithicMessage, lithic_message};
+use crate::instance::{GameVersionInstall, InstanceConfig};
 use crate::options::LithicOptions;
 use chrono::Local;
 use comfy_table::{Attribute, CellAlignment, Color};
@@ -70,6 +71,15 @@ pub struct Config {
 
     #[serde(default)]
     pub table: Tables,
+
+    #[serde(default)]
+    pub instances: Vec<InstanceConfig>,
+
+    #[serde(default)]
+    pub active_instance_id: Option<String>,
+
+    #[serde(default)]
+    pub game_versions: Vec<GameVersionInstall>,
 }
 
 #[cfg(windows)]
@@ -180,6 +190,9 @@ impl Default for Config {
             table: Tables::with_defaults(),
             modpacks: ModPacks::default(),
             check_for_updates: true,
+            instances: Vec::new(),
+            active_instance_id: None,
+            game_versions: Vec::new(),
 
             #[cfg(windows)]
             update_default_windows_loc: true,
