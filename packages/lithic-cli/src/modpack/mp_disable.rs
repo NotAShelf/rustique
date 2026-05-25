@@ -9,9 +9,9 @@ use is_elevated::is_elevated;
 use lithic_core::aliases::ModID;
 use lithic_core::config::manager::get_config;
 use lithic_core::errors::LithicError;
-use lithic_core::information_utils::notice;
 use lithic_core::symlink_manager::SymlinkManager;
 use lithic_core::utils::extract_all_mods_metadata;
+use lithic_core::utils::notice;
 #[cfg(windows)]
 use std::process::exit;
 

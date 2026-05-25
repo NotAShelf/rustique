@@ -9,9 +9,9 @@ use lithic_core::api::structs::ModInfo;
 use lithic_core::config::manager::get_config;
 use lithic_core::config::structs::{CellAttr, CellColor, ListColumn, TableSection};
 use lithic_core::errors::LithicError;
-use lithic_core::information_utils::prep_cell;
 use lithic_core::installer::manager::Install;
 use lithic_core::sync::structs::ModSyncInfo;
+use lithic_core::utils::prep_cell;
 use lithic_core::utils::{
    extract_all_mods_metadata, format_for_csv, gather_dependencies, gather_missing_dependencies, html_parse,
    normalize_whitespace, split_modid_version,

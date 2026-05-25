@@ -1,9 +1,9 @@
 use crate::aliases::ModVersion;
 use crate::config::structs::Tables;
 use crate::errors::LithicError;
-use crate::information_utils::{CellData, LithicMessage, lithic_message};
 use crate::instance::{GameVersionInstall, InstanceConfig};
 use crate::options::LithicOptions;
+use crate::utils::{CellData, LithicMessage, lithic_message};
 use chrono::Local;
 use comfy_table::{Attribute, CellAlignment, Color};
 use dirs::home_dir;

@@ -6,7 +6,7 @@ use comfy_table::{Attribute, CellAlignment, Color};
 use lithic_core::config::flatten_map::FlattenMap;
 use lithic_core::config::manager::get_config;
 use lithic_core::config::structs::{CellAttr, CellColor, ColumnProperties, TableSection, Tables};
-use lithic_core::information_utils::{CellData, display_table, notice};
+use lithic_core::utils::{CellData, display_table, notice};
 use std::fmt::Display;
 use std::process::exit;
 use tracing::error;

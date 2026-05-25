@@ -1,14 +1,14 @@
 use crate::config::manager::get_config;
 use crate::utils::get_expanded_path;
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "macos"))]
 use comfy_table::{Attribute, Color};
 #[cfg(unix)]
 use dirs::home_dir;
 use std::path::PathBuf;
 use tracing::{info, warn};
 
-#[cfg(windows)]
-use crate::information_utils::notice;
+#[cfg(any(windows, target_os = "macos"))]
+use crate::utils::notice;
 
 #[derive(Clone, Debug)]
 pub struct LithicOptions {

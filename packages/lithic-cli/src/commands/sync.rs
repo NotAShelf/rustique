@@ -6,9 +6,9 @@ use lithic_core::api::structs::{Mod, ModsSearchFile};
 use lithic_core::config::manager::{Config, Package, get_config};
 use lithic_core::consts::{FILE_GAME_VERSION_SYNC, FILE_LITHIC_SYNC, FILE_MOD_SEARCH_SYNC};
 use lithic_core::errors::LithicError;
-use lithic_core::information_utils::{CellData, display_table, elapsed_footer, notice};
 use lithic_core::symlink_manager::SymlinkManager;
 use lithic_core::sync::structs::{GameVersionSync, LithicSyncJson, ModSyncInfo};
+use lithic_core::utils::{CellData, display_table, elapsed_footer, notice};
 use lithic_core::utils::{
    extract_all_mods_metadata, find_mod_id, get_current_time, parse_json_file, prettify, split_modid_version,
    timestamp_older_than, write_json_file,

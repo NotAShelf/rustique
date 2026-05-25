@@ -6,8 +6,8 @@ use comfy_table::{Attribute, CellAlignment, Color, ContentArrangement, Row, Tabl
 use lithic_core::config::manager::{Config, Package, get_config};
 use lithic_core::config::structs::{CellAttr, CellColor};
 use lithic_core::consts::FILE_GAME_VERSION_SYNC;
-use lithic_core::information_utils::{CellData, command_output, display_table, notice, prep_cell};
 use lithic_core::sync::structs::GameVersionSync;
+use lithic_core::utils::{CellData, command_output, display_table, notice, prep_cell};
 use lithic_core::utils::{get_expanded_path, parse_json_file};
 use lithic_core::version::manager::parse_version;
 use std::path::PathBuf;

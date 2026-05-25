@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 #[cfg(unix)]
-use lithic_core::information_utils::notice;
+use lithic_core::utils::notice;
 
 #[cfg(unix)]
 use comfy_table::{Attribute, Color};

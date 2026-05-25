@@ -3,7 +3,6 @@ pub mod api;
 pub mod config;
 pub mod consts;
 pub mod errors;
-pub mod information_utils;
 pub mod installer;
 pub mod instance;
 pub mod options;

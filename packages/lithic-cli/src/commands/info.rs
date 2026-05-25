@@ -6,8 +6,8 @@ use lithic_core::api::client::ApiClient;
 use lithic_core::api::structs::Release;
 use lithic_core::config::structs::{CellAttr, CellColor};
 use lithic_core::errors::LithicError;
-use lithic_core::information_utils::{notice, prep_cell};
 use lithic_core::utils::html_parse;
+use lithic_core::utils::{notice, prep_cell};
 
 pub async fn info(args: &ModInfoArgs) -> Result<(), LithicError> {
    let mods_vec = args.mod_id.clone();

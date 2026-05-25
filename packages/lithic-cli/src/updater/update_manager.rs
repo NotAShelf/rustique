@@ -4,9 +4,7 @@ use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use comfy_table::{Attribute, CellAlignment, Color};
 use lithic_core::api::client::LITHIC_USER_AGENT;
 use lithic_core::errors::LithicError;
-use lithic_core::information_utils::{
-   CellData, LithicMessage, command_output, display_table, lithic_message, notice,
-};
+use lithic_core::utils::{CellData, LithicMessage, command_output, display_table, lithic_message, notice};
 use lithic_core::version::manager::parse_version;
 use reqwest::Client;
 use reqwest::header::ACCEPT;

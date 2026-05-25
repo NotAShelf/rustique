@@ -12,8 +12,8 @@ use lithic_core::api::structs::ModInfo;
 use lithic_core::config::manager::{Package, get_config};
 use lithic_core::consts::FILE_MODINFO_JSON;
 use lithic_core::errors::LithicError;
-use lithic_core::information_utils::{command_output, display_table, elapsed_footer, notice};
 use lithic_core::installer::manager::{Install, Installed, install_manager};
+use lithic_core::utils::{command_output, display_table, elapsed_footer, notice};
 use lithic_core::utils::{extract_all_mods_metadata, extract_zip_metadata};
 use lithic_core::version::manager::{
    parse_download_url_from_version, parse_latest_version, parse_pinned_version,

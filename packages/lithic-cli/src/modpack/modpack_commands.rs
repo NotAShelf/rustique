@@ -12,7 +12,7 @@ use comfy_table::presets::UTF8_HORIZONTAL_ONLY;
 use comfy_table::{Attribute, Color};
 use lithic_core::aliases::{ModID, ModVersion};
 use lithic_core::config::manager::get_config;
-use lithic_core::information_utils::{command_output, display_table, notice};
+use lithic_core::utils::{command_output, display_table, notice};
 use std::path::Path;
 use std::process::exit;
 use tracing::{error, info, warn};

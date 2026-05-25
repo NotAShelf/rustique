@@ -1,5 +1,5 @@
 use crate::consts::FILE_MODINFO_JSON;
-use crate::information_utils::notice;
+use crate::utils::notice;
 use comfy_table::{Attribute, Color};
 use thiserror::Error;
 use tracing::{debug, error, info, warn};
