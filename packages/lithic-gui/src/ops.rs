@@ -37,6 +37,9 @@ pub struct SettingsData {
     pub check_for_updates: bool,
     pub show_execution_time: bool,
     pub modpack_dir: String,
+    pub theme_mode: String,
+    pub theme_preset: String,
+    pub initial_page: String,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -536,6 +539,9 @@ pub async fn load_settings() -> Result<SettingsData, String> {
         check_for_updates: config.check_for_updates,
         show_execution_time: config.show_execution_time,
         modpack_dir: config.modpacks.modpack_dir.clone(),
+        theme_mode: config.theme_mode.clone(),
+        theme_preset: config.theme_preset.clone(),
+        initial_page: config.initial_page.clone(),
     })
 }
 
@@ -551,7 +557,17 @@ pub async fn save_settings(s: SettingsData) -> Result<(), String> {
     config.check_for_updates = s.check_for_updates;
     config.show_execution_time = s.show_execution_time;
     config.modpacks.modpack_dir = s.modpack_dir;
+    config.theme_mode = s.theme_mode;
+    config.theme_preset = s.theme_preset;
+    config.initial_page = s.initial_page;
     config.save(None).map_err(err)
+}
+
+pub async fn load_theme_presets() -> Result<Vec<String>, String> {
+    Ok(native_theme::theme::Theme::list_presets()
+        .iter()
+        .map(|preset| preset.key.to_string())
+        .collect())
 }
 
 pub async fn load_instances() -> Result<Vec<InstanceConfig>, String> {

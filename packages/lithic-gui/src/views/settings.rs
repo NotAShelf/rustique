@@ -1,4 +1,6 @@
-use iced::widget::{button, checkbox, column, row, scrollable, text, text_input};
+use std::fmt::{Display, Formatter};
+
+use iced::widget::{button, checkbox, column, pick_list, row, scrollable, text, text_input};
 use iced::{Alignment, Color, Element, Fill};
 use lithic_core::version::filter::minor_version;
 
@@ -17,8 +19,106 @@ pub struct SettingsView {
     pub check_for_updates: bool,
     pub show_execution_time: bool,
     pub modpack_dir: String,
+    pub theme_mode: ThemeModeOption,
+    pub theme_preset: String,
+    pub available_theme_presets: Vec<String>,
+    pub initial_page: InitialPageOption,
     pub dirty: bool,
     pub status: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ThemeModeOption {
+    #[default]
+    System,
+    Light,
+    Dark,
+    Preset,
+}
+
+impl ThemeModeOption {
+    pub const ALL: [Self; 4] = [Self::System, Self::Light, Self::Dark, Self::Preset];
+
+    pub fn from_config(value: &str) -> Self {
+        match value {
+            "light" => Self::Light,
+            "dark" => Self::Dark,
+            "preset" => Self::Preset,
+            _ => Self::System,
+        }
+    }
+
+    pub fn as_config(self) -> &'static str {
+        match self {
+            Self::System => "system",
+            Self::Light => "light",
+            Self::Dark => "dark",
+            Self::Preset => "preset",
+        }
+    }
+}
+
+impl Display for ThemeModeOption {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::System => write!(f, "System"),
+            Self::Light => write!(f, "Light"),
+            Self::Dark => write!(f, "Dark"),
+            Self::Preset => write!(f, "Preset"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum InitialPageOption {
+    #[default]
+    Browse,
+    Installed,
+    Instances,
+    GameVersions,
+    Settings,
+}
+
+impl InitialPageOption {
+    pub const ALL: [Self; 5] = [
+        Self::Browse,
+        Self::Installed,
+        Self::Instances,
+        Self::GameVersions,
+        Self::Settings,
+    ];
+
+    pub fn from_config(value: &str) -> Self {
+        match value {
+            "installed" => Self::Installed,
+            "instances" => Self::Instances,
+            "game_versions" => Self::GameVersions,
+            "settings" => Self::Settings,
+            _ => Self::Browse,
+        }
+    }
+
+    pub fn as_config(self) -> &'static str {
+        match self {
+            Self::Browse => "browse",
+            Self::Installed => "installed",
+            Self::Instances => "instances",
+            Self::GameVersions => "game_versions",
+            Self::Settings => "settings",
+        }
+    }
+}
+
+impl Display for InitialPageOption {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Browse => write!(f, "Browse"),
+            Self::Installed => write!(f, "Installed"),
+            Self::Instances => write!(f, "Instances"),
+            Self::GameVersions => write!(f, "Game Versions"),
+            Self::Settings => write!(f, "Settings"),
+        }
+    }
 }
 
 pub fn view(state: &SettingsView) -> Element<'_, Message> {
@@ -95,6 +195,51 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
         .spacing(12),
     );
 
+    let app_card = section_card(
+        column![
+            section_label("APPEARANCE"),
+            row![
+                text("Theme").size(12).width(100),
+                pick_list(
+                    ThemeModeOption::ALL,
+                    Some(state.theme_mode),
+                    Message::SettingThemeMode
+                )
+                .width(180),
+            ]
+            .spacing(8)
+            .align_y(Alignment::Center),
+            row![
+                text("Preset").size(12).width(100),
+                pick_list(
+                    state.available_theme_presets.as_slice(),
+                    if state.theme_preset.is_empty() {
+                        None
+                    } else {
+                        Some(state.theme_preset.clone())
+                    },
+                    Message::SettingThemePreset
+                )
+                .placeholder("Select a built-in preset")
+                .width(260),
+            ]
+            .spacing(8)
+            .align_y(Alignment::Center),
+            row![
+                text("Startup Page").size(12).width(100),
+                pick_list(
+                    InitialPageOption::ALL,
+                    Some(state.initial_page),
+                    Message::SettingInitialPage
+                )
+                .width(180),
+            ]
+            .spacing(8)
+            .align_y(Alignment::Center),
+        ]
+        .spacing(10),
+    );
+
     let files_card = section_card(
         column![
             section_label("MOD FILES"),
@@ -150,6 +295,7 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
             status_element(state.status.as_deref()),
             paths_card,
             game_card,
+            app_card,
             updates_card,
             files_card,
             backup_card,

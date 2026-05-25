@@ -12,7 +12,9 @@ dirs               = { workspace = true }
 futures            = { workspace = true }
 human_format       = { workspace = true }
 iced               = { workspace = true }
-lithic-core      = { workspace = true }
+lithic-core        = { workspace = true }
+native-theme       = { workspace = true }
+native-theme-iced  = { workspace = true }
 serde              = { workspace = true }
 serde_json         = { workspace = true }
 tokio              = { workspace = true }

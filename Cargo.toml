@@ -36,8 +36,9 @@ url                = "2.5.7"
 uuid               = { version = "1.18.1", features = [ "v4" ] }
 yansi              = "1.0.1"
 
-iced = { version = "0.14.0", features = [ "tokio" ] }
-
+iced              = { version = "0.14.0", features = [ "tokio" ] }
+native-theme      = "0.5.7"
+native-theme-iced = "0.5.7"
 
 [profile.dev]
 opt-level = 1

@@ -80,6 +80,15 @@ pub struct Config {
 
     #[serde(default)]
     pub game_versions: Vec<GameVersionInstall>,
+
+    #[serde(default = "default_theme_mode")]
+    pub theme_mode: String,
+
+    #[serde(default)]
+    pub theme_preset: String,
+
+    #[serde(default = "default_initial_page")]
+    pub initial_page: String,
 }
 
 #[cfg(windows)]
@@ -121,6 +130,14 @@ pub struct Package {
 
 fn default_sync_time() -> i64 {
     24
+}
+
+fn default_theme_mode() -> String {
+    "system".to_string()
+}
+
+fn default_initial_page() -> String {
+    "browse".to_string()
 }
 
 impl Config {
@@ -193,6 +210,9 @@ impl Default for Config {
             instances: Vec::new(),
             active_instance_id: None,
             game_versions: Vec::new(),
+            theme_mode: default_theme_mode(),
+            theme_preset: String::new(),
+            initial_page: default_initial_page(),
 
             #[cfg(windows)]
             update_default_windows_loc: true,

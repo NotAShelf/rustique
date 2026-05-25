@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use iced::widget::{column, container, row, rule, text};
 use iced::{Element, Fill, Subscription, Task, Theme};
+use native_theme_iced::{from_preset, from_system};
 
 use lithic_core::api::structs::ModApi;
 use lithic_core::sync::structs::ModSyncInfo;
@@ -15,6 +16,7 @@ use crate::views::game_versions::GameVersionsView;
 use crate::views::installed::{InstalledTab, InstalledView};
 use crate::views::instances::InstancesView;
 use crate::views::settings::SettingsView;
+use crate::views::settings::{InitialPageOption, ThemeModeOption};
 use crate::views::{browse, game_versions, installed, instances, settings};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -131,6 +133,7 @@ pub enum Message {
     InstallGameVersion,
     PollGameInstallProgress,
     ToggleGameInstallLogs,
+    RefreshNativeTheme,
     InstallGameVersionDone(Result<String, String>),
     DeleteGameVersion(String),
     GameVersionOpDone(Result<(), String>),
@@ -142,6 +145,7 @@ pub enum Message {
 
     // Settings
     SettingsLoaded(Result<SettingsData, String>),
+    ThemePresetsLoaded(Result<Vec<String>, String>),
     SettingModDir(String),
     SettingGameDownloadDir(String),
     SettingGameVersion(String),
@@ -152,6 +156,9 @@ pub enum Message {
     SettingCheckUpdates(bool),
     SettingShowExecTime(bool),
     SettingModpackDir(String),
+    SettingThemeMode(ThemeModeOption),
+    SettingThemePreset(String),
+    SettingInitialPage(InitialPageOption),
     SaveSettings,
     SettingsSaved(Result<(), String>),
 }
@@ -165,6 +172,7 @@ pub struct App {
     pub game_versions: GameVersionsView,
     pub settings: SettingsView,
     pub game_install_progress: SharedGameInstallProgress,
+    pub theme: Theme,
 }
 
 fn clear_after(msg: Message) -> Task<Message> {
@@ -198,10 +206,15 @@ impl App {
             },
             settings: SettingsView::default(),
             game_install_progress: crate::ops::new_game_install_progress(),
+            theme: detect_native_theme(),
         };
         let task = Task::batch([
             Task::perform(crate::ops::load_installed(), Message::InstalledLoaded),
             Task::perform(crate::ops::load_settings(), Message::SettingsLoaded),
+            Task::perform(
+                crate::ops::load_theme_presets(),
+                Message::ThemePresetsLoaded,
+            ),
             Task::perform(crate::ops::load_browse(), Message::BrowseLoaded),
             Task::perform(crate::ops::load_favorites(), Message::FavoritesLoaded),
             Task::perform(
@@ -642,8 +655,16 @@ impl App {
                 self.settings.check_for_updates = data.check_for_updates;
                 self.settings.show_execution_time = data.show_execution_time;
                 self.settings.modpack_dir = data.modpack_dir;
+                self.settings.theme_mode = ThemeModeOption::from_config(&data.theme_mode);
+                self.settings.theme_preset = data.theme_preset;
+                self.settings.initial_page = InitialPageOption::from_config(&data.initial_page);
                 self.settings.dirty = false;
                 self.mod_dir = PathBuf::from(data.mod_dir);
+                self.current_view = view_from_initial_page(self.settings.initial_page);
+                self.theme = theme_from_mode(
+                    self.settings.theme_mode,
+                    self.settings.theme_preset.as_str(),
+                );
                 if let Some(minor) = minor_version(&data.pinned_game_version) {
                     self.browse.version_filter = VersionFilter::Exact(minor);
                     if !self.browse.available_minor_versions.is_empty() {
@@ -660,6 +681,14 @@ impl App {
             }
             Message::SettingsLoaded(Err(e)) => {
                 tracing::error!("Settings load error: {e}");
+                Task::none()
+            }
+            Message::ThemePresetsLoaded(Ok(presets)) => {
+                self.settings.available_theme_presets = presets;
+                Task::none()
+            }
+            Message::ThemePresetsLoaded(Err(e)) => {
+                tracing::error!("Theme preset load error: {e}");
                 Task::none()
             }
             Message::SettingModDir(v) => {
@@ -712,6 +741,26 @@ impl App {
                 self.settings.dirty = true;
                 Task::none()
             }
+            Message::SettingThemeMode(v) => {
+                self.settings.theme_mode = v;
+                self.settings.dirty = true;
+                self.theme = theme_from_mode(v, self.settings.theme_preset.as_str());
+                Task::none()
+            }
+            Message::SettingThemePreset(v) => {
+                self.settings.theme_preset = v;
+                self.settings.dirty = true;
+                self.theme = theme_from_mode(
+                    self.settings.theme_mode,
+                    self.settings.theme_preset.as_str(),
+                );
+                Task::none()
+            }
+            Message::SettingInitialPage(v) => {
+                self.settings.initial_page = v;
+                self.settings.dirty = true;
+                Task::none()
+            }
             Message::SaveSettings => {
                 let data = SettingsData {
                     mod_dir: self.settings.mod_dir.clone(),
@@ -724,6 +773,9 @@ impl App {
                     check_for_updates: self.settings.check_for_updates,
                     show_execution_time: self.settings.show_execution_time,
                     modpack_dir: self.settings.modpack_dir.clone(),
+                    theme_mode: self.settings.theme_mode.as_config().to_string(),
+                    theme_preset: self.settings.theme_preset.clone(),
+                    initial_page: self.settings.initial_page.as_config().to_string(),
                 };
                 Task::perform(crate::ops::save_settings(data), Message::SettingsSaved)
             }
@@ -731,6 +783,10 @@ impl App {
                 self.settings.dirty = false;
                 self.settings.status = Some("Settings saved.".to_string());
                 self.mod_dir = PathBuf::from(&self.settings.mod_dir);
+                self.theme = theme_from_mode(
+                    self.settings.theme_mode,
+                    self.settings.theme_preset.as_str(),
+                );
                 let new_filter = minor_version(&self.settings.pinned_game_version)
                     .map(VersionFilter::Exact)
                     .unwrap_or(VersionFilter::Any);
@@ -1126,6 +1182,12 @@ impl App {
                 }
                 Task::none()
             }
+            Message::RefreshNativeTheme => {
+                if self.settings.theme_mode == ThemeModeOption::System {
+                    self.theme = detect_native_theme();
+                }
+                Task::none()
+            }
             Message::ToggleGameInstallLogs => {
                 self.game_versions.show_install_logs = !self.game_versions.show_install_logs;
                 Task::none()
@@ -1236,7 +1298,10 @@ impl App {
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-        iced::time::every(Duration::from_millis(250)).map(|_| Message::PollGameInstallProgress)
+        Subscription::batch([
+            iced::time::every(Duration::from_millis(250)).map(|_| Message::PollGameInstallProgress),
+            iced::time::every(Duration::from_secs(5)).map(|_| Message::RefreshNativeTheme),
+        ])
     }
 }
 
@@ -1310,11 +1375,38 @@ fn apply_browse_filter(browse: &mut BrowseView) {
 pub fn run() -> iced::Result {
     iced::application(App::new, App::update, App::view)
         .title(App::title)
+        .theme(|app: &App| app.theme.clone())
         .subscription(App::subscription)
         .window(iced::window::Settings {
             size: iced::Size::new(1100.0, 720.0),
             ..Default::default()
         })
-        .theme(Theme::Dark)
         .run()
+}
+
+fn detect_native_theme() -> Theme {
+    from_system()
+        .map(|(theme, _, _)| theme)
+        .unwrap_or(Theme::Dark)
+}
+
+fn theme_from_mode(mode: ThemeModeOption, preset: &str) -> Theme {
+    match mode {
+        ThemeModeOption::System => detect_native_theme(),
+        ThemeModeOption::Light => Theme::Light,
+        ThemeModeOption::Dark => Theme::Dark,
+        ThemeModeOption::Preset => from_preset(preset, true)
+            .map(|(theme, _)| theme)
+            .unwrap_or_else(|_| detect_native_theme()),
+    }
+}
+
+fn view_from_initial_page(page: InitialPageOption) -> View {
+    match page {
+        InitialPageOption::Browse => View::Browse,
+        InitialPageOption::Installed => View::Installed,
+        InitialPageOption::Instances => View::Instances,
+        InitialPageOption::GameVersions => View::GameVersions,
+        InitialPageOption::Settings => View::Settings,
+    }
 }
