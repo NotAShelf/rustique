@@ -5,6 +5,18 @@ workflows. Browse, install, update, enable, disable, and organize your mods
 without juggling folders by hand, whether you prefer scripting everything from
 the terminal or managing your setup through a simple desktop interface.
 
+<!--markdownlint-disable MD033-->
+
+<p align="center">
+  <img
+    alt="Lithic mod browser GUI"
+    src="./assets/demo_browse.png"
+    width="850px"
+  >
+</p>
+
+<!--markdownlint-enable MD033-->
+
 ## License
 
 [@Tekunogosu/rustique]: https://github.com/Tekunogosu/rustique
