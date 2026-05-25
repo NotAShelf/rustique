@@ -2505,7 +2505,7 @@ checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
 
 [[package]]
 name = "lithic-cli"
-version = "0.5.16"
+version = "0.6.0"
 dependencies = [
  "async_zip",
  "chrono",
@@ -2539,7 +2539,7 @@ dependencies = [
 
 [[package]]
 name = "lithic-core"
-version = "0.5.16"
+version = "0.6.0"
 dependencies = [
  "async_zip",
  "chrono",
@@ -2567,7 +2567,7 @@ dependencies = [
 
 [[package]]
 name = "lithic-gui"
-version = "0.5.16"
+version = "0.6.0"
 dependencies = [
  "dirs",
  "futures",

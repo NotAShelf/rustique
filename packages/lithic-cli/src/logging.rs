@@ -3,26 +3,26 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, fmt};
 
 pub enum VerboseLevel {
-    Verbose,
-    Debug,
-    Default,
+   Verbose,
+   Debug,
+   Default,
 }
 
 pub fn init_logging(verbose: &VerboseLevel) {
-    let filter = match verbose {
-        VerboseLevel::Verbose => EnvFilter::new("info,lithic=info,ureq=info,tokio=info,tokio_runtime=info"),
-        VerboseLevel::Debug => EnvFilter::new("info,lithic=debug,ureq=info,tokio=info,tokio_runtime=info"),
-        VerboseLevel::Default => EnvFilter::new("warn,lithic=warn,ureq=warn,tokio=warn,tokio_runtime=warn"),
-    };
+   let filter = match verbose {
+      VerboseLevel::Verbose => EnvFilter::new("info,lithic=info,ureq=info,tokio=info,tokio_runtime=info"),
+      VerboseLevel::Debug => EnvFilter::new("info,lithic=debug,ureq=info,tokio=info,tokio_runtime=info"),
+      VerboseLevel::Default => EnvFilter::new("warn,lithic=warn,ureq=warn,tokio=warn,tokio_runtime=warn"),
+   };
 
-    tracing_subscriber::registry()
-        .with(
-            fmt::layer()
-                .with_thread_ids(true)
-                .with_thread_names(true)
-                .with_target(false)
-                .with_ansi_sanitization(false),
-        )
-        .with(filter)
-        .init();
+   tracing_subscriber::registry()
+      .with(
+         fmt::layer()
+            .with_thread_ids(true)
+            .with_thread_names(true)
+            .with_target(false)
+            .with_ansi_sanitization(false),
+      )
+      .with(filter)
+      .init();
 }

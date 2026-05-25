@@ -1,13 +1,9 @@
 [package]
-name    = "lithic-cli"
-version = "0.5.16"
-edition = "2024"
-authors = [ "tekunogosu", "Violet4" ]
-
-
-[[bin]]
-name = "lithic-cli"
-path = "src/main.rs"
+name                   = "lithic-cli"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
 
 [dependencies]
 async_zip          = { workspace = true }
@@ -33,9 +29,9 @@ url                = { workspace = true }
 uuid               = { workspace = true }
 yansi              = { workspace = true }
 #log = {workspace = true}
-comfy-table   = { workspace = true }
-csv           = { workspace = true }
-indexmap      = { workspace = true }
-indicatif     = { workspace = true }
-is_elevated   = { workspace = true }
+comfy-table = { workspace = true }
+csv         = { workspace = true }
+indexmap    = { workspace = true }
+indicatif   = { workspace = true }
+is_elevated = { workspace = true }
 lithic-core = { workspace = true }

@@ -12,150 +12,150 @@ use crate::information_utils::notice;
 
 #[derive(Clone, Debug)]
 pub struct LithicOptions {
-    pub mod_dir: Option<PathBuf>,
+   pub mod_dir: Option<PathBuf>,
 }
 
 impl Default for LithicOptions {
-    fn default() -> Self {
-        #[cfg(windows)]
-        return Self::windows();
+   fn default() -> Self {
+      #[cfg(windows)]
+      return Self::windows();
 
-        #[cfg(unix)]
-        return Self::unix();
-    }
+      #[cfg(unix)]
+      return Self::unix();
+   }
 }
 
 impl LithicOptions {
-    #[cfg(windows)]
-    pub fn windows() -> Self {
-        if let Some(path) = std::env::var_os("APPDATA") {
-            return LithicOptions {
-                mod_dir: Some(PathBuf::from(path).join("VintagestoryData").join("Mods")),
-            };
-        }
-        warn!("Unable to determine default mods directory (APPDATA not set). Set mod_dir manually.");
-        LithicOptions { mod_dir: None }
-    }
+   #[cfg(windows)]
+   pub fn windows() -> Self {
+      if let Some(path) = std::env::var_os("APPDATA") {
+         return LithicOptions {
+            mod_dir: Some(PathBuf::from(path).join("VintagestoryData").join("Mods")),
+         };
+      }
+      warn!("Unable to determine default mods directory (APPDATA not set). Set mod_dir manually.");
+      LithicOptions { mod_dir: None }
+   }
 
-    // As of 1.21-pre*, the default location for Mac has changed to
-    // $HOME/Library/Application Support/VintagestoryData/Mods
-    #[cfg(unix)]
-    pub fn unix() -> Self {
-        // TODO: check if dir exists, if not check for the flatpack dir, throw error message if none are found
-        if let Some(home) = home_dir() {
-            #[cfg(target_os = "macos")]
-            let mac_base = home
-                .join("Library")
-                .join("Application Support")
-                .join("VintagestoryData")
-                .join("Mods");
+   // As of 1.21-pre*, the default location for Mac has changed to
+   // $HOME/Library/Application Support/VintagestoryData/Mods
+   #[cfg(unix)]
+   pub fn unix() -> Self {
+      // TODO: check if dir exists, if not check for the flatpack dir, throw error message if none are found
+      if let Some(home) = home_dir() {
+         #[cfg(target_os = "macos")]
+         let mac_base = home
+            .join("Library")
+            .join("Application Support")
+            .join("VintagestoryData")
+            .join("Mods");
 
-            let base = home.join(".config").join("VintagestoryData").join("Mods");
+         let base = home.join(".config").join("VintagestoryData").join("Mods");
 
-            let flatpak = home
-                .join(".var")
-                .join("app")
-                .join("at.vintagestory.VintageStory")
-                .join("config")
-                .join("VintagestoryData")
-                .join("Mods");
+         let flatpak = home
+            .join(".var")
+            .join("app")
+            .join("at.vintagestory.VintageStory")
+            .join("config")
+            .join("VintagestoryData")
+            .join("Mods");
 
-            let mut options = LithicOptions {
-                mod_dir: Some(PathBuf::new()),
-            };
+         let mut options = LithicOptions {
+            mod_dir: Some(PathBuf::new()),
+         };
 
-            #[cfg(target_os = "macos")]
-            if mac_base.exists() {
-                info!("Default mac mod dir found");
-                options.mod_dir = Some(mac_base);
-                return options;
-            }
-
-            if base.exists() {
-                info!("normal mod dir found");
-                options.mod_dir = Some(base);
-            } else if flatpak.exists() {
-                info!("flatpak mod dir found");
-                options.mod_dir = Some(flatpak);
-            } else {
-                info!("Lithic was unable to find the default mod dir. Using empty dir for now.");
-                options.mod_dir = None;
-            }
-
+         #[cfg(target_os = "macos")]
+         if mac_base.exists() {
+            info!("Default mac mod dir found");
+            options.mod_dir = Some(mac_base);
             return options;
-        }
-        warn!("Unable to determine user home directory. Mod directory will be unset.");
-        LithicOptions { mod_dir: None }
-    }
+         }
 
-    // TODO: Finish mac migration to new config location
-    #[cfg(target_os = "macos")]
-    pub fn mac() -> Self {
-        // Notify the user that the default location for Mac as of 1.21-pre* has been changed
-        // Prompt if they would like to update the default location if they are using 1.21-pre+
+         if base.exists() {
+            info!("normal mod dir found");
+            options.mod_dir = Some(base);
+         } else if flatpak.exists() {
+            info!("flatpak mod dir found");
+            options.mod_dir = Some(flatpak);
+         } else {
+            info!("Lithic was unable to find the default mod dir. Using empty dir for now.");
+            options.mod_dir = None;
+         }
 
-        // check if new location exists
-        // if yes, prompt user to update the default path and move the mods over
-        // have option to disable message
+         return options;
+      }
+      warn!("Unable to determine user home directory. Mod directory will be unset.");
+      LithicOptions { mod_dir: None }
+   }
 
-        if let Some(home) = home_dir() {
-            let new_default = home
-                .join("Library")
-                .join("Application Support")
-                .join("VintagestoryData")
-                .join("Mods");
+   // TODO: Finish mac migration to new config location
+   #[cfg(target_os = "macos")]
+   pub fn mac() -> Self {
+      // Notify the user that the default location for Mac as of 1.21-pre* has been changed
+      // Prompt if they would like to update the default location if they are using 1.21-pre+
 
-            let old_default = home.join(".config").join("VintagestoryData").join("Mods");
+      // check if new location exists
+      // if yes, prompt user to update the default path and move the mods over
+      // have option to disable message
 
-            // if old default exists and IS NOT empty, prompt user
-            // if its empty, check if new_default exist.
-            // if new default does, use new default
-            // if not, return old default, but let user know that 1.21 will use the new default
+      if let Some(home) = home_dir() {
+         let new_default = home
+            .join("Library")
+            .join("Application Support")
+            .join("VintagestoryData")
+            .join("Mods");
 
-            let mut options = LithicOptions {
-                mod_dir: Some(PathBuf::new()),
-            };
+         let old_default = home.join(".config").join("VintagestoryData").join("Mods");
 
-            let old_is_empty =
-                old_default.exists() && old_default.read_dir().map_or(true, |mut d| d.next().is_none());
+         // if old default exists and IS NOT empty, prompt user
+         // if its empty, check if new_default exist.
+         // if new default does, use new default
+         // if not, return old default, but let user know that 1.21 will use the new default
 
-            // old exists, but is empty AND new exists, just use new location
-            if old_is_empty && new_default.exists() {
-                options.mod_dir = Some(new_default);
-            } else if old_default.exists() && !old_is_empty && new_default.exists() {
-                // let user know that the new location should be used and ask if they want to set the
-                // default and move the mods over
-                options.mod_dir = Some(old_default);
+         let mut options = LithicOptions {
+            mod_dir: Some(PathBuf::new()),
+         };
 
-                notice(
-                    "It looks like you are using the old default location for mods. As of Vintage Story 1.21, the new mac location is ~/Library/Application Support/VintagestoryData/Mods",
-                    Some(Color::Yellow),
-                    vec![Attribute::Bold],
-                );
-                notice(
-                    "To update this run, lithic config set -m ~/Library/Application Support/VintagestoryData/Mods -- Note you will have to manually move your mods from the old location ~/.config/VintagestoryData/Mods",
-                    Some(Color::Yellow),
-                    vec![Attribute::Bold],
-                );
-            }
-        }
+         let old_is_empty =
+            old_default.exists() && old_default.read_dir().map_or(true, |mut d| d.next().is_none());
 
-        warn!("Unable to determine default home directory for macOS. Mod directory will be unset.");
-        LithicOptions { mod_dir: None }
-    }
+         // old exists, but is empty AND new exists, just use new location
+         if old_is_empty && new_default.exists() {
+            options.mod_dir = Some(new_default);
+         } else if old_default.exists() && !old_is_empty && new_default.exists() {
+            // let user know that the new location should be used and ask if they want to set the
+            // default and move the mods over
+            options.mod_dir = Some(old_default);
 
-    pub async fn get_mod_path(&self) -> PathBuf {
-        let default_path = self.mod_dir.clone().unwrap_or_default();
-        let config = get_config().read().await;
-        let config_mod_dir = PathBuf::from(&config.mod_dir);
+            notice(
+               "It looks like you are using the old default location for mods. As of Vintage Story 1.21, the new mac location is ~/Library/Application Support/VintagestoryData/Mods",
+               Some(Color::Yellow),
+               vec![Attribute::Bold],
+            );
+            notice(
+               "To update this run, lithic config set -m ~/Library/Application Support/VintagestoryData/Mods -- Note you will have to manually move your mods from the old location ~/.config/VintagestoryData/Mods",
+               Some(Color::Yellow),
+               vec![Attribute::Bold],
+            );
+         }
+      }
 
-        if default_path
-            .as_path()
-            .eq(get_expanded_path(config_mod_dir.clone()).as_path())
-        {
-            default_path
-        } else {
-            config_mod_dir
-        }
-    }
+      warn!("Unable to determine default home directory for macOS. Mod directory will be unset.");
+      LithicOptions { mod_dir: None }
+   }
+
+   pub async fn get_mod_path(&self) -> PathBuf {
+      let default_path = self.mod_dir.clone().unwrap_or_default();
+      let config = get_config().read().await;
+      let config_mod_dir = PathBuf::from(&config.mod_dir);
+
+      if default_path
+         .as_path()
+         .eq(get_expanded_path(config_mod_dir.clone()).as_path())
+      {
+         default_path
+      } else {
+         config_mod_dir
+      }
+   }
 }

@@ -1,11 +1,10 @@
 [package]
-name    = "lithic-gui"
-version = "0.5.16"
-edition = "2024"
-
-[[bin]]
-name = "lithic-gui"
-path = "src/main.rs"
+name                   = "lithic-gui"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+readme.workspace       = true
 
 [dependencies]
 dirs               = { workspace = true }

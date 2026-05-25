@@ -11,79 +11,79 @@ use tracing::debug;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct LithicSyncJson {
-    #[serde(rename = "LithicSync")]
-    pub lithic_sync: HashMap<String, ModSyncInfo>,
-    pub last_sync: String,
+   #[serde(rename = "LithicSync")]
+   pub lithic_sync: HashMap<String, ModSyncInfo>,
+   pub last_sync: String,
 }
 
 impl Default for LithicSyncJson {
-    fn default() -> Self {
-        LithicSyncJson {
-            lithic_sync: HashMap::default(),
-            last_sync: get_current_time(),
-        }
-    }
+   fn default() -> Self {
+      LithicSyncJson {
+         lithic_sync: HashMap::default(),
+         last_sync: get_current_time(),
+      }
+   }
 }
 
 impl LithicSyncJson {
-    // Let the calling function tell us where the sync file is located
-    pub async fn save(&self, file_location: impl AsRef<Path>) -> Result<(), LithicError> {
-        debug!("Attempting to save {:?}", self);
+   // Let the calling function tell us where the sync file is located
+   pub async fn save(&self, file_location: impl AsRef<Path>) -> Result<(), LithicError> {
+      debug!("Attempting to save {:?}", self);
 
-        let json = prettify(self, "Sync")?;
+      let json = prettify(self, "Sync")?;
 
-        // Use tokio's async file operations
-        let mut file = File::create(&file_location)
-            .await
-            .map_err(|e| LithicError::IoError {
-                context: format!(
-                    "Error writing sync file to {}",
-                    file_location.as_ref().to_string_lossy()
-                ),
-                source: e,
-            })?;
+      // Use tokio's async file operations
+      let mut file = File::create(&file_location)
+         .await
+         .map_err(|e| LithicError::IoError {
+            context: format!(
+               "Error writing sync file to {}",
+               file_location.as_ref().to_string_lossy()
+            ),
+            source: e,
+         })?;
 
-        AsyncWriteExt::write_all(&mut file, json.as_bytes()).await?;
+      AsyncWriteExt::write_all(&mut file, json.as_bytes()).await?;
 
-        Ok(())
-    }
+      Ok(())
+   }
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct ModIDSync {
-    pub all_mods: HashMap<ModName, ModIDSyncData>,
-    pub last_sync: String,
+   pub all_mods: HashMap<ModName, ModIDSyncData>,
+   pub last_sync: String,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ModIDSyncData {
-    pub mod_id: ModID,
-    pub modid_strs: Vec<String>,
+   pub mod_id: ModID,
+   pub modid_strs: Vec<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
 pub struct ModSyncInfo {
-    pub file_name: ModFileName,
-    pub mod_name: String,
-    pub asset_id: i64,
-    pub installed_version: ModVersion,
-    pub latest_known_version: ModVersion,
-    pub latest_download_url: String,
-    pub game_versions: Vec<String>,
-    pub latest_changelog: String,
+   pub file_name: ModFileName,
+   pub mod_name: String,
+   pub asset_id: i64,
+   pub installed_version: ModVersion,
+   pub latest_known_version: ModVersion,
+   pub latest_download_url: String,
+   pub game_versions: Vec<String>,
+   pub latest_changelog: String,
 
-    #[serde(default)]
-    pub is_symlink: bool,
+   #[serde(default)]
+   pub is_symlink: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
 pub struct GameVersionSync {
-    pub game_versions: Vec<String>,
-    pub last_sync: String,
+   pub game_versions: Vec<String>,
+   pub last_sync: String,
 }
 
 impl GameVersionSync {
-    pub fn new() -> GameVersionSync {
-        Self::default()
-    }
+   pub fn new() -> GameVersionSync {
+      Self::default()
+   }
 }
