@@ -78,22 +78,21 @@ pub async fn mp_update(args: MPUpdateArgs) -> Result<(), LithicError> {
 
     debug!("{} {:#?}", "m_install".green(), m_install.blue());
 
-    let installed =
-        match download_requested_mods(&pack_dir, &mut vec![m_install], &client, None).await {
-            Ok(i) => {
-                // delete the old file if its named differently from the new
-                // there is only 1 file as we only process 1 modpack at a time
-                if i.first()
-                    .is_some_and(|e| !e.installed_file_path.eq(&Some(mp_file_path.clone())))
-                {
-                    info!("Deleting old modpack file {}", mp_file_path.display());
-                    delete_file(&mp_file_path).await?;
-                }
-
-                i.first().unwrap().clone()
+    let installed = match download_requested_mods(&pack_dir, &mut vec![m_install], &client, None).await {
+        Ok(i) => {
+            // delete the old file if its named differently from the new
+            // there is only 1 file as we only process 1 modpack at a time
+            if i.first()
+                .is_some_and(|e| !e.installed_file_path.eq(&Some(mp_file_path.clone())))
+            {
+                info!("Deleting old modpack file {}", mp_file_path.display());
+                delete_file(&mp_file_path).await?;
             }
-            Err(e) => return Err(e),
-        };
+
+            i.first().unwrap().clone()
+        }
+        Err(e) => return Err(e),
+    };
 
     let Some(updated_mp_filepath) = &installed.installed_file_path else {
         return Err(LithicError::SimpleError(format!(
@@ -102,16 +101,15 @@ pub async fn mp_update(args: MPUpdateArgs) -> Result<(), LithicError> {
         )));
     };
 
-    let mp_mod_pkgs: Vec<Package> =
-        extract_zip_metadata::<ModInfo>(&updated_mp_filepath, FILE_MODINFO_JSON)
-            .await?
-            .dependencies
-            .iter()
-            .map(|(mod_id, mod_version)| Package {
-                mod_id: mod_id.to_string(),
-                pinned_version: Some(mod_version.clone()),
-            })
-            .collect();
+    let mp_mod_pkgs: Vec<Package> = extract_zip_metadata::<ModInfo>(&updated_mp_filepath, FILE_MODINFO_JSON)
+        .await?
+        .dependencies
+        .iter()
+        .map(|(mod_id, mod_version)| Package {
+            mod_id: mod_id.to_string(),
+            pinned_version: Some(mod_version.clone()),
+        })
+        .collect();
 
     let mp_install_dir = modpack_base_dir.join("installed").join(&args.mpk_id);
     sync(&mp_install_dir, true, &mp_mod_pkgs).await?;

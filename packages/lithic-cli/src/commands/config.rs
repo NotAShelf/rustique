@@ -1,6 +1,4 @@
-use crate::commands::arg_structs::config_args::{
-    CommonArgs, ConfigCommand, ConfigSubCommand, DelArgs,
-};
+use crate::commands::arg_structs::config_args::{CommonArgs, ConfigCommand, ConfigSubCommand, DelArgs};
 use crate::commands::config_table::config_table;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::UTF8_FULL_CONDENSED;
@@ -67,10 +65,7 @@ async fn set(args: &CommonArgs) {
     if let Some(notif) = &args.notify_of_unzipped_mods {
         config.notify_of_unzipped_mods = *notif;
         save = true;
-        display_vec.push(command_output(
-            "config.show_mod_dir_warning",
-            notif.to_string(),
-        ));
+        display_vec.push(command_output("config.show_mod_dir_warning", notif.to_string()));
     }
 
     if let Some(version) = &args.pin_game_version {
@@ -142,10 +137,7 @@ async fn set(args: &CommonArgs) {
         config.show_execution_time = *val;
         save = true;
 
-        display_vec.push(command_output(
-            "config.show_execution_time",
-            val.to_string(),
-        ));
+        display_vec.push(command_output("config.show_execution_time", val.to_string()));
     }
 
     if let Some(backup) = &args.backup_mods {
@@ -252,10 +244,7 @@ async fn del(args: &DelArgs) {
     if args.backup_mods_dir {
         config.backup_mods_dir.clone_from(&defaults.backup_mods_dir);
         save = true;
-        display_vec.push(command_output(
-            "config.backup_mods_dir",
-            defaults.backup_mods_dir,
-        ));
+        display_vec.push(command_output("config.backup_mods_dir", defaults.backup_mods_dir));
     }
 
     if args.modpack_dir {
@@ -323,9 +312,7 @@ async fn del(args: &DelArgs) {
     }
 
     if args.game_download_dir {
-        config
-            .game_download_dir
-            .clone_from(&defaults.game_download_dir);
+        config.game_download_dir.clone_from(&defaults.game_download_dir);
         save = true;
         display_vec.push(command_output(
             "config.game_download_dir",
@@ -388,10 +375,7 @@ async fn list() {
     let display_vec: Vec<(CellData, CellData)> = vec![
         command_output("config.mod_dir", config.mod_dir.to_string()),
         command_output("config.backup_mods_dir", config.backup_mods_dir.to_string()),
-        command_output(
-            "config.game_download_dir",
-            config.game_download_dir.to_string(),
-        ),
+        command_output("config.game_download_dir", config.game_download_dir.to_string()),
         command_output("config.backup_mods", config.backup_mods.to_string()),
         command_output(
             "config.show_execution_time",
@@ -406,10 +390,7 @@ async fn list() {
             config.pinned_game_version.to_string(),
         ),
         command_output("", ""),
-        command_output(
-            "config.check_for_updates",
-            config.check_for_updates.to_string(),
-        ),
+        command_output("config.check_for_updates", config.check_for_updates.to_string()),
         #[cfg(windows)]
         command_output(
             "config.update_windows_default_loc",
@@ -421,10 +402,7 @@ async fn list() {
             config.modpacks.modpack_dir.to_string(),
         ),
         command_output("config.modpacks.enabled", config.modpacks.enabled.join(",")),
-        command_output(
-            "config.modpacks.disabled",
-            config.modpacks.disabled.join(","),
-        ),
+        command_output("config.modpacks.disabled", config.modpacks.disabled.join(",")),
     ];
 
     display_table(display_vec, None);
@@ -436,13 +414,7 @@ async fn list() {
             .apply_modifier(UTF8_ROUND_CORNERS)
             .set_content_arrangement(ContentArrangement::Dynamic);
         let headers = vec![
-            prep_cell(
-                "Mod ID",
-                Some(CellColor::Green),
-                Some(CellAttr::Bold),
-                None,
-                None,
-            ),
+            prep_cell("Mod ID", Some(CellColor::Green), Some(CellAttr::Bold), None, None),
             prep_cell(
                 "Pinned Version",
                 Some(CellColor::Green),
@@ -455,13 +427,7 @@ async fn list() {
 
         let mut rows: Vec<Row> = Vec::with_capacity(config.pkg.len());
         for pkg in &config.pkg {
-            let mod_name = prep_cell(
-                pkg.mod_id.clone(),
-                Some(CellColor::Yellow),
-                None,
-                None,
-                None,
-            );
+            let mod_name = prep_cell(pkg.mod_id.clone(), Some(CellColor::Yellow), None, None, None);
             let pinned_version = prep_cell(
                 pkg.pinned_version.clone().unwrap_or_default().to_string(),
                 Some(CellColor::Magenta),

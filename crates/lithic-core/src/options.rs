@@ -33,9 +33,7 @@ impl LithicOptions {
                 mod_dir: Some(PathBuf::from(path).join("VintagestoryData").join("Mods")),
             };
         }
-        warn!(
-            "Unable to determine default mods directory (APPDATA not set). Set mod_dir manually."
-        );
+        warn!("Unable to determine default mods directory (APPDATA not set). Set mod_dir manually.");
         LithicOptions { mod_dir: None }
     }
 
@@ -118,10 +116,8 @@ impl LithicOptions {
                 mod_dir: Some(PathBuf::new()),
             };
 
-            let old_is_empty = old_default.exists()
-                && old_default
-                    .read_dir()
-                    .map_or(true, |mut d| d.next().is_none());
+            let old_is_empty =
+                old_default.exists() && old_default.read_dir().map_or(true, |mut d| d.next().is_none());
 
             // old exists, but is empty AND new exists, just use new location
             if old_is_empty && new_default.exists() {

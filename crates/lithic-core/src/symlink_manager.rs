@@ -12,10 +12,7 @@ pub struct SymlinkManager;
 
 impl SymlinkManager {
     /// Manage symlink creation
-    pub async fn create(
-        target: impl AsRef<Path>,
-        link: impl AsRef<Path>,
-    ) -> Result<(), LithicError> {
+    pub async fn create(target: impl AsRef<Path>, link: impl AsRef<Path>) -> Result<(), LithicError> {
         let (target, link) = (target.as_ref(), link.as_ref());
         #[cfg(unix)]
         symlink(target, link)

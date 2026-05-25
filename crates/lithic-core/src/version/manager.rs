@@ -115,36 +115,38 @@ pub fn parse_pinned_version(
     let pinned_game_version = pinned_game_version.as_ref();
 
     // filter out versions that are not declared as compatible with the pinned game version
-    let gres =
-        if pinned_game_version.is_empty() {
-            info!("pinned_game_version was empty");
-            releases.to_owned()
-        } else {
-            info!("found pinned_game_version: {pinned_game_version}");
-            releases.iter().filter(|r| {
-            let mut found = false;
+    let gres = if pinned_game_version.is_empty() {
+        info!("pinned_game_version was empty");
+        releases.to_owned()
+    } else {
+        info!("found pinned_game_version: {pinned_game_version}");
+        releases
+            .iter()
+            .filter(|r| {
+                let mut found = false;
 
-            for tag in &r.tags {
-                match compare_versions(tag.as_str(), pinned_game_version) {
-                    Ok(c) => match c {
-                        std::cmp::Ordering::Less| std::cmp::Ordering::Equal => {
-                            debug!("Version {tag} is <= {pinned_game_version} --- returning true");
-                            found = true;
+                for tag in &r.tags {
+                    match compare_versions(tag.as_str(), pinned_game_version) {
+                        Ok(c) => match c {
+                            std::cmp::Ordering::Less | std::cmp::Ordering::Equal => {
+                                debug!("Version {tag} is <= {pinned_game_version} --- returning true");
+                                found = true;
+                            }
+                            std::cmp::Ordering::Greater => {
+                                debug!("Version {tag} is > {pinned_game_version} --- returning false");
+                            }
                         },
-                        std::cmp::Ordering::Greater => {
-                            debug!("Version {tag} is > {pinned_game_version} --- returning false");
-                        },
-                    },
-                    Err(e) => {
-                        error!("{e}");
-                    },
+                        Err(e) => {
+                            error!("{e}");
+                        }
+                    }
                 }
-            }
 
-            found
-
-        }).cloned().collect()
-        };
+                found
+            })
+            .cloned()
+            .collect()
+    };
 
     debug!("releases found for game version {:?}", gres);
 
@@ -226,10 +228,7 @@ fn return_version_results(
     }
 }
 
-pub fn compare_versions(
-    mod_version: &str,
-    other_version: &str,
-) -> Result<std::cmp::Ordering, LithicError> {
+pub fn compare_versions(mod_version: &str, other_version: &str) -> Result<std::cmp::Ordering, LithicError> {
     let mv = parse_version(mod_version)?;
     let ov = parse_version(other_version)?;
     Ok(mv.cmp(&ov))

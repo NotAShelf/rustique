@@ -18,12 +18,7 @@ pub struct DownloadArgs {
     pub os_type: VSOSType,
 
     /// Select executable type, client by default. Note: Mac `DOES NOT` have a server
-    #[arg(
-        short = 't',
-        long = "type",
-        value_name = "TYPE",
-        default_value = "client"
-    )]
+    #[arg(short = 't', long = "type", value_name = "TYPE", default_value = "client")]
     pub exe_type: VSExecutabletype,
 
     /// This lets you choose between the installer or update exe for Windows only, this flag is ignored if os_type = linux/osx

@@ -13,8 +13,8 @@ use lithic_core::information_utils::prep_cell;
 use lithic_core::installer::manager::Install;
 use lithic_core::sync::structs::ModSyncInfo;
 use lithic_core::utils::{
-    extract_all_mods_metadata, format_for_csv, gather_dependencies, gather_missing_dependencies,
-    html_parse, normalize_whitespace, split_modid_version,
+    extract_all_mods_metadata, format_for_csv, gather_dependencies, gather_missing_dependencies, html_parse,
+    normalize_whitespace, split_modid_version,
 };
 use lithic_core::version::manager::parse_version;
 use std::collections::HashMap;
@@ -116,9 +116,7 @@ pub async fn cmd_list(
                 return None;
             }
 
-            if local_mp_call
-                && matches!(ListColumn::from_str(column), Ok(ListColumn::LatestVersion))
-            {
+            if local_mp_call && matches!(ListColumn::from_str(column), Ok(ListColumn::LatestVersion)) {
                 debug!("local modpack_call on LatestVersion");
                 return None;
             }
@@ -240,9 +238,7 @@ pub async fn cmd_list(
                         .unwrap_or_default();
 
                     match <ListColumn as FromStr>::from_str(column) {
-                        Ok(ListColumn::Name) => {
-                            Some(prep_cell(&mod_info.name, color, attr, None, None))
-                        }
+                        Ok(ListColumn::Name) => Some(prep_cell(&mod_info.name, color, attr, None, None)),
                         Ok(ListColumn::ModId) => {
                             let (mut txt, mut the_color) = (String::new(), color);
 
@@ -338,9 +334,8 @@ pub async fn cmd_list(
                                 ),
                         ),
                         Ok(ListColumn::Description) => {
-                            let mut txt = normalize_whitespace(
-                                &mod_info.description.clone().unwrap_or(String::new()),
-                            );
+                            let mut txt =
+                                normalize_whitespace(&mod_info.description.clone().unwrap_or(String::new()));
 
                             if let Some(out) = &export {
                                 if matches!(out, ListExport::Csv) {
@@ -413,11 +408,9 @@ pub async fn cmd_list(
                             // let mut changelog = normalize_whitespace(&mod_sync_data.latest_changelog);
                             let mut changelog = &mod_sync_data.latest_changelog;
 
-                            let out = html_parse(
-                                &mut changelog,
-                                usize::from(table.width().unwrap_or_default()),
-                            )
-                            .unwrap_or_default();
+                            let out =
+                                html_parse(&mut changelog, usize::from(table.width().unwrap_or_default()))
+                                    .unwrap_or_default();
                             let changelog = if let Some(output) = &export {
                                 if matches!(output, ListExport::Csv) {
                                     format_for_csv(out)
@@ -438,10 +431,8 @@ pub async fn cmd_list(
                             None,
                         )),
                         Ok(ListColumn::ModURL) => {
-                            let url = format!(
-                                "https://mods.vintagestory.at/show/mod/{}",
-                                mod_sync_data.asset_id
-                            );
+                            let url =
+                                format!("https://mods.vintagestory.at/show/mod/{}", mod_sync_data.asset_id);
 
                             Some(prep_cell(url, color, attr, None, None))
                         }

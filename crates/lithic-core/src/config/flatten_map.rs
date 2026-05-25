@@ -49,12 +49,7 @@ impl FlattenMap {
         Self(IndexMap::new())
     }
 
-    pub fn with(
-        &mut self,
-        key: &str,
-        color: Option<CellColor>,
-        attribute: Option<CellAttr>,
-    ) -> &mut Self {
+    pub fn with(&mut self, key: &str, color: Option<CellColor>, attribute: Option<CellAttr>) -> &mut Self {
         self.0
             .insert(key.to_string(), ColumnProperties { color, attribute });
         self
@@ -99,16 +94,14 @@ impl<'de> Deserialize<'de> for FlattenMap {
                         if attr == "color" {
                             if let Some(color_str) = value.as_str() {
                                 entry.color = Option::from(
-                                    <CellColor as FromStr>::from_str(color_str)
-                                        .unwrap_or(CellColor::Reset),
+                                    <CellColor as FromStr>::from_str(color_str).unwrap_or(CellColor::Reset),
                                 );
                             }
                         } else if attr == "attribute"
                             && let Some(attr_str) = value.as_str()
                         {
                             entry.attribute = Option::from(
-                                <CellAttr as FromStr>::from_str(attr_str)
-                                    .unwrap_or(CellAttr::NoHidden),
+                                <CellAttr as FromStr>::from_str(attr_str).unwrap_or(CellAttr::NoHidden),
                             );
                         }
                     }

@@ -7,9 +7,7 @@ use lithic_core::errors::LithicError;
 use lithic_core::errors::LithicError::SimpleError;
 use lithic_core::information_utils::{command_output, display_installation_results, display_table};
 use lithic_core::installer::manager::{Install, install_manager};
-use lithic_core::utils::{
-    extract_all_mods_metadata, gather_missing_dependencies, split_modid_version,
-};
+use lithic_core::utils::{extract_all_mods_metadata, gather_missing_dependencies, split_modid_version};
 use lithic_core::version::manager::{parse_latest_version, parse_pinned_version};
 use std::collections::HashMap;
 use std::path::Path;

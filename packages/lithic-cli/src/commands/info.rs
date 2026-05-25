@@ -48,30 +48,15 @@ pub async fn info(args: &ModInfoArgs) -> Result<(), LithicError> {
 
         if let Some(author) = &mod_info.author {
             t1_rows.push(Row::from(vec![
-                prep_cell(
-                    "Author",
-                    Some(CellColor::Green),
-                    Some(CellAttr::Bold),
-                    None,
-                    None,
-                ),
+                prep_cell("Author", Some(CellColor::Green), Some(CellAttr::Bold), None, None),
                 prep_cell(author, Some(CellColor::Green), None, None, None),
             ]));
         }
 
         t1_rows.push(Row::from(vec![
+            prep_cell("URL", Some(CellColor::Green), Some(CellAttr::Bold), None, None),
             prep_cell(
-                "URL",
-                Some(CellColor::Green),
-                Some(CellAttr::Bold),
-                None,
-                None,
-            ),
-            prep_cell(
-                format!(
-                    "https://mods.vintagestory.at/show/mod/{}",
-                    &mod_info.asset_id
-                ),
+                format!("https://mods.vintagestory.at/show/mod/{}", &mod_info.asset_id),
                 Some(CellColor::Yellow),
                 None,
                 None,
@@ -120,39 +105,21 @@ pub async fn info(args: &ModInfoArgs) -> Result<(), LithicError> {
 
         if let Some(wiki) = &mod_info.wiki_url {
             t1_rows.push(Row::from(vec![
-                prep_cell(
-                    "Wiki",
-                    Some(CellColor::Green),
-                    Some(CellAttr::Bold),
-                    None,
-                    None,
-                ),
+                prep_cell("Wiki", Some(CellColor::Green), Some(CellAttr::Bold), None, None),
                 prep_cell(wiki, Some(CellColor::Yellow), None, None, None),
             ]));
         }
 
         if let Some(side) = &mod_info.side {
             t1_rows.push(Row::from(vec![
-                prep_cell(
-                    "Side",
-                    Some(CellColor::Green),
-                    Some(CellAttr::Bold),
-                    None,
-                    None,
-                ),
+                prep_cell("Side", Some(CellColor::Green), Some(CellAttr::Bold), None, None),
                 prep_cell(side, Some(CellColor::Cyan), None, None, None),
             ]));
         }
 
         if !&mod_info.tags.is_empty() {
             t1_rows.push(Row::from(vec![
-                prep_cell(
-                    "Tags",
-                    Some(CellColor::Green),
-                    Some(CellAttr::Bold),
-                    None,
-                    None,
-                ),
+                prep_cell("Tags", Some(CellColor::Green), Some(CellAttr::Bold), None, None),
                 prep_cell(
                     mod_info.tags.join(", "),
                     Some(CellColor::Blue),
@@ -274,11 +241,9 @@ pub async fn info(args: &ModInfoArgs) -> Result<(), LithicError> {
         for (index, mv) in rels.iter().enumerate() {
             let version = &mv.mod_version.clone().unwrap_or_default().clone();
             let game_versions = &mv.tags.join(", ");
-            let changelog = html2text::from_read(
-                &mut mv.changelog.clone().unwrap_or(String::new()).as_bytes(),
-                100,
-            )
-            .map_err(|_| LithicError::SimpleError("html2txt failed".to_string()))?;
+            let changelog =
+                html2text::from_read(&mut mv.changelog.clone().unwrap_or(String::new()).as_bytes(), 100)
+                    .map_err(|_| LithicError::SimpleError("html2txt failed".to_string()))?;
 
             let cell_color = if index % 2 == 0 {
                 CellColor::Green
@@ -288,13 +253,7 @@ pub async fn info(args: &ModInfoArgs) -> Result<(), LithicError> {
 
             vt_rows.push(Row::from(vec![
                 prep_cell(version, Some(CellColor::Magenta), None, None, None),
-                prep_cell(
-                    game_versions,
-                    Some(CellColor::Yellow),
-                    None,
-                    Some(','),
-                    None,
-                ),
+                prep_cell(game_versions, Some(CellColor::Yellow), None, Some(','), None),
                 prep_cell(&changelog, Some(cell_color), None, None, None),
             ]));
         }

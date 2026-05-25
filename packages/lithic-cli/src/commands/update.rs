@@ -82,9 +82,7 @@ pub async fn update_mods<V: AsRef<[ModID]>>(
         .into_iter()
         .filter_map(|(mod_id, mod_sync_info)| {
             // if mod_id is present in the [[pkg]] section of the config, check if we are allowed to update the mod
-            if mod_sync_info.latest_known_version != mod_sync_info.installed_version
-                && !mod_id.is_empty()
-            {
+            if mod_sync_info.latest_known_version != mod_sync_info.installed_version && !mod_id.is_empty() {
                 Some(Install {
                     mod_id: mod_id.to_lowercase().into(),
                     mod_name: mod_sync_info.mod_name.clone().into(),

@@ -27,9 +27,7 @@ pub async fn delete_all(
 
     let mut cleaned_mods: Vec<PathBuf> = Vec::new();
 
-    if matches!(delete_type, DeleteArgAllVals::Mods)
-        || matches!(delete_type, DeleteArgAllVals::Both)
-    {
+    if matches!(delete_type, DeleteArgAllVals::Mods) || matches!(delete_type, DeleteArgAllVals::Both) {
         // delete all mods in the mod_dir
         // collect paths for all in mod_dir
         // use delete_file on each
@@ -38,9 +36,7 @@ pub async fn delete_all(
         iterate_and_delete(&mut mods, &mut cleaned_mods).await?;
     }
 
-    if matches!(delete_type, DeleteArgAllVals::Backups)
-        || matches!(delete_type, DeleteArgAllVals::Both)
-    {
+    if matches!(delete_type, DeleteArgAllVals::Backups) || matches!(delete_type, DeleteArgAllVals::Both) {
         let mut mods = tokio::fs::read_dir(Path::new(&config.backup_mods_dir)).await?;
         iterate_and_delete(&mut mods, &mut cleaned_mods).await?;
     }
@@ -129,8 +125,7 @@ pub async fn delete_cmd(
             let should_delete = match &target_version {
                 Some(required_version) => {
                     let required = parse_version(required_version)?;
-                    let current =
-                        parse_version(&modinfo.version.clone().unwrap_or("0.0.0".into()))?;
+                    let current = parse_version(&modinfo.version.clone().unwrap_or("0.0.0".into()))?;
                     info!("DELETE: Comparing versions: {} == {}", required, current);
                     required == current
                 }
@@ -166,9 +161,7 @@ pub async fn delete_cmd(
         }
 
         // save the file from the passed mod_dir (which could be from the config file or the cli)
-        sync_data
-            .save(Path::new(mod_dir).join(FILE_LITHIC_SYNC))
-            .await?;
+        sync_data.save(Path::new(mod_dir).join(FILE_LITHIC_SYNC)).await?;
     }
 
     let removed = processed_mods
@@ -189,12 +182,7 @@ pub async fn delete_cmd(
 fn show_deleted(deleted_mods: &str) {
     display_table(
         vec![(
-            CellData::new(
-                "Successfully deleted:".into(),
-                Some(Color::Green),
-                vec![],
-                None,
-            ),
+            CellData::new("Successfully deleted:".into(), Some(Color::Green), vec![], None),
             CellData::new(
                 format!("[{deleted_mods}]"),
                 Some(Color::Magenta),

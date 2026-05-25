@@ -10,8 +10,8 @@ use lithic_core::information_utils::{CellData, display_table, elapsed_footer, no
 use lithic_core::symlink_manager::SymlinkManager;
 use lithic_core::sync::structs::{GameVersionSync, LithicSyncJson, ModSyncInfo};
 use lithic_core::utils::{
-    extract_all_mods_metadata, find_mod_id, get_current_time, parse_json_file, prettify,
-    split_modid_version, timestamp_older_than, write_json_file,
+    extract_all_mods_metadata, find_mod_id, get_current_time, parse_json_file, prettify, split_modid_version,
+    timestamp_older_than, write_json_file,
 };
 use lithic_core::version::manager::{parse_latest_version, parse_pinned_version, parse_version};
 use std::collections::HashMap;
@@ -23,10 +23,7 @@ use tracing::{debug, error, info, warn};
 use yansi::Paint;
 
 /// Use this function to retrieve the sync file for mod_dir.
-pub async fn get_sync_data(
-    mod_dir: impl AsRef<Path>,
-    quiet: bool,
-) -> Result<LithicSyncJson, LithicError> {
+pub async fn get_sync_data(mod_dir: impl AsRef<Path>, quiet: bool) -> Result<LithicSyncJson, LithicError> {
     let mod_dir = mod_dir.as_ref();
     let fp = mod_dir.join(PathBuf::from(FILE_LITHIC_SYNC));
     if !fp.exists() {
@@ -115,14 +112,13 @@ pub async fn sync<V: AsRef<[Package]>>(
     }
 
     let game_version_sync_file = config_path.join(FILE_GAME_VERSION_SYNC);
-    let game_version_sync_data =
-        match parse_json_file::<GameVersionSync>(&game_version_sync_file).await {
-            Ok(json) => json,
-            Err(e) => {
-                info!("game version sync Error: {e}");
-                game_version_sync(true).await?
-            }
-        };
+    let game_version_sync_data = match parse_json_file::<GameVersionSync>(&game_version_sync_file).await {
+        Ok(json) => json,
+        Err(e) => {
+            info!("game version sync Error: {e}");
+            game_version_sync(true).await?
+        }
+    };
 
     let game_version_time = config.sync_latest_game_version_file_every;
     if timestamp_older_than(game_version_time, &game_version_sync_data.last_sync).unwrap_or(true) {
@@ -141,8 +137,7 @@ pub async fn sync<V: AsRef<[Package]>>(
         debug!("MOD_INFO in sync: {:?}", mod_info);
 
         // check if the file is a symlink
-        let version = if let Ok(parsed_version) =
-            parse_version(&mod_info.version.clone().unwrap_or_default())
+        let version = if let Ok(parsed_version) = parse_version(&mod_info.version.clone().unwrap_or_default())
         {
             parsed_version.to_string()
         } else {
@@ -231,22 +226,14 @@ pub async fn sync<V: AsRef<[Package]>>(
 
         let (mod_version, download_url, game_versions, changelog) =
             if !pkg.mod_id.is_empty() || !config.pinned_game_version.is_empty() {
-                info!(
-                    "{} {}",
-                    "Parsing pinned versions for".yellow(),
-                    mod_id.blue()
-                );
+                info!("{} {}", "Parsing pinned versions for".yellow(), mod_id.blue());
                 parse_pinned_version(
                     &res_mod.mod_json.releases,
                     &pkg,
                     config.pinned_game_version.clone(),
                 )
             } else {
-                info!(
-                    "{} {}",
-                    "Parsing latest versions for".yellow(),
-                    mod_id.blue()
-                );
+                info!("{} {}", "Parsing latest versions for".yellow(), mod_id.blue());
                 parse_latest_version(&res_mod.mod_json.releases)
             };
 
@@ -318,11 +305,7 @@ pub async fn daily_file_syncs(force: bool) -> Result<ModsSearchFile, LithicError
         || force
         || timestamp_older_than(sync_time, &file_data.last_sync).unwrap_or(true)
     {
-        notice(
-            "Daily Search Sync...",
-            Some(Color::Yellow),
-            vec![Attribute::Bold],
-        );
+        notice("Daily Search Sync...", Some(Color::Yellow), vec![Attribute::Bold]);
 
         let client = ApiClient::new();
         // get all mod info

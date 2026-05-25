@@ -68,8 +68,7 @@ pub async fn install_manager(
     let mod_dir = mod_dir.as_ref();
     // this is the combined list of all mods installed, once download is completed, new mods will be
     // added here
-    let mut total_mods_seen: HashMap<ModID, Installed> =
-        HashMap::with_capacity(installed_mods.len());
+    let mut total_mods_seen: HashMap<ModID, Installed> = HashMap::with_capacity(installed_mods.len());
     for (mod_id, mod_sync_info) in &installed_mods {
         // this is what is already on the system
         // the version doesn't really matter, we just need to know modid and filepath, which the
@@ -218,10 +217,7 @@ pub async fn install_manager(
         }
 
         // obtain the download_urls for the currently needed dependencies and then pass it back to mods_requested
-        let mod_ids: Vec<ModID> = needed_dependencies
-            .iter()
-            .map(|dep| dep.mod_id.clone())
-            .collect();
+        let mod_ids: Vec<ModID> = needed_dependencies.iter().map(|dep| dep.mod_id.clone()).collect();
         let result: HashMap<ModID, Mod> = client.fetch_mods_parallel(mod_ids).await?;
 
         // add the result to the mods_requested

@@ -2,6 +2,7 @@ use crate::aliases::ModVersion;
 use crate::config::structs::Tables;
 use crate::errors::LithicError;
 use crate::information_utils::{CellData, LithicMessage, lithic_message};
+use crate::instance::{GameVersionInstall, InstanceConfig};
 use crate::options::LithicOptions;
 use chrono::Local;
 use comfy_table::{Attribute, CellAlignment, Color};
@@ -70,6 +71,24 @@ pub struct Config {
 
     #[serde(default)]
     pub table: Tables,
+
+    #[serde(default)]
+    pub instances: Vec<InstanceConfig>,
+
+    #[serde(default)]
+    pub active_instance_id: Option<String>,
+
+    #[serde(default)]
+    pub game_versions: Vec<GameVersionInstall>,
+
+    #[serde(default = "default_theme_mode")]
+    pub theme_mode: String,
+
+    #[serde(default)]
+    pub theme_preset: String,
+
+    #[serde(default = "default_initial_page")]
+    pub initial_page: String,
 }
 
 #[cfg(windows)]
@@ -92,10 +111,7 @@ pub struct ModPacks {
 impl Default for ModPacks {
     fn default() -> Self {
         Self {
-            modpack_dir: Config::data_path()
-                .join("modpacks")
-                .to_string_lossy()
-                .to_string(),
+            modpack_dir: Config::data_path().join("modpacks").to_string_lossy().to_string(),
             enabled: vec![],
             disabled: vec![],
         }
@@ -111,6 +127,14 @@ pub struct Package {
 
 fn default_sync_time() -> i64 {
     24
+}
+
+fn default_theme_mode() -> String {
+    "system".to_string()
+}
+
+fn default_initial_page() -> String {
+    "browse".to_string()
 }
 
 impl Config {
@@ -180,6 +204,12 @@ impl Default for Config {
             table: Tables::with_defaults(),
             modpacks: ModPacks::default(),
             check_for_updates: true,
+            instances: Vec::new(),
+            active_instance_id: None,
+            game_versions: Vec::new(),
+            theme_mode: default_theme_mode(),
+            theme_preset: String::new(),
+            initial_page: default_initial_page(),
 
             #[cfg(windows)]
             update_default_windows_loc: true,
@@ -207,13 +237,11 @@ impl Config {
                 LithicError::ConfigFileError(format!("Failed to serialize default config: {e}"))
             })?;
 
-            let mut file = File::create(&config_file_path).map_err(|e| {
-                LithicError::ConfigFileError(format!("Failed to create config file at: {e}"))
-            })?;
+            let mut file = File::create(&config_file_path)
+                .map_err(|e| LithicError::ConfigFileError(format!("Failed to create config file at: {e}")))?;
 
-            file.write_all(toml_content.as_bytes()).map_err(|e| {
-                LithicError::ConfigFileError(format!("Failed writing config file: {e}"))
-            })?;
+            file.write_all(toml_content.as_bytes())
+                .map_err(|e| LithicError::ConfigFileError(format!("Failed writing config file: {e}")))?;
 
             println!(
                 "{} {}",
@@ -227,14 +255,12 @@ impl Config {
         Self::setup_modpack_dir("modpacks")?;
 
         // if config exists load and parse it
-        let mut file = File::open(&config_file_path).map_err(|e| {
-            LithicError::ConfigFileError(format!("Failed to open config file: {e}"))
-        })?;
+        let mut file = File::open(&config_file_path)
+            .map_err(|e| LithicError::ConfigFileError(format!("Failed to open config file: {e}")))?;
 
         let mut contents = String::new();
-        file.read_to_string(&mut contents).map_err(|e| {
-            LithicError::ConfigFileError(format!("Failed to read config file: {e}"))
-        })?;
+        file.read_to_string(&mut contents)
+            .map_err(|e| LithicError::ConfigFileError(format!("Failed to read config file: {e}")))?;
 
         match toml::from_str::<Config>(&contents) {
             Ok(config) => Ok(config),
@@ -261,11 +287,7 @@ impl Config {
                 info!("creating modpacks/{dir}");
                 let d = &modpack_dir.join(dir);
                 fs::create_dir_all(d).map_err(|e| {
-                    LithicError::SimpleError(format!(
-                        "Failed to create {}: {}",
-                        d.to_string_lossy(),
-                        e
-                    ))
+                    LithicError::SimpleError(format!("Failed to create {}: {}", d.to_string_lossy(), e))
                 })?;
             }
         }
@@ -277,27 +299,19 @@ impl Config {
         let config_path = config_dir.unwrap_or_else(Self::get_path);
         let config_file_path = config_path.join("config.toml");
 
-        let toml_content = toml::to_string_pretty(self).map_err(|e| {
-            LithicError::ConfigFileError(format!("Failed to serialize config: {e}"))
-        })?;
+        let toml_content = toml::to_string_pretty(self)
+            .map_err(|e| LithicError::ConfigFileError(format!("Failed to serialize config: {e}")))?;
 
         File::create(&config_file_path)
-            .map_err(|e| {
-                LithicError::ConfigFileError(format!("Failed to create config file: {e}"))
-            })?
+            .map_err(|e| LithicError::ConfigFileError(format!("Failed to create config file: {e}")))?
             .write_all(toml_content.as_bytes())
-            .map_err(|e| {
-                LithicError::ConfigFileError(format!("Failed to write config file: {e}"))
-            })?;
+            .map_err(|e| LithicError::ConfigFileError(format!("Failed to write config file: {e}")))?;
 
         Ok(())
     }
 }
 
-pub fn backup_config(
-    config_path: impl AsRef<Path>,
-    message: Option<String>,
-) -> Result<(), LithicError> {
+pub fn backup_config(config_path: impl AsRef<Path>, message: Option<String>) -> Result<(), LithicError> {
     let config_path = config_path.as_ref();
     if config_path.exists() {
         let back_name = format!("toml.bak-{}", Local::now().format("%Y%m%d_%H%M%S"));

@@ -59,15 +59,9 @@ pub async fn download_requested_mods(
                     installed.clone()
                 }
                 Err(e) => {
-                    warn!(
-                        "Failed to download mod: {}, {}",
-                        mod_request.download_url, e
-                    );
+                    warn!("Failed to download mod: {}, {}", mod_request.download_url, e);
                     if let Some(p) = &pb_clone {
-                        p.set_message(format!(
-                            "Failed download: {}",
-                            mod_request.mod_id.bright_red()
-                        ));
+                        p.set_message(format!("Failed download: {}", mod_request.mod_id.bright_red()));
                         p.inc(1);
                     }
 
@@ -167,9 +161,7 @@ pub async fn download_mod(
         }
     }
 
-    Err(LithicError::SimpleError(
-        "Maximum retries exceeded".to_string(),
-    ))
+    Err(LithicError::SimpleError("Maximum retries exceeded".to_string()))
 }
 
 pub async fn download_and_verify(
@@ -199,9 +191,7 @@ pub async fn download_and_verify(
 
     // Verify we have actual content
     if bytes.is_empty() {
-        return Err(LithicError::SimpleError(
-            "Downloaded file is empty".to_string(),
-        ));
+        return Err(LithicError::SimpleError("Downloaded file is empty".to_string()));
     }
 
     // Create and write to temp file first
@@ -210,22 +200,17 @@ pub async fn download_and_verify(
     let mut file = tokio::fs::File::create(&temp_file_path)
         .await
         .map_err(|e| LithicError::IoError {
-            context: format!(
-                "Unable to create temp file {}",
-                temp_file_path.to_string_lossy()
-            ),
+            context: format!("Unable to create temp file {}", temp_file_path.to_string_lossy()),
             source: e,
         })?;
 
-    file.write_all(&bytes)
-        .await
-        .map_err(|e| LithicError::IoError {
-            context: format!(
-                "Failure while writing to file {}",
-                temp_file_path.to_string_lossy()
-            ),
-            source: e,
-        })?;
+    file.write_all(&bytes).await.map_err(|e| LithicError::IoError {
+        context: format!(
+            "Failure while writing to file {}",
+            temp_file_path.to_string_lossy()
+        ),
+        source: e,
+    })?;
 
     // Ensure all data is written to disk
     file.sync_all().await.map_err(|e| LithicError::IoError {
@@ -246,10 +231,7 @@ pub async fn download_and_verify(
     tokio::fs::rename(&temp_file_path, file_path)
         .await
         .map_err(|e| LithicError::IoError {
-            context: format!(
-                "Failed to rename temp file to {}",
-                file_path.to_string_lossy()
-            ),
+            context: format!("Failed to rename temp file to {}", file_path.to_string_lossy()),
             source: e,
         })?;
 

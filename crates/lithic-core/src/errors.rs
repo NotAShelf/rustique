@@ -112,11 +112,7 @@ pub fn handle_err_result<T>(
         };
 
         if nice_error {
-            notice(
-                format!("{context}: {e}"),
-                Some(color),
-                vec![Attribute::Bold],
-            );
+            notice(format!("{context}: {e}"), Some(color), vec![Attribute::Bold]);
         }
     }
 }

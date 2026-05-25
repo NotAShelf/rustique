@@ -48,10 +48,7 @@ pub fn danger_btn_style(_: &Theme, _: iced::widget::button::Status) -> iced::wid
     }
 }
 
-pub fn ghost_btn_style(
-    theme: &Theme,
-    _: iced::widget::button::Status,
-) -> iced::widget::button::Style {
+pub fn ghost_btn_style(theme: &Theme, _: iced::widget::button::Status) -> iced::widget::button::Style {
     iced::widget::button::Style {
         background: None,
         text_color: theme.extended_palette().background.base.text,
@@ -69,10 +66,7 @@ pub fn ghost_btn_style(
     }
 }
 
-pub fn primary_btn_style(
-    _: &Theme,
-    _: iced::widget::button::Status,
-) -> iced::widget::button::Style {
+pub fn primary_btn_style(_: &Theme, _: iced::widget::button::Status) -> iced::widget::button::Style {
     iced::widget::button::Style {
         background: Some(
             Color {
@@ -169,18 +163,17 @@ pub fn nav_button(label: &str, active: bool, msg: Message) -> Element<'_, Messag
 
     let pip_color = if active { ACCENT } else { TRANSPARENT };
 
-    let pip =
-        container("")
-            .width(3)
-            .height(14)
-            .style(move |_: &Theme| iced::widget::container::Style {
-                background: Some(pip_color.into()),
-                border: Border {
-                    radius: 2.0.into(),
-                    ..Default::default()
-                },
+    let pip = container("")
+        .width(3)
+        .height(14)
+        .style(move |_: &Theme| iced::widget::container::Style {
+            background: Some(pip_color.into()),
+            border: Border {
+                radius: 2.0.into(),
                 ..Default::default()
-            });
+            },
+            ..Default::default()
+        });
 
     button(
         row![pip, text(label).size(14)]

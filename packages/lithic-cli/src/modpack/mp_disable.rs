@@ -34,8 +34,7 @@ pub async fn mp_disable(mpk_id: ModID, mod_dir: impl AsRef<Path>) -> Result<ModI
 
     if !mod_pack_dir.exists() {
         return Err(LithicError::SimpleError(
-            "Modpack {} doesn't exist. Run 'Lithic modpack list' to view installed modpacks."
-                .into(),
+            "Modpack {} doesn't exist. Run 'Lithic modpack list' to view installed modpacks.".into(),
         ));
     }
 

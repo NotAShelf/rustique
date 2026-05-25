@@ -46,10 +46,7 @@ pub async fn download(args: &DownloadArgs) -> Result<(), LithicError> {
     let user_version = args.game_version.replace('v', "");
     let mut found = false;
     for game_version in &game_versions {
-        if game_version
-            .replace('v', "")
-            .eq_ignore_ascii_case(&user_version)
-        {
+        if game_version.replace('v', "").eq_ignore_ascii_case(&user_version) {
             found = true;
         }
     }

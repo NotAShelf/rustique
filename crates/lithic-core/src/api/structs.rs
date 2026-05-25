@@ -158,8 +158,8 @@ impl ModInfo {
 
         // Compression needs to be set to Deflated to make it the most compatible
 
-        let mod_info = serde_json::to_string_pretty(&self)
-            .map_err(|e| LithicError::SimpleError(e.to_string()))?;
+        let mod_info =
+            serde_json::to_string_pretty(&self).map_err(|e| LithicError::SimpleError(e.to_string()))?;
 
         if let Err(e) = self
             .add_file_to_zip(
@@ -336,49 +336,25 @@ pub struct ApiModJson {
     #[serde(default, rename = "urlalias", skip_serializing_if = "Option::is_none")]
     pub url_alias: Option<String>,
 
-    #[serde(
-        default,
-        rename = "logofilename",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(default, rename = "logofilename", skip_serializing_if = "Option::is_none")]
     pub logo_filename: Option<String>,
 
     #[serde(default, rename = "logofile", skip_serializing_if = "Option::is_none")]
     pub logo_file: Option<String>,
 
-    #[serde(
-        default,
-        rename = "logofiledb",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(default, rename = "logofiledb", skip_serializing_if = "Option::is_none")]
     pub logo_file_db: Option<String>,
 
-    #[serde(
-        default,
-        rename = "homepageurl",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(default, rename = "homepageurl", skip_serializing_if = "Option::is_none")]
     pub home_page_url: Option<String>,
 
-    #[serde(
-        default,
-        rename = "sourcecodeurl",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(default, rename = "sourcecodeurl", skip_serializing_if = "Option::is_none")]
     pub source_code_url: Option<String>,
 
-    #[serde(
-        default,
-        rename = "trailervideourl",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(default, rename = "trailervideourl", skip_serializing_if = "Option::is_none")]
     pub trailer_video_url: Option<String>,
 
-    #[serde(
-        default,
-        rename = "issuetrackerurl",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(default, rename = "issuetrackerurl", skip_serializing_if = "Option::is_none")]
     pub issue_tracker_url: Option<String>,
 
     #[serde(default, rename = "wikiurl", skip_serializing_if = "Option::is_none")]
@@ -404,17 +380,9 @@ pub struct ApiModJson {
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub created: Option<String>,
-    #[serde(
-        default,
-        rename = "lastreleased",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(default, rename = "lastreleased", skip_serializing_if = "Option::is_none")]
     pub last_released: Option<String>,
-    #[serde(
-        default,
-        rename = "lastmodified",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(default, rename = "lastmodified", skip_serializing_if = "Option::is_none")]
     pub last_modified: Option<String>,
     #[serde(default, deserialize_with = "some_array_items")]
     pub tags: Vec<String>,

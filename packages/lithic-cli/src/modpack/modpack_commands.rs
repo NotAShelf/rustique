@@ -1,6 +1,4 @@
-use crate::commands::arg_structs::modpack_args::{
-    MPLocalSubCommands, ModpackCommands, ModpackSubCommands,
-};
+use crate::commands::arg_structs::modpack_args::{MPLocalSubCommands, ModpackCommands, ModpackSubCommands};
 use crate::commands::info::info;
 use crate::commands::list::cmd_list;
 use crate::handle_sync_call;
@@ -178,10 +176,7 @@ pub async fn parse_modpack_commands(commands: &ModpackCommands, mod_dir: impl As
                     }
                 }
                 Err(e) => {
-                    error!(
-                        "Failed to disable modpack.. :{}",
-                        e.to_string().red().bold()
-                    );
+                    error!("Failed to disable modpack.. :{}", e.to_string().red().bold());
                 }
             }
         }
