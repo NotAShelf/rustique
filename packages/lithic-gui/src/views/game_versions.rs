@@ -4,9 +4,7 @@ use lithic_core::instance::GameVersionInstall;
 
 use crate::app::Message;
 use crate::ops::GameInstallProgress;
-use crate::widgets::{
-    card_style, danger_btn_style, ghost_btn_style, primary_btn_style, status_element,
-};
+use crate::widgets::{card_style, danger_btn_style, ghost_btn_style, primary_btn_style, status_element};
 
 #[derive(Debug, Clone, Default)]
 pub struct GameVersionsView {
@@ -34,75 +32,74 @@ pub fn view(state: &GameVersionsView) -> Element<'_, Message> {
     .spacing(8)
     .align_y(Alignment::Center);
 
-    let install_banner: Element<'_, Message> =
-        if state.install_banner.active || state.install_banner.done {
-            let percent_text = state
-                .install_banner
-                .percent
-                .map(|p| format!("{p}%"))
-                .unwrap_or_else(|| "Working".to_string());
-            let title = if let Some(error) = &state.install_banner.error {
-                format!("Installing Vintage Story - Error: {error}")
-            } else if state.install_banner.done {
-                "Installing Vintage Story - Complete".to_string()
-            } else {
-                format!(
-                    "Installing Vintage Story - {} {percent_text}",
-                    state.install_banner.stage
-                )
-            };
-
-            let bar_value = state.install_banner.percent.unwrap_or(0) as f32 / 100.0;
-            let logs: Element<'_, Message> = if state.show_install_logs {
-                let lines: Vec<Element<'_, Message>> = state
-                    .install_banner
-                    .logs
-                    .iter()
-                    .rev()
-                    .take(10)
-                    .rev()
-                    .map(|line| {
-                        text(line.as_str())
-                            .size(11)
-                            .color(Color {
-                                r: 0.72,
-                                g: 0.72,
-                                b: 0.72,
-                                a: 1.0,
-                            })
-                            .into()
-                    })
-                    .collect();
-                column(lines).spacing(3).into()
-            } else {
-                iced::widget::Space::new().into()
-            };
-
-            container(
-                column![
-                    row![
-                        text(title).size(14).width(Fill),
-                        button(if state.show_install_logs {
-                            "Hide Logs"
-                        } else {
-                            "View Logs"
-                        })
-                        .on_press(Message::ToggleGameInstallLogs)
-                        .style(ghost_btn_style),
-                    ]
-                    .spacing(8)
-                    .align_y(Alignment::Center),
-                    progress_bar(0.0..=1.0, bar_value),
-                    logs,
-                ]
-                .spacing(8),
+    let install_banner: Element<'_, Message> = if state.install_banner.active || state.install_banner.done {
+        let percent_text = state
+            .install_banner
+            .percent
+            .map(|p| format!("{p}%"))
+            .unwrap_or_else(|| "Working".to_string());
+        let title = if let Some(error) = &state.install_banner.error {
+            format!("Installing Vintage Story - Error: {error}")
+        } else if state.install_banner.done {
+            "Installing Vintage Story - Complete".to_string()
+        } else {
+            format!(
+                "Installing Vintage Story - {} {percent_text}",
+                state.install_banner.stage
             )
-            .padding(12)
-            .style(card_style)
-            .into()
+        };
+
+        let bar_value = state.install_banner.percent.unwrap_or(0) as f32 / 100.0;
+        let logs: Element<'_, Message> = if state.show_install_logs {
+            let lines: Vec<Element<'_, Message>> = state
+                .install_banner
+                .logs
+                .iter()
+                .rev()
+                .take(10)
+                .rev()
+                .map(|line| {
+                    text(line.as_str())
+                        .size(11)
+                        .color(Color {
+                            r: 0.72,
+                            g: 0.72,
+                            b: 0.72,
+                            a: 1.0,
+                        })
+                        .into()
+                })
+                .collect();
+            column(lines).spacing(3).into()
         } else {
             iced::widget::Space::new().into()
         };
+
+        container(
+            column![
+                row![
+                    text(title).size(14).width(Fill),
+                    button(if state.show_install_logs {
+                        "Hide Logs"
+                    } else {
+                        "View Logs"
+                    })
+                    .on_press(Message::ToggleGameInstallLogs)
+                    .style(ghost_btn_style),
+                ]
+                .spacing(8)
+                .align_y(Alignment::Center),
+                progress_bar(0.0..=1.0, bar_value),
+                logs,
+            ]
+            .spacing(8),
+        )
+        .padding(12)
+        .style(card_style)
+        .into()
+    } else {
+        iced::widget::Space::new().into()
+    };
 
     let form = container(
         column![
@@ -139,10 +136,8 @@ pub fn view(state: &GameVersionsView) -> Element<'_, Message> {
     let install_form = container(
         column![
             text("Install Version").size(14),
-            text_input("id (defaults to version)", &state.install_id)
-                .on_input(Message::GameVersionInstallId),
-            text_input("version", &state.install_version)
-                .on_input(Message::GameVersionInstallVersion),
+            text_input("id (defaults to version)", &state.install_id).on_input(Message::GameVersionInstallId),
+            text_input("version", &state.install_version).on_input(Message::GameVersionInstallVersion),
             row![
                 text_input("install dir (optional)", &state.install_dir)
                     .on_input(Message::GameVersionInstallDir)

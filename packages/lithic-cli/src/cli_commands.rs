@@ -59,9 +59,7 @@ pub enum Commands {
     #[command(about = "Updates a specific mod OR all mods installed. Runs sync after completion")]
     Update(UpdateArgs),
 
-    #[command(
-        about = "Install a specific mod. Must use the mod_id, Example: ./Lithic install alchemy"
-    )]
+    #[command(about = "Install a specific mod. Must use the mod_id, Example: ./Lithic install alchemy")]
     Install(InstallArgs),
 
     #[command(about = "Search the mod website for new mods, Example: ./Lithic search -q magic")]

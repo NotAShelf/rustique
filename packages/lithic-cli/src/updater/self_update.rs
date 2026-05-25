@@ -98,10 +98,7 @@ impl LithicUpdater {
                 source: e,
             })?;
 
-        info!(
-            "Looking for binary in archive called: {}",
-            &self.new_binary_name
-        );
+        info!("Looking for binary in archive called: {}", &self.new_binary_name);
 
         let entry_index = zip
             .file()
@@ -110,14 +107,10 @@ impl LithicUpdater {
             .position(|entry| {
                 let filename = entry.filename().as_str().unwrap_or("");
                 info!("Current file in archive: {}", filename.magenta());
-                filename == self.new_binary_name
-                    || filename.ends_with(&format!("/{}", &self.new_binary_name))
+                filename == self.new_binary_name || filename.ends_with(&format!("/{}", &self.new_binary_name))
             })
             .ok_or_else(|| {
-                LithicError::SimpleError(format!(
-                    "Failed to locate {} in zip",
-                    &self.new_binary_name
-                ))
+                LithicError::SimpleError(format!("Failed to locate {} in zip", &self.new_binary_name))
             })?;
 
         // extract the binary
@@ -125,10 +118,7 @@ impl LithicUpdater {
             zip.reader_with_entry(entry_index)
                 .await
                 .map_err(|e| LithicError::ZipError {
-                    context: format!(
-                        "Failed to create entry_reader for {}",
-                        &self.new_binary_name
-                    ),
+                    context: format!("Failed to create entry_reader for {}", &self.new_binary_name),
                     source: e,
                 })?;
 
@@ -137,10 +127,7 @@ impl LithicUpdater {
         entry_reader.read_to_end(&mut buffer).await?;
         output_file.write_all(&buffer).await?;
 
-        info!(
-            "{}",
-            "Successfully extracted binary from zip archive".green()
-        );
+        info!("{}", "Successfully extracted binary from zip archive".green());
 
         Ok(self.temp_dir.join(&self.new_binary_name))
     }
@@ -164,11 +151,7 @@ impl LithicUpdater {
         .await
         {
             Ok(_) => {
-                notice(
-                    "Update successful!",
-                    Some(Color::Green),
-                    vec![Attribute::Bold],
-                );
+                notice("Update successful!", Some(Color::Green), vec![Attribute::Bold]);
                 // update successful
                 fs::remove_file(exe_backup).await?; // delete backup
                 fs::remove_file(&self.downloaded_path).await?; // zip archive
@@ -281,8 +264,8 @@ impl LithicUpdater {
     }
 
     fn get_current_binary_filename(&self) -> Result<&OsStr, LithicError> {
-        self.current_binary_path.file_name().ok_or_else(|| {
-            LithicError::SimpleError("Unable to get file name from current exe path".into())
-        })
+        self.current_binary_path
+            .file_name()
+            .ok_or_else(|| LithicError::SimpleError("Unable to get file name from current exe path".into()))
     }
 }

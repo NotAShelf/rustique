@@ -4,9 +4,7 @@ use lithic_core::sync::structs::ModSyncInfo;
 use lithic_core::version::filter::minor_version;
 
 use crate::app::Message;
-use crate::widgets::{
-    active_tab_style, card_style, danger_btn_style, ghost_btn_style, status_element,
-};
+use crate::widgets::{active_tab_style, card_style, danger_btn_style, ghost_btn_style, status_element};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum InstalledTab {
@@ -67,17 +65,12 @@ pub fn view<'a>(state: &'a InstalledView, pinned_game_version: &str) -> Element<
         }
     };
 
-    column![
-        header,
-        tab_bar,
-        status_element(state.status.as_deref()),
-        body
-    ]
-    .spacing(10)
-    .padding(16)
-    .width(Fill)
-    .height(Fill)
-    .into()
+    column![header, tab_bar, status_element(state.status.as_deref()), body]
+        .spacing(10)
+        .padding(16)
+        .width(Fill)
+        .height(Fill)
+        .into()
 }
 
 fn tab_btn(label: &str, active: bool, msg: Message) -> Element<'_, Message> {
@@ -253,8 +246,7 @@ fn mod_row<'a>(
     expanded: bool,
     pinned_minor: Option<&str>,
 ) -> Element<'a, Message> {
-    let needs_update =
-        !m.latest_known_version.is_empty() && m.installed_version != m.latest_known_version;
+    let needs_update = !m.latest_known_version.is_empty() && m.installed_version != m.latest_known_version;
 
     let update_badge: Element<'_, Message> = if needs_update {
         container(

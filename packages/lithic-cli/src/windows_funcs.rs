@@ -139,11 +139,7 @@ pub async fn check_old_default_windows() -> Result<(), LithicError> {
                     Some(Color::Red),
                     vec![Attribute::Bold],
                 );
-                notice(
-                    "Lithic config del -m:",
-                    Some(Color::Cyan),
-                    vec![Attribute::Bold],
-                );
+                notice("Lithic config del -m:", Some(Color::Cyan), vec![Attribute::Bold]);
                 exit(1);
             }
 
@@ -154,10 +150,7 @@ pub async fn check_old_default_windows() -> Result<(), LithicError> {
                 config.mod_dir = new_default.to_string_lossy().to_string();
                 config.update_default_windows_loc = false; // set this to false so we don't try to run the update again
                 config.save(None)?;
-                info!(
-                    "Updated mod_dir in config to new path {}",
-                    new_default.display()
-                );
+                info!("Updated mod_dir in config to new path {}", new_default.display());
             }
 
             for mpk_id in &enabled_modpacks {
@@ -195,9 +188,7 @@ pub async fn check_old_default_windows() -> Result<(), LithicError> {
             );
         }
     } else {
-        info!(
-            "Unable to read the appdata folder. This should not happen and will cause errors with lithic"
-        );
+        info!("Unable to read the appdata folder. This should not happen and will cause errors with lithic");
         return Ok(());
     }
 

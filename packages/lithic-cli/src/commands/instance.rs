@@ -42,9 +42,7 @@ pub async fn parse_instance_commands(commands: &InstanceCommands) -> Result<(), 
             }
             Ok(())
         }
-        InstanceSubCommands::Select(args) => {
-            lithic_core::instance::set_active_instance(&args.id).await
-        }
+        InstanceSubCommands::Select(args) => lithic_core::instance::set_active_instance(&args.id).await,
         InstanceSubCommands::Upsert(args) => {
             lithic_core::instance::add_or_update_instance(to_instance(args)).await
         }

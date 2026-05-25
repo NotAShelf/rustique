@@ -139,8 +139,7 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
             .spacing(6),
             column![
                 section_label("MODPACK DIRECTORY"),
-                text_input("/path/to/modpacks", &state.modpack_dir)
-                    .on_input(Message::SettingModpackDir),
+                text_input("/path/to/modpacks", &state.modpack_dir).on_input(Message::SettingModpackDir),
             ]
             .spacing(6),
         ]
@@ -176,8 +175,7 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
             section_label("GAME VERSION"),
             column![
                 section_label("PINNED GAME VERSION  (leave empty for latest)"),
-                text_input("e.g. 1.20.0", &state.pinned_game_version)
-                    .on_input(Message::SettingGameVersion),
+                text_input("e.g. 1.20.0", &state.pinned_game_version).on_input(Message::SettingGameVersion),
                 browse_gate_note,
             ]
             .spacing(6),

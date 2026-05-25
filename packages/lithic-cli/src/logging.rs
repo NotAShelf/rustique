@@ -10,15 +10,9 @@ pub enum VerboseLevel {
 
 pub fn init_logging(verbose: &VerboseLevel) {
     let filter = match verbose {
-        VerboseLevel::Verbose => {
-            EnvFilter::new("info,lithic=info,ureq=info,tokio=info,tokio_runtime=info")
-        }
-        VerboseLevel::Debug => {
-            EnvFilter::new("info,lithic=debug,ureq=info,tokio=info,tokio_runtime=info")
-        }
-        VerboseLevel::Default => {
-            EnvFilter::new("warn,lithic=warn,ureq=warn,tokio=warn,tokio_runtime=warn")
-        }
+        VerboseLevel::Verbose => EnvFilter::new("info,lithic=info,ureq=info,tokio=info,tokio_runtime=info"),
+        VerboseLevel::Debug => EnvFilter::new("info,lithic=debug,ureq=info,tokio=info,tokio_runtime=info"),
+        VerboseLevel::Default => EnvFilter::new("warn,lithic=warn,ureq=warn,tokio=warn,tokio_runtime=warn"),
     };
 
     tracing_subscriber::registry()

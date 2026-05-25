@@ -13,8 +13,8 @@ impl<T: AsRef<str>> StrLowerExt for T {
     /// Checks if needle is in string. Strips all special characters and whitespaces
     fn contains_str_only(&self, needle: &str) -> bool {
         let replace_chars = [
-            '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+', '[', ']', '{',
-            '}', '|', '\\', ':', ';', '"', '\'', '<', '>', ',', '.', '?', '/', '~', '`',
+            '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+', '[', ']', '{', '}', '|',
+            '\\', ':', ';', '"', '\'', '<', '>', ',', '.', '?', '/', '~', '`',
         ];
 
         let needle_lower = needle

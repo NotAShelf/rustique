@@ -221,11 +221,7 @@ pub async fn get_active_instance() -> Result<Option<InstanceConfig>, String> {
     let Some(active_id) = config.active_instance_id.as_ref() else {
         return Ok(None);
     };
-    Ok(config
-        .instances
-        .iter()
-        .find(|x| &x.id == active_id)
-        .cloned())
+    Ok(config.instances.iter().find(|x| &x.id == active_id).cloned())
 }
 
 pub async fn resolve_active_mod_dir() -> Result<PathBuf, String> {
@@ -249,11 +245,7 @@ pub async fn add_or_update_game_version(game_version: GameVersionInstall) -> Res
     {
         return Err("Game version id, version, and path are required".to_string());
     }
-    if let Some(i) = config
-        .game_versions
-        .iter()
-        .position(|x| x.id == game_version.id)
-    {
+    if let Some(i) = config.game_versions.iter().position(|x| x.id == game_version.id) {
         config.game_versions[i] = game_version;
     } else {
         config.game_versions.push(game_version);
@@ -380,9 +372,7 @@ where
     download_file(&client, url.as_ref(), &archive_path, &mut progress)
         .await
         .map_err(|e| e.to_string())?;
-    progress(GameVersionInstallEvent::Log(
-        "Download complete".to_string(),
-    ));
+    progress(GameVersionInstallEvent::Log("Download complete".to_string()));
 
     let registered_path = if archive_path
         .file_name()
@@ -435,9 +425,7 @@ where
     Ok(install)
 }
 
-pub async fn install_game_version(
-    opts: GameVersionInstallOptions,
-) -> Result<GameVersionInstall, String> {
+pub async fn install_game_version(opts: GameVersionInstallOptions) -> Result<GameVersionInstall, String> {
     install_game_version_with_progress(opts, |_: GameVersionInstallEvent| {}).await
 }
 
@@ -467,18 +455,11 @@ pub async fn launch_instance(instance_id: Option<String>) -> Result<(), String> 
 
     let version_path = PathBuf::from(version.path);
     let Some((command, mut args)) = find_executable(&version_path) else {
-        return Err(
-            "Unable to locate Vintage Story executable in selected version path".to_string(),
-        );
+        return Err("Unable to locate Vintage Story executable in selected version path".to_string());
     };
 
     args.push(format!("--dataPath={}", instance.data_dir));
-    args.extend(
-        instance
-            .start_params
-            .split_whitespace()
-            .map(ToString::to_string),
-    );
+    args.extend(instance.start_params.split_whitespace().map(ToString::to_string));
 
     let start = now_ms();
     let mut cmd = Command::new(command);

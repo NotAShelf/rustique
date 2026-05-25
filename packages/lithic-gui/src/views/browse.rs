@@ -1,17 +1,14 @@
 use std::collections::{HashMap, HashSet};
 
 use human_format::Formatter;
-use iced::widget::{
-    Column, button, column, container, pick_list, row, scrollable, text, text_input,
-};
+use iced::widget::{Column, button, column, container, pick_list, row, scrollable, text, text_input};
 use iced::{Alignment, Color, Element, Fill};
 use lithic_core::api::structs::ModApi;
 use lithic_core::version::filter::VersionFilter;
 
 use crate::app::Message;
 use crate::widgets::{
-    active_tab_style, card_style, danger_btn_style, ghost_btn_style, primary_btn_style,
-    status_element,
+    active_tab_style, card_style, danger_btn_style, ghost_btn_style, primary_btn_style, status_element,
 };
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -107,13 +104,9 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
         .on_press(Message::BrowseRefresh)
         .style(ghost_btn_style);
 
-    let header = row![
-        text("Browse Mods").size(22).width(Fill),
-        export_btn,
-        refresh_btn,
-    ]
-    .spacing(8)
-    .align_y(Alignment::Center);
+    let header = row![text("Browse Mods").size(22).width(Fill), export_btn, refresh_btn,]
+        .spacing(8)
+        .align_y(Alignment::Center);
 
     let search_bar = row![
         text_input("Search mods...", &state.query)
@@ -180,12 +173,7 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
     };
 
     let sort_controls = {
-        let sorts = [
-            SortBy::Downloads,
-            SortBy::Follows,
-            SortBy::Trending,
-            SortBy::Name,
-        ];
+        let sorts = [SortBy::Downloads, SortBy::Follows, SortBy::Trending, SortBy::Name];
         let sort_btns = sorts
             .into_iter()
             .map(|s| sort_btn(s, &state.sort_by, state.sort_desc));
@@ -249,10 +237,7 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
         } else {
             "No mods found.".to_string()
         };
-        container(text(msg).size(14))
-            .center(Fill)
-            .height(Fill)
-            .into()
+        container(text(msg).size(14)).center(Fill).height(Fill).into()
     } else {
         let page_mods = state.current_page_mods();
         let rows: Vec<Element<'_, Message>> = page_mods
@@ -265,14 +250,7 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
                 let pending_delete = state.confirm_delete.is_some()
                     && state.confirm_delete.as_deref() == installed_file.as_deref();
                 let expanded = state.expanded_mod.as_deref() == Some(key.as_str());
-                browse_row(
-                    m,
-                    favorited,
-                    installing,
-                    installed_file,
-                    pending_delete,
-                    expanded,
-                )
+                browse_row(m, favorited, installing, installed_file, pending_delete, expanded)
             })
             .collect();
 

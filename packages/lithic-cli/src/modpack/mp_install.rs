@@ -40,10 +40,7 @@ pub fn check_if_mp_enabled(mp_id: &str, array: &[String]) {
     }
 }
 
-pub async fn mp_install(
-    mp_id: ModID,
-    mp_version: Option<ModVersion>,
-) -> Result<String, LithicError> {
+pub async fn mp_install(mp_id: ModID, mp_version: Option<ModVersion>) -> Result<String, LithicError> {
     let start_time = Instant::now();
     // installing the modpack with this function will do the following:
     // Save the modpack.zip (the modpack from the mods website) to modpacks/packs
@@ -116,15 +113,12 @@ pub async fn mp_install(
             Some(Color::Green),
             vec![],
         );
-        let Some(modpack) =
-            download_requested_mods(&packs_dir, &mut vec![install_modpack], &client, None)
-                .await?
-                .into_iter()
-                .next()
+        let Some(modpack) = download_requested_mods(&packs_dir, &mut vec![install_modpack], &client, None)
+            .await?
+            .into_iter()
+            .next()
         else {
-            return Err(LithicError::SimpleError(
-                "Modpack download failure..".into(),
-            ));
+            return Err(LithicError::SimpleError("Modpack download failure..".into()));
         };
         modpack
     };
@@ -171,16 +165,14 @@ pub async fn mp_install(
                     .iter()
                     .find(|(dep_mod_id, _)| dep_mod_id.eq(&mod_id))
                 {
-                    let download_url = match parse_download_url_from_version(
-                        &mod_api.mod_json.releases,
-                        mp_mod_version,
-                    ) {
-                        Ok(download_url) => download_url,
-                        Err(e) => {
-                            warn!("Lithic can't download {}: {}", mp_mod_id.red(), e.red());
-                            return None;
-                        }
-                    };
+                    let download_url =
+                        match parse_download_url_from_version(&mod_api.mod_json.releases, mp_mod_version) {
+                            Ok(download_url) => download_url,
+                            Err(e) => {
+                                warn!("Lithic can't download {}: {}", mp_mod_id.red(), e.red());
+                                return None;
+                            }
+                        };
 
                     Some(Install {
                         mod_id: mod_id.clone(),

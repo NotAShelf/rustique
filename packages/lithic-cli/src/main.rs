@@ -240,12 +240,7 @@ async fn async_main() -> Result<()> {
             }
         }
         Commands::Download(args) => {
-            handle_err_result(
-                download(args).await,
-                "Failed download:",
-                true,
-                ErrorMsgFn::Error,
-            );
+            handle_err_result(download(args).await, "Failed download:", true, ErrorMsgFn::Error);
         }
         Commands::Install(args) => {
             let start_time = Instant::now();
@@ -304,20 +299,10 @@ async fn async_main() -> Result<()> {
         // This section is needed for windows to compile because one_click_setup is not available on windows
         Commands::Misc { .. } => {}
         Commands::Info(args) => {
-            handle_err_result(
-                info(args).await,
-                "Failed to call Info:",
-                true,
-                ErrorMsgFn::Info,
-            );
+            handle_err_result(info(args).await, "Failed to call Info:", true, ErrorMsgFn::Info);
         }
         Commands::Search(args) => {
-            handle_err_result(
-                search(args).await,
-                "Search failed:",
-                true,
-                ErrorMsgFn::Error,
-            );
+            handle_err_result(search(args).await, "Search failed:", true, ErrorMsgFn::Error);
         }
         Commands::Modpack(cmds) => {
             parse_modpack_commands(cmds, &mod_dir).await;
@@ -410,9 +395,7 @@ fn generate_completion(shell: ShellType) {
     println!("\n# Completion script generated. To use it:");
     match shell {
         Shell::Bash => {
-            println!(
-                "# Save the above output to ~/.local/share/bash-completion/completions/lithic"
-            );
+            println!("# Save the above output to ~/.local/share/bash-completion/completions/lithic");
             println!(
                 "# Or run: lithic misc --gen-auto-complete bash > ~/.local/share/bash-completion/completions/lithic"
             );

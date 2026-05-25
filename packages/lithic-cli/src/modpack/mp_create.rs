@@ -124,11 +124,7 @@ pub async fn mp_create(
                 target.display()
             );
             tokio::fs::copy(entry.path(), target).await.map_err(|e| {
-                LithicError::SimpleError(format!(
-                    "Failed to copy {}: {}",
-                    entry.path().display(),
-                    e
-                ))
+                LithicError::SimpleError(format!("Failed to copy {}: {}", entry.path().display(), e))
             })?;
         } else {
             info!(
@@ -138,11 +134,7 @@ pub async fn mp_create(
                 entry.path().display()
             );
             tokio::fs::rename(entry.path(), target).await.map_err(|e| {
-                LithicError::SimpleError(format!(
-                    "Failed to move {}: {}",
-                    entry.path().display(),
-                    e
-                ))
+                LithicError::SimpleError(format!("Failed to move {}: {}", entry.path().display(), e))
             })?;
         }
     }

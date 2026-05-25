@@ -50,32 +50,16 @@ pub async fn config_table(args: &TableArgs) {
             let mut search_cells_vec: Vec<(CellData, CellData)> = Vec::new();
             fill_vec_from_section(&search.cells, &mut search_cells_vec);
 
-            notice(
-                "List Table Headers",
-                Some(Color::Yellow),
-                vec![Attribute::Bold],
-            );
+            notice("List Table Headers", Some(Color::Yellow), vec![Attribute::Bold]);
             display_table(list_headers_vec, None);
 
-            notice(
-                "List Table Cells",
-                Some(Color::Yellow),
-                vec![Attribute::Bold],
-            );
+            notice("List Table Cells", Some(Color::Yellow), vec![Attribute::Bold]);
             display_table(list_cells_vec, None);
 
-            notice(
-                "Search Table Headers",
-                Some(Color::Yellow),
-                vec![Attribute::Bold],
-            );
+            notice("Search Table Headers", Some(Color::Yellow), vec![Attribute::Bold]);
             display_table(search_headers_vec, None);
 
-            notice(
-                "Search Table Cells",
-                Some(Color::Yellow),
-                vec![Attribute::Bold],
-            );
+            notice("Search Table Cells", Some(Color::Yellow), vec![Attribute::Bold]);
             display_table(search_cells_vec, None);
         }
         TableSubCommands::Reset(args) => match args.command {
@@ -143,10 +127,7 @@ where
     let group = cell_or_header(&arg.group);
     let mut fields: Vec<T> = vec![];
     if arg.field.is_some() {
-        let field = arg
-            .field
-            .as_ref()
-            .unwrap_or_else(|| panic!("Invalid field type"));
+        let field = arg.field.as_ref().unwrap_or_else(|| panic!("Invalid field type"));
         fields.push(field.clone());
     } else if !arg.fields.is_empty() {
         fields.clone_from(&arg.fields);

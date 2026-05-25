@@ -211,21 +211,12 @@ impl App {
         let task = Task::batch([
             Task::perform(crate::ops::load_installed(), Message::InstalledLoaded),
             Task::perform(crate::ops::load_settings(), Message::SettingsLoaded),
-            Task::perform(
-                crate::ops::load_theme_presets(),
-                Message::ThemePresetsLoaded,
-            ),
+            Task::perform(crate::ops::load_theme_presets(), Message::ThemePresetsLoaded),
             Task::perform(crate::ops::load_browse(), Message::BrowseLoaded),
             Task::perform(crate::ops::load_favorites(), Message::FavoritesLoaded),
-            Task::perform(
-                crate::ops::load_game_versions(),
-                Message::GameVersionsLoaded,
-            ),
+            Task::perform(crate::ops::load_game_versions(), Message::GameVersionsLoaded),
             Task::perform(crate::ops::load_instances(), Message::InstancesLoaded),
-            Task::perform(
-                crate::ops::load_active_instance(),
-                Message::ActiveInstanceLoaded,
-            ),
+            Task::perform(crate::ops::load_active_instance(), Message::ActiveInstanceLoaded),
             Task::perform(
                 crate::ops::load_game_version_installs(),
                 Message::InstalledGameVersionsLoaded,
@@ -264,9 +255,7 @@ impl App {
                     .map(|(id, info)| (id.clone(), info.file_name.to_string()))
                     .collect();
                 self.installed.mods = mods.into_values().collect();
-                self.installed
-                    .mods
-                    .sort_by(|a, b| a.mod_name.cmp(&b.mod_name));
+                self.installed.mods.sort_by(|a, b| a.mod_name.cmp(&b.mod_name));
                 self.installed.loading = false;
                 Task::none()
             }
@@ -287,9 +276,7 @@ impl App {
                     .map(|(id, info)| (id.clone(), info.file_name.to_string()))
                     .collect();
                 self.installed.mods = mods.into_values().collect();
-                self.installed
-                    .mods
-                    .sort_by(|a, b| a.mod_name.cmp(&b.mod_name));
+                self.installed.mods.sort_by(|a, b| a.mod_name.cmp(&b.mod_name));
                 self.installed.loading = false;
                 self.installed.status = Some("Sync complete.".to_string());
                 clear_after(Message::ClearInstalledStatus)
@@ -310,10 +297,7 @@ impl App {
                 self.installed.status = Some("Update complete.".to_string());
                 let mod_dir = self.mod_dir.clone();
                 Task::batch([
-                    Task::perform(
-                        crate::ops::load_installed_from(mod_dir),
-                        Message::InstalledLoaded,
-                    ),
+                    Task::perform(crate::ops::load_installed_from(mod_dir), Message::InstalledLoaded),
                     clear_after(Message::ClearInstalledStatus),
                 ])
             }
@@ -336,10 +320,7 @@ impl App {
                 self.browse.confirm_delete = None;
                 self.installed.confirm_delete = None;
                 let mod_dir = self.mod_dir.clone();
-                Task::perform(
-                    crate::ops::delete_mod(mod_dir, file_name),
-                    Message::DeleteDone,
-                )
+                Task::perform(crate::ops::delete_mod(mod_dir, file_name), Message::DeleteDone)
             }
             Message::DeleteDone(Ok(file_name)) => {
                 self.installed.mods.retain(|m| m.file_name != file_name);
@@ -347,10 +328,7 @@ impl App {
                 self.installed.status = Some(format!("Deleted {file_name}"));
                 let mod_dir = self.mod_dir.clone();
                 Task::batch([
-                    Task::perform(
-                        crate::ops::load_installed_from(mod_dir),
-                        Message::InstalledLoaded,
-                    ),
+                    Task::perform(crate::ops::load_installed_from(mod_dir), Message::InstalledLoaded),
                     clear_after(Message::ClearInstalledStatus),
                 ])
             }
@@ -395,12 +373,8 @@ impl App {
                 self.installed.loading = false;
                 clear_after(Message::ClearInstalledStatus)
             }
-            Message::EnablePack(id) => {
-                Task::perform(crate::ops::enable_pack(id), Message::PackOpDone)
-            }
-            Message::DisablePack(id) => {
-                Task::perform(crate::ops::disable_pack(id), Message::PackOpDone)
-            }
+            Message::EnablePack(id) => Task::perform(crate::ops::enable_pack(id), Message::PackOpDone),
+            Message::DisablePack(id) => Task::perform(crate::ops::disable_pack(id), Message::PackOpDone),
             Message::PackOpDone(Ok(msg)) => {
                 self.installed.status = Some(msg);
                 Task::batch([
@@ -543,20 +517,16 @@ impl App {
             Message::AddModToActiveInstance(mod_id) => {
                 self.browse.installing.insert(mod_id.clone());
                 let id = mod_id.clone();
-                Task::perform(
-                    crate::ops::install_mod_to_active_instance(mod_id),
-                    move |r| Message::AddModToActiveInstanceDone(id, r),
-                )
+                Task::perform(crate::ops::install_mod_to_active_instance(mod_id), move |r| {
+                    Message::AddModToActiveInstanceDone(id, r)
+                })
             }
             Message::InstallDone(mod_id, Ok(name)) => {
                 self.browse.installing.remove(&mod_id);
                 self.browse.status = Some(format!("Installed {name}"));
                 let mod_dir = self.mod_dir.clone();
                 Task::batch([
-                    Task::perform(
-                        crate::ops::load_installed_from(mod_dir),
-                        Message::InstalledLoaded,
-                    ),
+                    Task::perform(crate::ops::load_installed_from(mod_dir), Message::InstalledLoaded),
                     clear_after(Message::ClearBrowseStatus),
                 ])
             }
@@ -570,10 +540,7 @@ impl App {
                 self.browse.status = Some(format!("Added {name} to active instance"));
                 let mod_dir = self.mod_dir.clone();
                 Task::batch([
-                    Task::perform(
-                        crate::ops::load_installed_from(mod_dir),
-                        Message::InstalledLoaded,
-                    ),
+                    Task::perform(crate::ops::load_installed_from(mod_dir), Message::InstalledLoaded),
                     clear_after(Message::ClearBrowseStatus),
                 ])
             }
@@ -661,10 +628,7 @@ impl App {
                 self.settings.dirty = false;
                 self.mod_dir = PathBuf::from(data.mod_dir);
                 self.current_view = view_from_initial_page(self.settings.initial_page);
-                self.theme = theme_from_mode(
-                    self.settings.theme_mode,
-                    self.settings.theme_preset.as_str(),
-                );
+                self.theme = theme_from_mode(self.settings.theme_mode, self.settings.theme_preset.as_str());
                 if let Some(minor) = minor_version(&data.pinned_game_version) {
                     self.browse.version_filter = VersionFilter::Exact(minor);
                     if !self.browse.available_minor_versions.is_empty() {
@@ -750,10 +714,7 @@ impl App {
             Message::SettingThemePreset(v) => {
                 self.settings.theme_preset = v;
                 self.settings.dirty = true;
-                self.theme = theme_from_mode(
-                    self.settings.theme_mode,
-                    self.settings.theme_preset.as_str(),
-                );
+                self.theme = theme_from_mode(self.settings.theme_mode, self.settings.theme_preset.as_str());
                 Task::none()
             }
             Message::SettingInitialPage(v) => {
@@ -783,10 +744,7 @@ impl App {
                 self.settings.dirty = false;
                 self.settings.status = Some("Settings saved.".to_string());
                 self.mod_dir = PathBuf::from(&self.settings.mod_dir);
-                self.theme = theme_from_mode(
-                    self.settings.theme_mode,
-                    self.settings.theme_preset.as_str(),
-                );
+                self.theme = theme_from_mode(self.settings.theme_mode, self.settings.theme_preset.as_str());
                 let new_filter = minor_version(&self.settings.pinned_game_version)
                     .map(VersionFilter::Exact)
                     .unwrap_or(VersionFilter::Any);
@@ -869,10 +827,7 @@ impl App {
                 self.instances.loading = true;
                 Task::batch([
                     Task::perform(crate::ops::load_instances(), Message::InstancesLoaded),
-                    Task::perform(
-                        crate::ops::load_active_instance(),
-                        Message::ActiveInstanceLoaded,
-                    ),
+                    Task::perform(crate::ops::load_active_instance(), Message::ActiveInstanceLoaded),
                 ])
             }
             Message::InstancesLoaded(Ok(instances)) => {
@@ -991,10 +946,8 @@ impl App {
             Message::PickInstanceDataDirDone(Ok(path)) => {
                 self.instances.form_data_dir = path.clone();
                 if self.instances.form_mods_dir.trim().is_empty() {
-                    self.instances.form_mods_dir = PathBuf::from(&path)
-                        .join("Mods")
-                        .to_string_lossy()
-                        .to_string();
+                    self.instances.form_mods_dir =
+                        PathBuf::from(&path).join("Mods").to_string_lossy().to_string();
                 }
                 Task::none()
             }
@@ -1060,10 +1013,7 @@ impl App {
                 self.instances.status = Some("Instance operation completed.".to_string());
                 Task::batch([
                     Task::perform(crate::ops::load_instances(), Message::InstancesLoaded),
-                    Task::perform(
-                        crate::ops::load_active_instance(),
-                        Message::ActiveInstanceLoaded,
-                    ),
+                    Task::perform(crate::ops::load_active_instance(), Message::ActiveInstanceLoaded),
                     Task::perform(crate::ops::load_installed(), Message::InstalledLoaded),
                 ])
             }
@@ -1138,10 +1088,9 @@ impl App {
                 self.game_versions.status = Some(format!("Folder picker failed: {e}"));
                 Task::none()
             }
-            Message::PickGameVersionInstallDir => Task::perform(
-                crate::ops::pick_folder(),
-                Message::PickGameVersionInstallDirDone,
-            ),
+            Message::PickGameVersionInstallDir => {
+                Task::perform(crate::ops::pick_folder(), Message::PickGameVersionInstallDirDone)
+            }
             Message::PickGameVersionInstallDirDone(Ok(path)) => {
                 self.game_versions.install_dir = path;
                 Task::none()
@@ -1241,11 +1190,7 @@ impl App {
         let nav_buttons: Vec<Element<'_, Message>> = nav_items
             .iter()
             .map(|(label, view)| {
-                crate::widgets::nav_button(
-                    label,
-                    self.current_view == *view,
-                    Message::Navigate(view.clone()),
-                )
+                crate::widgets::nav_button(label, self.current_view == *view, Message::Navigate(view.clone()))
             })
             .collect();
 
@@ -1359,11 +1304,7 @@ fn apply_browse_filter(browse: &mut BrowseView) {
             filtered.sort_by(|a, b| {
                 let an = a.name.as_deref().unwrap_or("");
                 let bn = b.name.as_deref().unwrap_or("");
-                if browse.sort_desc {
-                    bn.cmp(an)
-                } else {
-                    an.cmp(bn)
-                }
+                if browse.sort_desc { bn.cmp(an) } else { an.cmp(bn) }
             });
         }
     }
@@ -1385,9 +1326,7 @@ pub fn run() -> iced::Result {
 }
 
 fn detect_native_theme() -> Theme {
-    from_system()
-        .map(|(theme, _, _)| theme)
-        .unwrap_or(Theme::Dark)
+    from_system().map(|(theme, _, _)| theme).unwrap_or(Theme::Dark)
 }
 
 fn theme_from_mode(mode: ThemeModeOption, preset: &str) -> Theme {

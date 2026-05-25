@@ -102,11 +102,7 @@ impl Tables {
                 Some(CellColor::Red),
                 Some(CellAttr::Bold),
             )
-            .with(
-                ListColumn::Description.as_str(),
-                Some(CellColor::Reset),
-                None,
-            );
+            .with(ListColumn::Description.as_str(), Some(CellColor::Reset), None);
 
         list
     }

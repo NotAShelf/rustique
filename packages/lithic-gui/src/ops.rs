@@ -81,18 +81,14 @@ pub async fn load_installed_from(mod_dir: PathBuf) -> Result<HashMap<String, Mod
     }
     let sync_file = mod_dir.join(FILE_LITHIC_SYNC);
     if sync_file.exists() {
-        let data = parse_json_file::<LithicSyncJson>(&sync_file)
-            .await
-            .map_err(err)?;
+        let data = parse_json_file::<LithicSyncJson>(&sync_file).await.map_err(err)?;
         return Ok(data.lithic_sync);
     }
     build_basic_installed(&mod_dir).await
 }
 
 async fn build_basic_installed(mod_dir: &Path) -> Result<HashMap<String, ModSyncInfo>, String> {
-    let installed = extract_all_mods_metadata(mod_dir, true)
-        .await
-        .map_err(err)?;
+    let installed = extract_all_mods_metadata(mod_dir, true).await.map_err(err)?;
     let map = installed
         .into_iter()
         .map(|(file_name, info)| {
@@ -115,9 +111,7 @@ async fn build_basic_installed(mod_dir: &Path) -> Result<HashMap<String, ModSync
 
 pub async fn sync_mods(mod_dir: PathBuf) -> Result<HashMap<String, ModSyncInfo>, String> {
     if mod_dir.as_os_str().is_empty() || !mod_dir.exists() {
-        return Err(
-            "Mods directory is not set or does not exist. Configure it in Settings.".to_string(),
-        );
+        return Err("Mods directory is not set or does not exist. Configure it in Settings.".to_string());
     }
     let scanned = build_basic_installed(&mod_dir).await?;
 
@@ -152,9 +146,7 @@ pub async fn update_all(mod_dir: PathBuf) -> Result<(), String> {
     if !sync_file.exists() {
         return Err("No sync data found. Run sync first.".to_string());
     }
-    let sync_data = parse_json_file::<LithicSyncJson>(&sync_file)
-        .await
-        .map_err(err)?;
+    let sync_data = parse_json_file::<LithicSyncJson>(&sync_file).await.map_err(err)?;
 
     let mods_needing_update: Vec<Install> = sync_data
         .lithic_sync
@@ -192,8 +184,7 @@ pub async fn delete_mod(mod_dir: PathBuf, file_name: String) -> Result<String, S
     let sync_file = mod_dir.join(FILE_LITHIC_SYNC);
     if sync_file.exists() {
         if let Ok(mut data) = parse_json_file::<LithicSyncJson>(&sync_file).await {
-            data.lithic_sync
-                .retain(|_, info| info.file_name != file_name);
+            data.lithic_sync.retain(|_, info| info.file_name != file_name);
             let _ = data.save(&sync_file).await;
         }
     }
@@ -228,9 +219,7 @@ async fn fetch_and_cache_mods(path: &Path) -> Result<Vec<ModApi>, String> {
     };
     let json = prettify(&file_data, "Mods Search DB").map_err(err)?;
     let config_dir = Config::get_path();
-    write_json_file(path, json, &config_dir)
-        .await
-        .map_err(err)?;
+    write_json_file(path, json, &config_dir).await.map_err(err)?;
     Ok(all.mods)
 }
 
@@ -259,11 +248,7 @@ pub async fn install_mod(mod_dir: PathBuf, mod_id: String) -> Result<String, Str
 
     let client = ApiClient::new();
     let mod_info = client.fetch_mod(&mod_id).await.map_err(err)?;
-    let mod_name = mod_info
-        .mod_json
-        .name
-        .clone()
-        .unwrap_or_else(|| mod_id.clone());
+    let mod_name = mod_info.mod_json.name.clone().unwrap_or_else(|| mod_id.clone());
 
     let (version, download_url, _, _) = parse_latest_version(&mod_info.mod_json.releases);
 
@@ -333,9 +318,7 @@ pub async fn install_mod_to_active_instance(mod_id: String) -> Result<String, St
     if instance.mods_dir.trim().is_empty() {
         return Err("Active instance has no mods directory.".to_string());
     }
-    tokio::fs::create_dir_all(&instance.mods_dir)
-        .await
-        .map_err(err)?;
+    tokio::fs::create_dir_all(&instance.mods_dir).await.map_err(err)?;
     install_mod(PathBuf::from(instance.mods_dir), mod_id).await
 }
 
@@ -358,11 +341,7 @@ pub async fn export_favorites(favorites: HashSet<String>) -> Result<String, Stri
     let path = Config::get_path().join("lithic-favorites-export.txt");
     let mut ids: Vec<&String> = favorites.iter().collect();
     ids.sort();
-    let content = ids
-        .iter()
-        .map(|s| s.as_str())
-        .collect::<Vec<_>>()
-        .join("\n");
+    let content = ids.iter().map(|s| s.as_str()).collect::<Vec<_>>().join("\n");
     tokio::fs::write(&path, content).await.map_err(err)?;
     Ok(path.display().to_string())
 }
@@ -447,10 +426,7 @@ pub async fn create_pack(
         config.save(None).map_err(err)?;
     }
 
-    Ok(format!(
-        "Created modpack '{name}' at {}",
-        save_path.display()
-    ))
+    Ok(format!("Created modpack '{name}' at {}", save_path.display()))
 }
 
 pub async fn load_game_versions() -> Result<Vec<String>, String> {
@@ -661,11 +637,7 @@ pub async fn load_game_version_installs() -> Result<Vec<GameVersionInstall>, Str
     lithic_core::instance::list_game_versions().await
 }
 
-pub async fn upsert_game_version_install(
-    id: String,
-    version: String,
-    path: String,
-) -> Result<(), String> {
+pub async fn upsert_game_version_install(id: String, version: String, path: String) -> Result<(), String> {
     lithic_core::instance::add_or_update_game_version(GameVersionInstall {
         id,
         version,
@@ -750,8 +722,7 @@ pub async fn install_game_version(
         p.active = false;
         p.stage = "Complete".to_string();
         p.percent = Some(100);
-        p.logs
-            .push(format!("Finished install at {}", installed.path));
+        p.logs.push(format!("Finished install at {}", installed.path));
     }
     Ok(format!(
         "Installed Vintage Story {} at {}",

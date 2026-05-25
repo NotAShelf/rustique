@@ -50,7 +50,9 @@ pub async fn delete_mpk_cmd(mpk_id: ModID) -> Result<ModID, LithicError> {
     let base_dir = Path::new(&p);
 
     if !base_dir.exists() {
-        return Err(LithicError::SimpleError("Your modpacks directory does not exist! 'Run Lithic config list' to see what its set to.".into()));
+        return Err(LithicError::SimpleError(
+            "Your modpacks directory does not exist! 'Run Lithic config list' to see what its set to.".into(),
+        ));
     }
 
     let mpk_mods_dir = base_dir.join("installed").join(&mpk_id);

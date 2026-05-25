@@ -41,12 +41,7 @@ pub struct GameVersionInstallArgs {
     pub install_dir: Option<String>,
     #[arg(short, long, value_name = "OS", default_value_t = os_default())]
     pub os_type: VSOSType,
-    #[arg(
-        short = 't',
-        long = "type",
-        value_name = "TYPE",
-        default_value = "client"
-    )]
+    #[arg(short = 't', long = "type", value_name = "TYPE", default_value = "client")]
     pub exe_type: VSExecutabletype,
     #[arg(short, long, default_value = "install")]
     pub windows_installer_type: Option<VSWinInstallerType>,

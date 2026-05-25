@@ -6,8 +6,7 @@ use lithic_core::instance::{GameVersionInstall, InstanceConfig};
 use crate::app::Message;
 use crate::views::browse::SortBy;
 use crate::widgets::{
-    active_tab_style, card_style, danger_btn_style, ghost_btn_style, primary_btn_style,
-    status_element,
+    active_tab_style, card_style, danger_btn_style, ghost_btn_style, primary_btn_style, status_element,
 };
 
 const MOD_PICKER_PAGE_SIZE: usize = 12;
@@ -49,12 +48,7 @@ pub fn view(state: &InstancesView) -> Element<'_, Message> {
         .instances
         .iter()
         .find(|i| i.id == state.active_instance_id)
-        .map(|i| {
-            format!(
-                "Active: {} - {} - {}",
-                i.name, i.game_version_id, i.mods_dir
-            )
-        })
+        .map(|i| format!("Active: {} - {} - {}", i.name, i.game_version_id, i.mods_dir))
         .unwrap_or_else(|| "No active instance selected".to_string());
 
     let version_buttons: Vec<Element<'_, Message>> = state
@@ -101,10 +95,8 @@ pub fn view(state: &InstancesView) -> Element<'_, Message> {
                 .style(ghost_btn_style),
         ]
         .spacing(6),
-        text_input("start params", &state.form_start_params)
-            .on_input(Message::InstanceFormStartParams),
-        text_input("env vars (K=V,K2=V2)", &state.form_env_vars)
-            .on_input(Message::InstanceFormEnvVars),
+        text_input("start params", &state.form_start_params).on_input(Message::InstanceFormStartParams),
+        text_input("env vars (K=V,K2=V2)", &state.form_env_vars).on_input(Message::InstanceFormEnvVars),
     ]
     .spacing(6)
     .width(Fill);
@@ -145,8 +137,7 @@ pub fn view(state: &InstancesView) -> Element<'_, Message> {
                     .on_press(Message::OpenInstanceModPicker)
                     .style(primary_btn_style),
             ],
-            scrollable(Column::with_children(selected_mod_rows).spacing(6))
-                .height(Length::Fixed(128.0)),
+            scrollable(Column::with_children(selected_mod_rows).spacing(6)).height(Length::Fixed(128.0)),
         ]
         .spacing(8),
     )
@@ -281,17 +272,13 @@ fn mod_picker_modal(state: &InstancesView) -> Element<'_, Message> {
                     ]
                     .spacing(3)
                     .width(Fill),
-                    button(if selected {
-                        "Remove"
-                    } else {
-                        "Add to Instance"
-                    })
-                    .on_press(Message::ToggleInstanceSelectedMod(id))
-                    .style(if selected {
-                        danger_btn_style
-                    } else {
-                        primary_btn_style
-                    }),
+                    button(if selected { "Remove" } else { "Add to Instance" })
+                        .on_press(Message::ToggleInstanceSelectedMod(id))
+                        .style(if selected {
+                            danger_btn_style
+                        } else {
+                            primary_btn_style
+                        }),
                 ]
                 .spacing(8)
                 .align_y(Alignment::Center),
@@ -302,12 +289,7 @@ fn mod_picker_modal(state: &InstancesView) -> Element<'_, Message> {
         })
         .collect();
 
-    let sorts = [
-        SortBy::Downloads,
-        SortBy::Follows,
-        SortBy::Trending,
-        SortBy::Name,
-    ];
+    let sorts = [SortBy::Downloads, SortBy::Follows, SortBy::Trending, SortBy::Name];
     let sort_controls = row(sorts
         .into_iter()
         .map(|s| picker_sort_btn(s, state))
@@ -325,8 +307,7 @@ fn mod_picker_modal(state: &InstancesView) -> Element<'_, Message> {
             ]
             .spacing(8)
             .align_y(Alignment::Center),
-            text_input("Search mods...", &state.mod_search)
-                .on_input(Message::InstanceModSearchChanged),
+            text_input("Search mods...", &state.mod_search).on_input(Message::InstanceModSearchChanged),
             sort_controls,
             scrollable(Column::with_children(rows).spacing(6)).height(Length::Fixed(360.0)),
             row![
@@ -374,11 +355,7 @@ fn picker_sort_btn(sort: SortBy, state: &InstancesView) -> Element<'_, Message> 
         } else {
             Message::InstanceModSortChanged(sort)
         })
-        .style(if active {
-            active_tab_style
-        } else {
-            ghost_btn_style
-        })
+        .style(if active { active_tab_style } else { ghost_btn_style })
         .into()
 }
 
@@ -393,9 +370,7 @@ fn filtered_mods(state: &InstancesView) -> Vec<ModApi> {
             } else {
                 let name = m.name.as_deref().unwrap_or("");
                 name.to_lowercase().contains(&q)
-                    || m.mod_id_strs
-                        .iter()
-                        .any(|id| id.to_lowercase().contains(&q))
+                    || m.mod_id_strs.iter().any(|id| id.to_lowercase().contains(&q))
             }
         })
         .cloned()

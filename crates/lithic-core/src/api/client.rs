@@ -101,23 +101,20 @@ impl ApiClient {
     }
 
     pub async fn fetch_all_mods(&self) -> Result<Mods, LithicError> {
-        let response = self
-            .agent
-            .get(Self::api_uri("mods"))
-            .send()
-            .await
-            .map_err(|e| LithicError::ApiError {
-                context: "fetch_all_mods (get): ".to_string(),
-                source: e,
-            })?;
+        let response =
+            self.agent
+                .get(Self::api_uri("mods"))
+                .send()
+                .await
+                .map_err(|e| LithicError::ApiError {
+                    context: "fetch_all_mods (get): ".to_string(),
+                    source: e,
+                })?;
 
-        response
-            .json::<Mods>()
-            .await
-            .map_err(|e| LithicError::ApiError {
-                context: "fetch_all_mods (json): ".to_string(),
-                source: e,
-            })
+        response.json::<Mods>().await.map_err(|e| LithicError::ApiError {
+            context: "fetch_all_mods (json): ".to_string(),
+            source: e,
+        })
     }
 
     /// Fetches mods compatible with the given MAJOR.MINOR game version (e.g. "1.20").
@@ -132,13 +129,10 @@ impl ApiClient {
                 source: e,
             })?;
 
-        response
-            .json::<Mods>()
-            .await
-            .map_err(|e| LithicError::ApiError {
-                context: format!("fetch_mods_with_gameversion (json) ({version}): "),
-                source: e,
-            })
+        response.json::<Mods>().await.map_err(|e| LithicError::ApiError {
+            context: format!("fetch_mods_with_gameversion (json) ({version}): "),
+            source: e,
+        })
     }
 
     pub async fn fetch_mod(&self, mod_id: impl AsRef<str>) -> Result<Mod, LithicError> {
@@ -146,16 +140,11 @@ impl ApiClient {
         if mod_id.is_empty() {
             error!("Mod id is empty {}", mod_id);
             return Err(LithicError::MalformedModInfoJson(
-                "The mod id received was empty.. unable to download whatever mod this is."
-                    .to_string(),
+                "The mod id received was empty.. unable to download whatever mod this is.".to_string(),
             ));
         }
 
-        info!(
-            "{} {}",
-            "Fetching mod: ".bright_green(),
-            mod_id.bright_yellow()
-        );
+        info!("{} {}", "Fetching mod: ".bright_green(), mod_id.bright_yellow());
 
         let response = self
             .agent
@@ -190,8 +179,7 @@ impl ApiClient {
             .await
             .map_err(|e| LithicError::SimpleError(e.to_string()))?;
 
-        let parsed: Mod =
-            serde_json::from_str(&text).map_err(|e| LithicError::SimpleError(e.to_string()))?;
+        let parsed: Mod = serde_json::from_str(&text).map_err(|e| LithicError::SimpleError(e.to_string()))?;
         debug!("Parsed {:?}", parsed);
 
         Ok(parsed)
@@ -334,13 +322,8 @@ impl ApiClient {
                 download_str += "win";
             }
         } else {
-            write!(
-                &mut download_str,
-                "{}_{}",
-                etype,
-                os_type.to_string().as_str()
-            )
-            .map_err(|e| LithicError::SimpleError(e.to_string()))?;
+            write!(&mut download_str, "{}_{}", etype, os_type.to_string().as_str())
+                .map_err(|e| LithicError::SimpleError(e.to_string()))?;
         }
 
         // use std::fmt::write to avoid extra allocation with format!

@@ -31,24 +31,21 @@ pub async fn parse_game_version_commands(commands: &GameVersionCommands) -> Resu
             .await
         }
         GameVersionSubCommands::Install(args) => {
-            let installed =
-                lithic_core::instance::install_game_version(GameVersionInstallOptions {
-                    id: args.id.clone().unwrap_or_else(|| args.version.clone()),
-                    version: args.version.clone(),
-                    install_dir: args.install_dir.clone().map(PathBuf::from),
-                    os_type: args.os_type.clone(),
-                    exe_type: args.exe_type.clone(),
-                    windows_installer_type: args.windows_installer_type.clone(),
-                })
-                .await?;
+            let installed = lithic_core::instance::install_game_version(GameVersionInstallOptions {
+                id: args.id.clone().unwrap_or_else(|| args.version.clone()),
+                version: args.version.clone(),
+                install_dir: args.install_dir.clone().map(PathBuf::from),
+                os_type: args.os_type.clone(),
+                exe_type: args.exe_type.clone(),
+                windows_installer_type: args.windows_installer_type.clone(),
+            })
+            .await?;
             println!(
                 "installed {}\t{}\t{}",
                 installed.id, installed.version, installed.path
             );
             Ok(())
         }
-        GameVersionSubCommands::Remove(args) => {
-            lithic_core::instance::remove_game_version(&args.id).await
-        }
+        GameVersionSubCommands::Remove(args) => lithic_core::instance::remove_game_version(&args.id).await,
     }
 }

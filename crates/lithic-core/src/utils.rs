@@ -30,9 +30,8 @@ pub fn get_current_time() -> String {
 }
 
 pub fn timestamp_older_than(num_hours: i64, timestamp: &str) -> Result<bool, LithicError> {
-    let naive_dt = NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%d %H:%M").map_err(|e| {
-        LithicError::SimpleError(format!("Failed to parse timestamp '{timestamp}': {e}"))
-    })?;
+    let naive_dt = NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%d %H:%M")
+        .map_err(|e| LithicError::SimpleError(format!("Failed to parse timestamp '{timestamp}': {e}")))?;
     let now = Utc::now().naive_utc();
     let duration = now.signed_duration_since(naive_dt);
 
@@ -54,10 +53,7 @@ pub fn get_expanded_path(dir: impl AsRef<Path>) -> PathBuf {
     dir.to_path_buf()
 }
 
-pub async fn extract_zip_metadata<T>(
-    entry: impl AsRef<Path>,
-    inner_file: &str,
-) -> Result<T, LithicError>
+pub async fn extract_zip_metadata<T>(entry: impl AsRef<Path>, inner_file: &str) -> Result<T, LithicError>
 where
     T: for<'de> serde::Deserialize<'de>,
 {
@@ -66,10 +62,7 @@ where
     if entry.is_dir() {
         return Err(LithicError::ModNotZipped(entry.display().to_string()));
     }
-    if entry
-        .extension()
-        .is_some_and(|x| !x.eq_ignore_ascii_case("zip"))
-    {
+    if entry.extension().is_some_and(|x| !x.eq_ignore_ascii_case("zip")) {
         return Err(LithicError::SimpleError(format!(
             "Skipping non-zip file: {}",
             entry.display()
@@ -305,12 +298,10 @@ where
         .to_string_lossy()
         .to_string();
 
-    let mut file = File::open(file_path)
-        .await
-        .map_err(|e| LithicError::IoError {
-            context: format!("Unable to open {filename}"),
-            source: e,
-        })?;
+    let mut file = File::open(file_path).await.map_err(|e| LithicError::IoError {
+        context: format!("Unable to open {filename}"),
+        source: e,
+    })?;
 
     let mut file_contents = String::new();
     file.read_to_string(&mut file_contents)
@@ -346,15 +337,13 @@ pub async fn write_json_file(
     config_dir: impl AsRef<Path>,
 ) -> Result<(), LithicError> {
     let (file_path, config_dir) = (file_path.as_ref(), config_dir.as_ref());
-    let mut open_file = File::create(file_path)
-        .await
-        .map_err(|e| LithicError::IoError {
-            context: format!(
-                "Error writing sync mod search file to config dir: {}",
-                config_dir.to_string_lossy()
-            ),
-            source: e,
-        })?;
+    let mut open_file = File::create(file_path).await.map_err(|e| LithicError::IoError {
+        context: format!(
+            "Error writing sync mod search file to config dir: {}",
+            config_dir.to_string_lossy()
+        ),
+        source: e,
+    })?;
     AsyncWriteExt::write_all(&mut open_file, json.as_bytes()).await?;
 
     Ok(())
@@ -427,10 +416,7 @@ pub fn find_mod_id<V: AsRef<[ModApi]>>(
 /// processed_install: Vec<Installed>
 pub async fn remove_older_files(processed_install: &[Installed]) -> Result<(), LithicError> {
     for mod_installed in processed_install {
-        if let (Some(old), Some(new)) = (
-            &mod_installed.old_file_path,
-            &mod_installed.installed_file_path,
-        ) {
+        if let (Some(old), Some(new)) = (&mod_installed.old_file_path, &mod_installed.installed_file_path) {
             if old == new {
                 info!("Old file and new file have the same name, **NOT DELETING**");
             } else {
@@ -512,11 +498,7 @@ pub fn format_for_csv(input: impl AsRef<str>) -> String {
 }
 
 pub fn normalize_whitespace(input: impl AsRef<str>) -> String {
-    input
-        .as_ref()
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
+    input.as_ref().split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 pub fn html_parse(input: &mut impl AsRef<str>, width: usize) -> Result<String, LithicError> {
@@ -529,10 +511,7 @@ where
     T: serde::Serialize,
 {
     to_string_pretty(&data).map_err(|e| LithicError::JsonError {
-        context: format!(
-            "Failure while making the {} json pretty",
-            command_type.as_ref()
-        ),
+        context: format!("Failure while making the {} json pretty", command_type.as_ref()),
         source: serde_json5::Error::from(std::io::Error::other(e)),
     })
 }

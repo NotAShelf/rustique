@@ -14,11 +14,7 @@ use lithic_core::utils::extract_all_mods_metadata;
 #[cfg(windows)]
 use std::process::exit;
 
-pub async fn mp_enable(
-    mpk_id: ModID,
-    mod_dir: impl AsRef<Path>,
-    force: bool,
-) -> Result<String, LithicError> {
+pub async fn mp_enable(mpk_id: ModID, mod_dir: impl AsRef<Path>, force: bool) -> Result<String, LithicError> {
     #[cfg(windows)]
     if !is_elevated() {
         notice(

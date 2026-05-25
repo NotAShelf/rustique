@@ -64,10 +64,7 @@ impl GithubApi {
     }
 }
 
-pub async fn check_for_update(
-    hide_message: bool,
-    hide_is_updated_msg: bool,
-) -> Result<bool, LithicError> {
+pub async fn check_for_update(hide_message: bool, hide_is_updated_msg: bool) -> Result<bool, LithicError> {
     let client = GithubApi::new();
 
     let latest_release = client.get_latest_release().await?;
@@ -80,13 +77,39 @@ pub async fn check_for_update(
     if !hide_message {
         if has_update {
             lithic_message(LithicMessage {
-                header: Some(CellData::new("New Lithic Version Available!".into(), Some(Color::Green), vec![Attribute::Bold], Some(CellAlignment::Center))),
+                header: Some(CellData::new(
+                    "New Lithic Version Available!".into(),
+                    Some(Color::Green),
+                    vec![Attribute::Bold],
+                    Some(CellAlignment::Center),
+                )),
                 message: vec![
-                    CellData::new(format!("Version: {latest_version} is now available!"), Some(Color::Green), vec![Attribute::Bold], Some(CellAlignment::Center)),
-                    CellData::new("You can update Lithic with the following command: ".into(), Some(Color::Yellow), vec![], Some(CellAlignment::Center)),
-                    CellData::new("./Lithic self --update".into(), Some(Color::Magenta), vec![Attribute::Bold], Some(CellAlignment::Center)),
+                    CellData::new(
+                        format!("Version: {latest_version} is now available!"),
+                        Some(Color::Green),
+                        vec![Attribute::Bold],
+                        Some(CellAlignment::Center),
+                    ),
+                    CellData::new(
+                        "You can update Lithic with the following command: ".into(),
+                        Some(Color::Yellow),
+                        vec![],
+                        Some(CellAlignment::Center),
+                    ),
+                    CellData::new(
+                        "./Lithic self --update".into(),
+                        Some(Color::Magenta),
+                        vec![Attribute::Bold],
+                        Some(CellAlignment::Center),
+                    ),
                     CellData::default(),
-                    CellData::new("You can disable this message with ./Lithic config set --disable-update-message".into(), Some(Color::Cyan), vec![Attribute::Italic, Attribute::Dim], Some(CellAlignment::Center)),
+                    CellData::new(
+                        "You can disable this message with ./Lithic config set --disable-update-message"
+                            .into(),
+                        Some(Color::Cyan),
+                        vec![Attribute::Italic, Attribute::Dim],
+                        Some(CellAlignment::Center),
+                    ),
                 ],
             });
         } else if !hide_is_updated_msg {
@@ -100,9 +123,7 @@ pub async fn check_for_update(
         }
     }
 
-    info!(
-        "Current Version: {current_version}, latest version {latest_version}, has-update: {has_update}"
-    );
+    info!("Current Version: {current_version}, latest version {latest_version}, has-update: {has_update}");
 
     Ok(has_update)
 }
@@ -153,9 +174,7 @@ pub async fn self_update_binary(force_update: bool) -> Result<(), LithicError> {
         .find(|a| a.name == archive_name)
         .map(|a| &a.browser_download_url)
     else {
-        return Err(LithicError::SimpleError(
-            "Failed to get download url".into(),
-        ));
+        return Err(LithicError::SimpleError("Failed to get download url".into()));
     };
 
     let new_binary_name: String = if cfg!(windows) {
