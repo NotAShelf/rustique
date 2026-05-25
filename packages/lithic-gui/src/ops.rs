@@ -1,12 +1,16 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::sync::{Arc, Mutex};
 
 use futures::future::join_all;
 use lithic_core::api::client::ApiClient;
+use lithic_core::api::client::{VSExecutabletype, VSOSType, VSWinInstallerType};
 use lithic_core::api::structs::{ModApi, ModInfo, ModsSearchFile};
 use lithic_core::config::manager::{Config, get_config};
 use lithic_core::consts::{FILE_GAME_VERSION_SYNC, FILE_LITHIC_SYNC, FILE_MOD_SEARCH_SYNC};
 use lithic_core::installer::manager::{Install, install_manager};
+use lithic_core::instance::{GameVersionInstall, GameVersionInstallEvent, InstanceConfig};
 use lithic_core::search::SearchQuery;
 use lithic_core::sync::structs::{GameVersionSync, LithicSyncJson, ModSyncInfo};
 use lithic_core::utils::{
@@ -35,11 +39,36 @@ pub struct SettingsData {
     pub modpack_dir: String,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct InstanceFormData {
+    pub id: String,
+    pub name: String,
+    pub data_dir: String,
+    pub mods_dir: String,
+    pub game_version_id: String,
+    pub start_params: String,
+    pub env_vars: String,
+    pub selected_mod_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct GameInstallProgress {
+    pub active: bool,
+    pub stage: String,
+    pub percent: Option<u8>,
+    pub logs: Vec<String>,
+    pub done: bool,
+    pub error: Option<String>,
+}
+
+pub type SharedGameInstallProgress = Arc<Mutex<GameInstallProgress>>;
+
+pub fn new_game_install_progress() -> SharedGameInstallProgress {
+    Arc::new(Mutex::new(GameInstallProgress::default()))
+}
+
 pub async fn load_installed() -> Result<HashMap<String, ModSyncInfo>, String> {
-    let mod_dir = {
-        let config = get_config().read().await;
-        PathBuf::from(&config.mod_dir)
-    };
+    let mod_dir = lithic_core::instance::resolve_active_mod_dir().await?;
     load_installed_from(mod_dir).await
 }
 
@@ -294,6 +323,19 @@ pub async fn install_mod(mod_dir: PathBuf, mod_id: String) -> Result<String, Str
     Ok(mod_name)
 }
 
+pub async fn install_mod_to_active_instance(mod_id: String) -> Result<String, String> {
+    let instance = lithic_core::instance::get_active_instance()
+        .await?
+        .ok_or_else(|| "No active instance selected.".to_string())?;
+    if instance.mods_dir.trim().is_empty() {
+        return Err("Active instance has no mods directory.".to_string());
+    }
+    tokio::fs::create_dir_all(&instance.mods_dir)
+        .await
+        .map_err(err)?;
+    install_mod(PathBuf::from(instance.mods_dir), mod_id).await
+}
+
 pub async fn load_favorites() -> Result<HashSet<String>, String> {
     let path = Config::get_path().join(FAVORITES_FILE);
     if !path.exists() {
@@ -510,4 +552,236 @@ pub async fn save_settings(s: SettingsData) -> Result<(), String> {
     config.show_execution_time = s.show_execution_time;
     config.modpacks.modpack_dir = s.modpack_dir;
     config.save(None).map_err(err)
+}
+
+pub async fn load_instances() -> Result<Vec<InstanceConfig>, String> {
+    lithic_core::instance::list_instances().await
+}
+
+pub async fn load_active_instance() -> Result<Option<InstanceConfig>, String> {
+    lithic_core::instance::get_active_instance().await
+}
+
+pub async fn upsert_instance(form: InstanceFormData) -> Result<(), String> {
+    let id = form.id.trim().to_string();
+    if id.is_empty() {
+        return Err("Instance id cannot be empty".to_string());
+    }
+    let name = if form.name.trim().is_empty() {
+        id.clone()
+    } else {
+        form.name.trim().to_string()
+    };
+    let (default_data_dir, default_mods_dir) = default_instance_paths(id.clone()).await;
+    let data_dir = if form.data_dir.trim().is_empty() {
+        default_data_dir
+    } else {
+        form.data_dir
+    };
+    let mods_dir = if form.mods_dir.trim().is_empty() {
+        default_mods_dir
+    } else {
+        form.mods_dir
+    };
+    tokio::fs::create_dir_all(&data_dir).await.map_err(err)?;
+    tokio::fs::create_dir_all(&mods_dir).await.map_err(err)?;
+
+    for mod_id in &form.selected_mod_ids {
+        install_mod(PathBuf::from(&mods_dir), mod_id.clone()).await?;
+    }
+
+    lithic_core::instance::add_or_update_instance(InstanceConfig {
+        id,
+        name,
+        data_dir,
+        mods_dir,
+        game_version_id: form.game_version_id,
+        enabled_modpacks: Vec::new(),
+        start_params: form.start_params,
+        env_vars: form.env_vars,
+        last_played_at: 0,
+        total_play_time_ms: 0,
+    })
+    .await
+}
+
+pub async fn default_instance_paths(id: String) -> (String, String) {
+    let clean_id = id
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>();
+    let id = if clean_id.trim().is_empty() {
+        "new-instance".to_string()
+    } else {
+        clean_id
+    };
+    let data_dir = Config::data_path().join("instances").join(id).join("data");
+    let mods_dir = data_dir.join("Mods");
+    (
+        data_dir.to_string_lossy().to_string(),
+        mods_dir.to_string_lossy().to_string(),
+    )
+}
+
+pub async fn delete_instance(id: String) -> Result<(), String> {
+    lithic_core::instance::remove_instance(&id).await
+}
+
+pub async fn set_active_instance(id: String) -> Result<(), String> {
+    lithic_core::instance::set_active_instance(&id).await
+}
+
+pub async fn launch_active_instance() -> Result<(), String> {
+    lithic_core::instance::launch_instance(None).await
+}
+
+pub async fn load_game_version_installs() -> Result<Vec<GameVersionInstall>, String> {
+    lithic_core::instance::list_game_versions().await
+}
+
+pub async fn upsert_game_version_install(
+    id: String,
+    version: String,
+    path: String,
+) -> Result<(), String> {
+    lithic_core::instance::add_or_update_game_version(GameVersionInstall {
+        id,
+        version,
+        path,
+        source: lithic_core::instance::GameVersionSource::Manual,
+        os: std::env::consts::OS.to_string(),
+    })
+    .await
+}
+
+pub async fn delete_game_version_install(id: String) -> Result<(), String> {
+    lithic_core::instance::remove_game_version(&id).await
+}
+
+fn native_os_type() -> VSOSType {
+    #[cfg(target_os = "macos")]
+    return VSOSType::OSX;
+    #[cfg(target_os = "windows")]
+    return VSOSType::Windows;
+    #[cfg(target_os = "linux")]
+    VSOSType::Linux
+}
+
+pub async fn install_game_version(
+    id: String,
+    version: String,
+    install_dir: String,
+    progress: SharedGameInstallProgress,
+) -> Result<String, String> {
+    if let Ok(mut p) = progress.lock() {
+        *p = GameInstallProgress {
+            active: true,
+            stage: "Starting".to_string(),
+            percent: Some(0),
+            logs: vec![format!("Starting install for Vintage Story {version}")],
+            done: false,
+            error: None,
+        };
+    }
+
+    let progress_for_events = progress.clone();
+    let installed = lithic_core::instance::install_game_version_with_progress(
+        lithic_core::instance::GameVersionInstallOptions {
+            id,
+            version,
+            install_dir: if install_dir.trim().is_empty() {
+                None
+            } else {
+                Some(PathBuf::from(install_dir))
+            },
+            os_type: native_os_type(),
+            exe_type: VSExecutabletype::Client,
+            windows_installer_type: Some(VSWinInstallerType::Install),
+        },
+        move |event| {
+            if let Ok(mut p) = progress_for_events.lock() {
+                match event {
+                    GameVersionInstallEvent::Log(line) => {
+                        p.logs.push(line);
+                    }
+                    GameVersionInstallEvent::Progress {
+                        stage,
+                        downloaded,
+                        total,
+                    } => {
+                        p.stage = stage;
+                        p.percent = total.and_then(|t| {
+                            if t == 0 {
+                                None
+                            } else {
+                                Some(((downloaded.saturating_mul(100)) / t).min(100) as u8)
+                            }
+                        });
+                    }
+                }
+            }
+        },
+    )
+    .await?;
+    if let Ok(mut p) = progress.lock() {
+        p.done = true;
+        p.active = false;
+        p.stage = "Complete".to_string();
+        p.percent = Some(100);
+        p.logs
+            .push(format!("Finished install at {}", installed.path));
+    }
+    Ok(format!(
+        "Installed Vintage Story {} at {}",
+        installed.version, installed.path
+    ))
+}
+
+pub async fn pick_folder() -> Result<String, String> {
+    tokio::task::spawn_blocking(|| {
+        let candidates: Vec<(&str, Vec<&str>)> = if cfg!(target_os = "windows") {
+            vec![(
+                "powershell",
+                vec![
+                    "-NoProfile",
+                    "-Command",
+                    "Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.FolderBrowserDialog; if ($d.ShowDialog() -eq 'OK') { $d.SelectedPath }",
+                ],
+            )]
+        } else if cfg!(target_os = "macos") {
+            vec![(
+                "osascript",
+                vec![
+                    "-e",
+                    "POSIX path of (choose folder with prompt \"Choose a folder\")",
+                ],
+            )]
+        } else {
+            vec![
+                ("zenity", vec!["--file-selection", "--directory"]),
+                ("kdialog", vec!["--getexistingdirectory"]),
+            ]
+        };
+
+        for (cmd, args) in candidates {
+            let Ok(output) = Command::new(cmd).args(args).output() else {
+                continue;
+            };
+            if output.status.success() {
+                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !path.is_empty() {
+                    return Ok(path);
+                }
+            }
+        }
+        Err("No supported folder picker found.".to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }

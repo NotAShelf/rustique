@@ -424,10 +424,16 @@ fn browse_row(
             .style(danger_btn_style)
             .into()
     } else {
-        button(text("Install").size(13))
-            .on_press(Message::InstallMod(mod_id_str.clone()))
-            .style(primary_btn_style)
-            .into()
+        row![
+            button(text("Install").size(13))
+                .on_press(Message::InstallMod(mod_id_str.clone()))
+                .style(primary_btn_style),
+            button(text("Add to Instance").size(13))
+                .on_press(Message::AddModToActiveInstance(mod_id_str.clone()))
+                .style(ghost_btn_style),
+        ]
+        .spacing(6)
+        .into()
     };
 
     let expand_key = mod_id_str.clone();

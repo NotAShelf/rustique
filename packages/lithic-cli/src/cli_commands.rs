@@ -1,8 +1,11 @@
 use crate::commands::arg_structs::config_args::ConfigCommand;
 use crate::commands::arg_structs::delete_args::DeleteArgs;
 use crate::commands::arg_structs::download_args::DownloadArgs;
+use crate::commands::arg_structs::game_version_args::GameVersionCommands;
 use crate::commands::arg_structs::info_args::ModInfoArgs;
 use crate::commands::arg_structs::install_args::InstallArgs;
+use crate::commands::arg_structs::instance_args::InstanceCommands;
+use crate::commands::arg_structs::launch_args::LaunchArgs;
 use crate::commands::arg_structs::list_args::ListArgs;
 use crate::commands::arg_structs::modpack_args::ModpackCommands;
 use crate::commands::arg_structs::search_args::SearchArgs;
@@ -98,6 +101,15 @@ pub enum Commands {
 
     #[command(about = "Remove mods and backups")]
     Delete(DeleteArgs),
+
+    #[command(about = "Manage game instances")]
+    Instance(InstanceCommands),
+
+    #[command(about = "Manage installed game versions")]
+    GameVersion(GameVersionCommands),
+
+    #[command(about = "Launch Vintage Story using the selected instance")]
+    Launch(LaunchArgs),
 }
 
 #[derive(Args, Debug)]

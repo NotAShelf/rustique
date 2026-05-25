@@ -3,22 +3,26 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use iced::widget::{column, container, row, rule, text};
-use iced::{Element, Fill, Task, Theme};
+use iced::{Element, Fill, Subscription, Task, Theme};
 
 use lithic_core::api::structs::ModApi;
 use lithic_core::sync::structs::ModSyncInfo;
 use lithic_core::version::filter::{VersionFilter, minor_version};
 
-use crate::ops::SettingsData;
+use crate::ops::{InstanceFormData, SettingsData, SharedGameInstallProgress};
 use crate::views::browse::{BrowseView, SortBy};
+use crate::views::game_versions::GameVersionsView;
 use crate::views::installed::{InstalledTab, InstalledView};
+use crate::views::instances::InstancesView;
 use crate::views::settings::SettingsView;
-use crate::views::{browse, installed, settings};
+use crate::views::{browse, game_versions, installed, instances, settings};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum View {
     Browse,
     Installed,
+    Instances,
+    GameVersions,
     Settings,
 }
 
@@ -64,7 +68,9 @@ pub enum Message {
     BrowseNextPage,
     BrowsePrevPage,
     InstallMod(String),
+    AddModToActiveInstance(String),
     InstallDone(String, Result<String, String>),
+    AddModToActiveInstanceDone(String, Result<String, String>),
     ToggleFavorite(String),
     ToggleFavoritesFilter,
     ExportFavorites,
@@ -74,6 +80,60 @@ pub enum Message {
     BrowseVersionFilterChanged(VersionFilter),
     BrowseVersionFilterLoaded(Result<Vec<ModApi>, String>),
     GameVersionsLoaded(Result<Vec<String>, String>),
+
+    // Instances + launcher
+    InstancesLoaded(Result<Vec<lithic_core::instance::InstanceConfig>, String>),
+    ActiveInstanceLoaded(Result<Option<lithic_core::instance::InstanceConfig>, String>),
+    ReloadInstances,
+    InstanceFormId(String),
+    InstanceDefaultsLoaded((String, String)),
+    InstanceFormName(String),
+    InstanceFormDataDir(String),
+    InstanceFormModsDir(String),
+    InstanceFormGameVersionId(String),
+    InstanceFormStartParams(String),
+    InstanceFormEnvVars(String),
+    InstanceModSearchChanged(String),
+    OpenInstanceModPicker,
+    CloseInstanceModPicker,
+    InstanceModSortChanged(SortBy),
+    InstanceModSortToggle,
+    InstanceModNextPage,
+    InstanceModPrevPage,
+    ToggleInstanceSelectedMod(String),
+    PickInstanceDataDir,
+    PickInstanceDataDirDone(Result<String, String>),
+    PickInstanceModsDir,
+    PickInstanceModsDirDone(Result<String, String>),
+    EditInstance(String),
+    ClearInstanceForm,
+    SaveInstance,
+    SelectInstance(String),
+    DeleteInstance(String),
+    InstanceOpDone(Result<(), String>),
+    LaunchActiveInstance,
+    LaunchDone(Result<(), String>),
+
+    // Installed game versions
+    InstalledGameVersionsLoaded(Result<Vec<lithic_core::instance::GameVersionInstall>, String>),
+    ReloadGameVersions,
+    GameVersionFormId(String),
+    GameVersionFormVersion(String),
+    GameVersionFormPath(String),
+    GameVersionInstallId(String),
+    GameVersionInstallVersion(String),
+    GameVersionInstallDir(String),
+    PickGameVersionPath,
+    PickGameVersionPathDone(Result<String, String>),
+    PickGameVersionInstallDir,
+    PickGameVersionInstallDirDone(Result<String, String>),
+    SaveGameVersion,
+    InstallGameVersion,
+    PollGameInstallProgress,
+    ToggleGameInstallLogs,
+    InstallGameVersionDone(Result<String, String>),
+    DeleteGameVersion(String),
+    GameVersionOpDone(Result<(), String>),
 
     // Status clearing
     ClearBrowseStatus,
@@ -101,7 +161,10 @@ pub struct App {
     pub mod_dir: PathBuf,
     pub installed: InstalledView,
     pub browse: BrowseView,
+    pub instances: InstancesView,
+    pub game_versions: GameVersionsView,
     pub settings: SettingsView,
+    pub game_install_progress: SharedGameInstallProgress,
 }
 
 fn clear_after(msg: Message) -> Task<Message> {
@@ -125,7 +188,16 @@ impl App {
                 loading: true,
                 ..Default::default()
             },
+            instances: InstancesView {
+                loading: true,
+                ..Default::default()
+            },
+            game_versions: GameVersionsView {
+                loading: true,
+                ..Default::default()
+            },
             settings: SettingsView::default(),
+            game_install_progress: crate::ops::new_game_install_progress(),
         };
         let task = Task::batch([
             Task::perform(crate::ops::load_installed(), Message::InstalledLoaded),
@@ -135,6 +207,15 @@ impl App {
             Task::perform(
                 crate::ops::load_game_versions(),
                 Message::GameVersionsLoaded,
+            ),
+            Task::perform(crate::ops::load_instances(), Message::InstancesLoaded),
+            Task::perform(
+                crate::ops::load_active_instance(),
+                Message::ActiveInstanceLoaded,
+            ),
+            Task::perform(
+                crate::ops::load_game_version_installs(),
+                Message::InstalledGameVersionsLoaded,
             ),
         ]);
         (app, task)
@@ -365,6 +446,7 @@ impl App {
 
             // --- Browse ---
             Message::BrowseLoaded(Ok(mods)) => {
+                self.instances.available_mods = mods.clone();
                 self.browse.full_mods = mods.clone();
                 self.browse.all_mods = mods;
                 self.browse.loading = false;
@@ -445,6 +527,14 @@ impl App {
                     Message::InstallDone(id, r)
                 })
             }
+            Message::AddModToActiveInstance(mod_id) => {
+                self.browse.installing.insert(mod_id.clone());
+                let id = mod_id.clone();
+                Task::perform(
+                    crate::ops::install_mod_to_active_instance(mod_id),
+                    move |r| Message::AddModToActiveInstanceDone(id, r),
+                )
+            }
             Message::InstallDone(mod_id, Ok(name)) => {
                 self.browse.installing.remove(&mod_id);
                 self.browse.status = Some(format!("Installed {name}"));
@@ -460,6 +550,23 @@ impl App {
             Message::InstallDone(mod_id, Err(e)) => {
                 self.browse.installing.remove(&mod_id);
                 self.browse.status = Some(format!("Install failed: {e}"));
+                clear_after(Message::ClearBrowseStatus)
+            }
+            Message::AddModToActiveInstanceDone(mod_id, Ok(name)) => {
+                self.browse.installing.remove(&mod_id);
+                self.browse.status = Some(format!("Added {name} to active instance"));
+                let mod_dir = self.mod_dir.clone();
+                Task::batch([
+                    Task::perform(
+                        crate::ops::load_installed_from(mod_dir),
+                        Message::InstalledLoaded,
+                    ),
+                    clear_after(Message::ClearBrowseStatus),
+                ])
+            }
+            Message::AddModToActiveInstanceDone(mod_id, Err(e)) => {
+                self.browse.installing.remove(&mod_id);
+                self.browse.status = Some(format!("Add to instance failed: {e}"));
                 clear_after(Message::ClearBrowseStatus)
             }
             Message::ToggleFavorite(key) => {
@@ -700,6 +807,363 @@ impl App {
                 self.browse.status = Some(format!("Version filter failed: {e}"));
                 clear_after(Message::ClearBrowseStatus)
             }
+
+            // --- Instances + launcher ---
+            Message::ReloadInstances => {
+                self.instances.loading = true;
+                Task::batch([
+                    Task::perform(crate::ops::load_instances(), Message::InstancesLoaded),
+                    Task::perform(
+                        crate::ops::load_active_instance(),
+                        Message::ActiveInstanceLoaded,
+                    ),
+                ])
+            }
+            Message::InstancesLoaded(Ok(instances)) => {
+                self.instances.instances = instances;
+                self.instances.loading = false;
+                Task::none()
+            }
+            Message::InstancesLoaded(Err(e)) => {
+                self.instances.status = Some(format!("Instances load failed: {e}"));
+                self.instances.loading = false;
+                Task::none()
+            }
+            Message::ActiveInstanceLoaded(Ok(active)) => {
+                if let Some(active) = active {
+                    self.instances.active_instance_id = active.id.clone();
+                    self.mod_dir = PathBuf::from(active.mods_dir);
+                } else {
+                    self.instances.active_instance_id.clear();
+                }
+                Task::none()
+            }
+            Message::ActiveInstanceLoaded(Err(e)) => {
+                self.instances.status = Some(format!("Active instance load failed: {e}"));
+                Task::none()
+            }
+            Message::InstanceFormId(v) => {
+                self.instances.form_id = v.clone();
+                if self.instances.form_data_dir.trim().is_empty()
+                    || self.instances.form_mods_dir.trim().is_empty()
+                {
+                    Task::perform(
+                        crate::ops::default_instance_paths(v),
+                        Message::InstanceDefaultsLoaded,
+                    )
+                } else {
+                    Task::none()
+                }
+            }
+            Message::InstanceDefaultsLoaded((data_dir, mods_dir)) => {
+                if self.instances.form_data_dir.trim().is_empty() {
+                    self.instances.form_data_dir = data_dir;
+                }
+                if self.instances.form_mods_dir.trim().is_empty() {
+                    self.instances.form_mods_dir = mods_dir;
+                }
+                Task::none()
+            }
+            Message::InstanceFormName(v) => {
+                self.instances.form_name = v;
+                Task::none()
+            }
+            Message::InstanceFormDataDir(v) => {
+                self.instances.form_data_dir = v;
+                Task::none()
+            }
+            Message::InstanceFormModsDir(v) => {
+                self.instances.form_mods_dir = v;
+                Task::none()
+            }
+            Message::InstanceFormGameVersionId(v) => {
+                self.instances.form_game_version_id = v;
+                Task::none()
+            }
+            Message::InstanceFormStartParams(v) => {
+                self.instances.form_start_params = v;
+                Task::none()
+            }
+            Message::InstanceFormEnvVars(v) => {
+                self.instances.form_env_vars = v;
+                Task::none()
+            }
+            Message::InstanceModSearchChanged(v) => {
+                self.instances.mod_search = v;
+                self.instances.mod_page = 0;
+                Task::none()
+            }
+            Message::OpenInstanceModPicker => {
+                self.instances.show_mod_picker = true;
+                Task::none()
+            }
+            Message::CloseInstanceModPicker => {
+                self.instances.show_mod_picker = false;
+                Task::none()
+            }
+            Message::InstanceModSortChanged(sort) => {
+                self.instances.mod_sort_by = sort;
+                self.instances.mod_page = 0;
+                Task::none()
+            }
+            Message::InstanceModSortToggle => {
+                self.instances.mod_sort_desc = !self.instances.mod_sort_desc;
+                Task::none()
+            }
+            Message::InstanceModNextPage => {
+                self.instances.mod_page += 1;
+                Task::none()
+            }
+            Message::InstanceModPrevPage => {
+                if self.instances.mod_page > 0 {
+                    self.instances.mod_page -= 1;
+                }
+                Task::none()
+            }
+            Message::ToggleInstanceSelectedMod(id) => {
+                if self.instances.selected_mod_ids.contains(&id) {
+                    self.instances.selected_mod_ids.retain(|m| m != &id);
+                } else {
+                    self.instances.selected_mod_ids.push(id);
+                    self.instances.selected_mod_ids.sort();
+                }
+                Task::none()
+            }
+            Message::PickInstanceDataDir => {
+                Task::perform(crate::ops::pick_folder(), Message::PickInstanceDataDirDone)
+            }
+            Message::PickInstanceDataDirDone(Ok(path)) => {
+                self.instances.form_data_dir = path.clone();
+                if self.instances.form_mods_dir.trim().is_empty() {
+                    self.instances.form_mods_dir = PathBuf::from(&path)
+                        .join("Mods")
+                        .to_string_lossy()
+                        .to_string();
+                }
+                Task::none()
+            }
+            Message::PickInstanceDataDirDone(Err(e)) => {
+                self.instances.status = Some(format!("Folder picker failed: {e}"));
+                Task::none()
+            }
+            Message::PickInstanceModsDir => {
+                Task::perform(crate::ops::pick_folder(), Message::PickInstanceModsDirDone)
+            }
+            Message::PickInstanceModsDirDone(Ok(path)) => {
+                self.instances.form_mods_dir = path;
+                Task::none()
+            }
+            Message::PickInstanceModsDirDone(Err(e)) => {
+                self.instances.status = Some(format!("Folder picker failed: {e}"));
+                Task::none()
+            }
+            Message::EditInstance(id) => {
+                if let Some(inst) = self.instances.instances.iter().find(|i| i.id == id) {
+                    self.instances.form_id = inst.id.clone();
+                    self.instances.form_name = inst.name.clone();
+                    self.instances.form_data_dir = inst.data_dir.clone();
+                    self.instances.form_mods_dir = inst.mods_dir.clone();
+                    self.instances.form_game_version_id = inst.game_version_id.clone();
+                    self.instances.form_start_params = inst.start_params.clone();
+                    self.instances.form_env_vars = inst.env_vars.clone();
+                }
+                Task::none()
+            }
+            Message::ClearInstanceForm => {
+                self.instances.form_id.clear();
+                self.instances.form_name.clear();
+                self.instances.form_data_dir.clear();
+                self.instances.form_mods_dir.clear();
+                self.instances.form_game_version_id.clear();
+                self.instances.form_start_params.clear();
+                self.instances.form_env_vars.clear();
+                self.instances.selected_mod_ids.clear();
+                self.instances.mod_search.clear();
+                Task::none()
+            }
+            Message::SaveInstance => Task::perform(
+                crate::ops::upsert_instance(InstanceFormData {
+                    id: self.instances.form_id.clone(),
+                    name: self.instances.form_name.clone(),
+                    data_dir: self.instances.form_data_dir.clone(),
+                    mods_dir: self.instances.form_mods_dir.clone(),
+                    game_version_id: self.instances.form_game_version_id.clone(),
+                    start_params: self.instances.form_start_params.clone(),
+                    env_vars: self.instances.form_env_vars.clone(),
+                    selected_mod_ids: self.instances.selected_mod_ids.clone(),
+                }),
+                Message::InstanceOpDone,
+            ),
+            Message::SelectInstance(id) => {
+                Task::perform(crate::ops::set_active_instance(id), Message::InstanceOpDone)
+            }
+            Message::DeleteInstance(id) => {
+                Task::perform(crate::ops::delete_instance(id), Message::InstanceOpDone)
+            }
+            Message::InstanceOpDone(Ok(())) => {
+                self.instances.status = Some("Instance operation completed.".to_string());
+                Task::batch([
+                    Task::perform(crate::ops::load_instances(), Message::InstancesLoaded),
+                    Task::perform(
+                        crate::ops::load_active_instance(),
+                        Message::ActiveInstanceLoaded,
+                    ),
+                    Task::perform(crate::ops::load_installed(), Message::InstalledLoaded),
+                ])
+            }
+            Message::InstanceOpDone(Err(e)) => {
+                self.instances.status = Some(format!("Instance operation failed: {e}"));
+                Task::none()
+            }
+            Message::LaunchActiveInstance => {
+                self.instances.status = Some("Launching instance...".to_string());
+                Task::perform(crate::ops::launch_active_instance(), Message::LaunchDone)
+            }
+            Message::LaunchDone(Ok(())) => {
+                self.instances.status = Some("Game exited successfully.".to_string());
+                Task::none()
+            }
+            Message::LaunchDone(Err(e)) => {
+                self.instances.status = Some(format!("Launch failed: {e}"));
+                Task::none()
+            }
+
+            // --- Installed game versions ---
+            Message::ReloadGameVersions => {
+                self.game_versions.loading = true;
+                Task::perform(
+                    crate::ops::load_game_version_installs(),
+                    Message::InstalledGameVersionsLoaded,
+                )
+            }
+            Message::InstalledGameVersionsLoaded(Ok(versions)) => {
+                self.instances.game_versions = versions.clone();
+                self.game_versions.versions = versions;
+                self.game_versions.loading = false;
+                Task::none()
+            }
+            Message::InstalledGameVersionsLoaded(Err(e)) => {
+                self.game_versions.status = Some(format!("Game versions load failed: {e}"));
+                self.game_versions.loading = false;
+                Task::none()
+            }
+            Message::GameVersionFormId(v) => {
+                self.game_versions.form_id = v;
+                Task::none()
+            }
+            Message::GameVersionFormVersion(v) => {
+                self.game_versions.form_version = v;
+                Task::none()
+            }
+            Message::GameVersionFormPath(v) => {
+                self.game_versions.form_path = v;
+                Task::none()
+            }
+            Message::GameVersionInstallId(v) => {
+                self.game_versions.install_id = v;
+                Task::none()
+            }
+            Message::GameVersionInstallVersion(v) => {
+                self.game_versions.install_version = v;
+                Task::none()
+            }
+            Message::GameVersionInstallDir(v) => {
+                self.game_versions.install_dir = v;
+                Task::none()
+            }
+            Message::PickGameVersionPath => {
+                Task::perform(crate::ops::pick_folder(), Message::PickGameVersionPathDone)
+            }
+            Message::PickGameVersionPathDone(Ok(path)) => {
+                self.game_versions.form_path = path;
+                Task::none()
+            }
+            Message::PickGameVersionPathDone(Err(e)) => {
+                self.game_versions.status = Some(format!("Folder picker failed: {e}"));
+                Task::none()
+            }
+            Message::PickGameVersionInstallDir => Task::perform(
+                crate::ops::pick_folder(),
+                Message::PickGameVersionInstallDirDone,
+            ),
+            Message::PickGameVersionInstallDirDone(Ok(path)) => {
+                self.game_versions.install_dir = path;
+                Task::none()
+            }
+            Message::PickGameVersionInstallDirDone(Err(e)) => {
+                self.game_versions.status = Some(format!("Folder picker failed: {e}"));
+                Task::none()
+            }
+            Message::SaveGameVersion => Task::perform(
+                crate::ops::upsert_game_version_install(
+                    self.game_versions.form_id.clone(),
+                    self.game_versions.form_version.clone(),
+                    self.game_versions.form_path.clone(),
+                ),
+                Message::GameVersionOpDone,
+            ),
+            Message::InstallGameVersion => {
+                self.game_versions.installing = true;
+                self.game_versions.status = Some("Installing Vintage Story...".to_string());
+                let id = if self.game_versions.install_id.trim().is_empty() {
+                    self.game_versions.install_version.clone()
+                } else {
+                    self.game_versions.install_id.clone()
+                };
+                Task::perform(
+                    crate::ops::install_game_version(
+                        id,
+                        self.game_versions.install_version.clone(),
+                        self.game_versions.install_dir.clone(),
+                        self.game_install_progress.clone(),
+                    ),
+                    Message::InstallGameVersionDone,
+                )
+            }
+            Message::PollGameInstallProgress => {
+                if let Ok(progress) = self.game_install_progress.lock() {
+                    self.game_versions.install_banner = progress.clone();
+                }
+                Task::none()
+            }
+            Message::ToggleGameInstallLogs => {
+                self.game_versions.show_install_logs = !self.game_versions.show_install_logs;
+                Task::none()
+            }
+            Message::InstallGameVersionDone(Ok(msg)) => {
+                self.game_versions.installing = false;
+                self.game_versions.status = Some(msg);
+                Task::perform(
+                    crate::ops::load_game_version_installs(),
+                    Message::InstalledGameVersionsLoaded,
+                )
+            }
+            Message::InstallGameVersionDone(Err(e)) => {
+                self.game_versions.installing = false;
+                self.game_versions.status = Some(format!("Install failed: {e}"));
+                if let Ok(mut progress) = self.game_install_progress.lock() {
+                    progress.active = false;
+                    progress.done = true;
+                    progress.error = Some(e.clone());
+                    progress.logs.push(format!("Install failed: {e}"));
+                }
+                Task::none()
+            }
+            Message::DeleteGameVersion(id) => Task::perform(
+                crate::ops::delete_game_version_install(id),
+                Message::GameVersionOpDone,
+            ),
+            Message::GameVersionOpDone(Ok(())) => {
+                self.game_versions.status = Some("Game version operation completed.".to_string());
+                Task::perform(
+                    crate::ops::load_game_version_installs(),
+                    Message::InstalledGameVersionsLoaded,
+                )
+            }
+            Message::GameVersionOpDone(Err(e)) => {
+                self.game_versions.status = Some(format!("Game version operation failed: {e}"));
+                Task::none()
+            }
         }
     }
 
@@ -707,6 +1171,8 @@ impl App {
         let nav_items: &[(&str, View)] = &[
             ("Browse", View::Browse),
             ("Installed", View::Installed),
+            ("Instances", View::Instances),
+            ("Game Versions", View::GameVersions),
             ("Settings", View::Settings),
         ];
 
@@ -758,6 +1224,8 @@ impl App {
         let content: Element<'_, Message> = match &self.current_view {
             View::Browse => browse::view(&self.browse),
             View::Installed => installed::view(&self.installed, &self.settings.pinned_game_version),
+            View::Instances => instances::view(&self.instances),
+            View::GameVersions => game_versions::view(&self.game_versions),
             View::Settings => settings::view(&self.settings),
         };
 
@@ -765,6 +1233,10 @@ impl App {
             .width(Fill)
             .height(Fill)
             .into()
+    }
+
+    pub fn subscription(&self) -> Subscription<Message> {
+        iced::time::every(Duration::from_millis(250)).map(|_| Message::PollGameInstallProgress)
     }
 }
 
@@ -838,6 +1310,7 @@ fn apply_browse_filter(browse: &mut BrowseView) {
 pub fn run() -> iced::Result {
     iced::application(App::new, App::update, App::view)
         .title(App::title)
+        .subscription(App::subscription)
         .window(iced::window::Settings {
             size: iced::Size::new(1100.0, 720.0),
             ..Default::default()

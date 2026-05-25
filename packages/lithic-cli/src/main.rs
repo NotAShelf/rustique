@@ -29,8 +29,11 @@ use crate::cli_commands::{Cli, Commands, ShellType};
 use crate::commands::config::parse_config_args;
 use crate::commands::delete::{delete_all, delete_cmd};
 use crate::commands::download::download;
+use crate::commands::game_version::parse_game_version_commands;
 use crate::commands::info::info;
 use crate::commands::install::{install_cmd, install_missing_deps};
+use crate::commands::instance::parse_instance_commands;
+use crate::commands::launch::launch as launch_game;
 use crate::commands::list::cmd_list;
 use crate::commands::search::search;
 use crate::commands::sync::{daily_file_syncs, game_version_sync};
@@ -123,7 +126,12 @@ async fn async_main() -> Result<()> {
     }
 
     let mod_opts: LithicOptions = LithicOptions::default();
-    let mut mod_dir = mod_opts.get_mod_path().await;
+    let mut mod_dir = lithic_core::instance::resolve_active_mod_dir()
+        .await
+        .unwrap_or_else(|_| PathBuf::new());
+    if mod_dir.as_os_str().is_empty() {
+        mod_dir = mod_opts.get_mod_path().await;
+    }
     // the mods_dir from the lithic-cli takes priority from all other means, including the config file
     if cli.mods_dir.is_some() {
         mod_dir = get_expanded_path(PathBuf::from(cli.mods_dir.clone().unwrap_or(String::new())));
@@ -358,6 +366,24 @@ async fn async_main() -> Result<()> {
                         ErrorMsgFn::Error,
                     );
                 }
+            }
+        }
+        Commands::Instance(commands) => {
+            if let Err(e) = parse_instance_commands(commands).await {
+                error!("Instance command failed: {e}");
+                exit(1);
+            }
+        }
+        Commands::GameVersion(commands) => {
+            if let Err(e) = parse_game_version_commands(commands).await {
+                error!("Game-version command failed: {e}");
+                exit(1);
+            }
+        }
+        Commands::Launch(args) => {
+            if let Err(e) = launch_game(args).await {
+                error!("Launch failed: {e}");
+                exit(1);
             }
         }
     }
