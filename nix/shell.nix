@@ -29,8 +29,9 @@ in
       pkg-config
       taplo
     ];
+
     env = {
       LIBCLANG_PATH = "${libclang.lib}/lib";
-      LD_LIBRARY_PATH = "LD_LIBRARY_PATH:${runtimeInputs}/lib";
+      LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${runtimeInputs}";
     };
   }
