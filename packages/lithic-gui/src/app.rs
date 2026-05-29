@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 
 use iced::widget::{column, container, row, rule, text};
@@ -9,6 +10,7 @@ use native_theme_iced::{from_preset, from_system};
 use lithic_core::api::structs::ModApi;
 use lithic_core::sync::structs::ModSyncInfo;
 use lithic_core::version::filter::{VersionFilter, minor_version};
+use lithic_locale::{Localizer, ids};
 
 use crate::ops::{InstanceFormData, SettingsData, SharedGameInstallProgress};
 use crate::views::browse::{BrowseView, SortBy};
@@ -173,6 +175,9 @@ pub struct App {
    pub settings: SettingsView,
    pub game_install_progress: SharedGameInstallProgress,
    pub theme: Theme,
+   pub loc: Arc<Localizer>,
+   /// Cached translated navigation labels (computed once at startup).
+   pub nav_labels: [String; 5],
 }
 
 fn clear_after(msg: Message) -> Task<Message> {
@@ -185,6 +190,14 @@ fn clear_after(msg: Message) -> Task<Message> {
 impl App {
    pub fn new() -> (Self, Task<Message>) {
       let _ = lithic_core::config::manager::init_config();
+      let loc = Arc::new(Localizer::new_english());
+      let nav_labels = [
+         loc.get(ids::NAV_BROWSE).into_owned(),
+         loc.get(ids::NAV_INSTALLED).into_owned(),
+         loc.get(ids::NAV_INSTANCES).into_owned(),
+         loc.get(ids::NAV_GAME_VERSIONS).into_owned(),
+         loc.get(ids::NAV_SETTINGS).into_owned(),
+      ];
       let app = App {
          current_view: View::Browse,
          mod_dir: PathBuf::new(),
@@ -207,6 +220,8 @@ impl App {
          settings: SettingsView::default(),
          game_install_progress: crate::ops::new_game_install_progress(),
          theme: detect_native_theme(),
+         loc,
+         nav_labels,
       };
       let task = Task::batch([
          Task::perform(crate::ops::load_installed(), Message::InstalledLoaded),
@@ -226,7 +241,7 @@ impl App {
    }
 
    pub fn title(&self) -> String {
-      "Lithic - Vintage Story Mod Manager".to_string()
+      self.loc.get(ids::APP_TITLE).into_owned()
    }
 
    #[allow(clippy::too_many_lines)]
@@ -260,13 +275,18 @@ impl App {
             Task::none()
          }
          Message::InstalledLoaded(Err(e)) => {
-            self.installed.status = Some(format!("Error: {e}"));
+            self.installed.status = Some(
+               self
+                  .loc
+                  .get_with("status-error", "error", e.to_string())
+                  .into_owned(),
+            );
             self.installed.loading = false;
             clear_after(Message::ClearInstalledStatus)
          }
          Message::SyncMods => {
             self.installed.loading = true;
-            self.installed.status = Some("Syncing...".to_string());
+            self.installed.status = Some(self.loc.get(ids::STATUS_SYNCING).into_owned());
             let mod_dir = self.mod_dir.clone();
             Task::perform(crate::ops::sync_mods(mod_dir), Message::SyncDone)
          }
@@ -278,23 +298,28 @@ impl App {
             self.installed.mods = mods.into_values().collect();
             self.installed.mods.sort_by(|a, b| a.mod_name.cmp(&b.mod_name));
             self.installed.loading = false;
-            self.installed.status = Some("Sync complete.".to_string());
+            self.installed.status = Some(self.loc.get(ids::STATUS_SYNC_COMPLETE).into_owned());
             clear_after(Message::ClearInstalledStatus)
          }
          Message::SyncDone(Err(e)) => {
             self.installed.loading = false;
-            self.installed.status = Some(format!("Sync failed: {e}"));
+            self.installed.status = Some(
+               self
+                  .loc
+                  .get_with(ids::STATUS_SYNC_FAILED, "error", e.to_string())
+                  .into_owned(),
+            );
             clear_after(Message::ClearInstalledStatus)
          }
          Message::UpdateAll => {
             self.installed.loading = true;
-            self.installed.status = Some("Updating all mods...".to_string());
+            self.installed.status = Some(self.loc.get(ids::STATUS_UPDATING).into_owned());
             let mod_dir = self.mod_dir.clone();
             Task::perform(crate::ops::update_all(mod_dir), Message::UpdateDone)
          }
          Message::UpdateDone(Ok(())) => {
             self.installed.loading = false;
-            self.installed.status = Some("Update complete.".to_string());
+            self.installed.status = Some(self.loc.get(ids::STATUS_UPDATE_COMPLETE).into_owned());
             let mod_dir = self.mod_dir.clone();
             Task::batch([
                Task::perform(crate::ops::load_installed_from(mod_dir), Message::InstalledLoaded),
@@ -303,7 +328,12 @@ impl App {
          }
          Message::UpdateDone(Err(e)) => {
             self.installed.loading = false;
-            self.installed.status = Some(format!("Update failed: {e}"));
+            self.installed.status = Some(
+               self
+                  .loc
+                  .get_with(ids::STATUS_UPDATE_FAILED, "error", e.to_string())
+                  .into_owned(),
+            );
             clear_after(Message::ClearInstalledStatus)
          }
          Message::RequestDelete(file_name) => {
@@ -325,7 +355,12 @@ impl App {
          Message::DeleteDone(Ok(file_name)) => {
             self.installed.mods.retain(|m| m.file_name != file_name);
             self.browse.installed_mods.retain(|_, f| f != &file_name);
-            self.installed.status = Some(format!("Deleted {file_name}"));
+            self.installed.status = Some(
+               self
+                  .loc
+                  .get_with(ids::STATUS_DELETED, "name", file_name)
+                  .into_owned(),
+            );
             let mod_dir = self.mod_dir.clone();
             Task::batch([
                Task::perform(crate::ops::load_installed_from(mod_dir), Message::InstalledLoaded),
@@ -333,7 +368,12 @@ impl App {
             ])
          }
          Message::DeleteDone(Err(e)) => {
-            self.installed.status = Some(format!("Delete failed: {e}"));
+            self.installed.status = Some(
+               self
+                  .loc
+                  .get_with(ids::STATUS_DELETE_FAILED, "error", e.to_string())
+                  .into_owned(),
+            );
             clear_after(Message::ClearInstalledStatus)
          }
          Message::InstalledSearchChanged(q) => {
@@ -369,7 +409,12 @@ impl App {
             Task::none()
          }
          Message::PacksLoaded(Err(e)) => {
-            self.installed.status = Some(format!("Error: {e}"));
+            self.installed.status = Some(
+               self
+                  .loc
+                  .get_with("status-error", "error", e.to_string())
+                  .into_owned(),
+            );
             self.installed.loading = false;
             clear_after(Message::ClearInstalledStatus)
          }
@@ -383,7 +428,12 @@ impl App {
             ])
          }
          Message::PackOpDone(Err(e)) => {
-            self.installed.status = Some(format!("Error: {e}"));
+            self.installed.status = Some(
+               self
+                  .loc
+                  .get_with("status-error", "error", e.to_string())
+                  .into_owned(),
+            );
             clear_after(Message::ClearInstalledStatus)
          }
          Message::ShowCreatePackForm(show) => {
@@ -427,7 +477,12 @@ impl App {
          }
          Message::CreatePackDone(Err(e)) => {
             self.installed.loading = false;
-            self.installed.status = Some(format!("Create failed: {e}"));
+            self.installed.status = Some(
+               self
+                  .loc
+                  .get_with("status-create-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             clear_after(Message::ClearInstalledStatus)
          }
 
@@ -441,18 +496,23 @@ impl App {
             Task::none()
          }
          Message::BrowseLoaded(Err(e)) => {
-            self.browse.status = Some(format!("Failed to load mods: {e}"));
+            self.browse.status = Some(
+               self
+                  .loc
+                  .get_with("status-browse-load-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             self.browse.loading = false;
             clear_after(Message::ClearBrowseStatus)
          }
          Message::BrowseRefresh => {
             self.browse.loading = true;
-            self.browse.status = Some("Refreshing mod database...".to_string());
+            self.browse.status = Some(self.loc.get(ids::STATUS_REFRESHING).into_owned());
             Task::perform(crate::ops::refresh_browse(), Message::BrowseRefreshed)
          }
          Message::BrowseRefreshed(Ok(mods)) => {
             self.browse.full_mods = mods.clone();
-            self.browse.status = Some("Mod database refreshed.".to_string());
+            self.browse.status = Some(self.loc.get(ids::STATUS_REFRESHED).into_owned());
             if matches!(self.browse.version_filter, VersionFilter::Any) {
                self.browse.all_mods = mods;
                self.browse.loading = false;
@@ -472,7 +532,12 @@ impl App {
          }
          Message::BrowseRefreshed(Err(e)) => {
             self.browse.loading = false;
-            self.browse.status = Some(format!("Refresh failed: {e}"));
+            self.browse.status = Some(
+               self
+                  .loc
+                  .get_with(ids::STATUS_REFRESH_FAILED, "error", e.to_string())
+                  .into_owned(),
+            );
             clear_after(Message::ClearBrowseStatus)
          }
          Message::BrowseQueryChanged(q) => {
@@ -523,7 +588,12 @@ impl App {
          }
          Message::InstallDone(mod_id, Ok(name)) => {
             self.browse.installing.remove(&mod_id);
-            self.browse.status = Some(format!("Installed {name}"));
+            self.browse.status = Some(
+               self
+                  .loc
+                  .get_with(ids::STATUS_INSTALLED, "name", name)
+                  .into_owned(),
+            );
             let mod_dir = self.mod_dir.clone();
             Task::batch([
                Task::perform(crate::ops::load_installed_from(mod_dir), Message::InstalledLoaded),
@@ -532,12 +602,22 @@ impl App {
          }
          Message::InstallDone(mod_id, Err(e)) => {
             self.browse.installing.remove(&mod_id);
-            self.browse.status = Some(format!("Install failed: {e}"));
+            self.browse.status = Some(
+               self
+                  .loc
+                  .get_with(ids::STATUS_INSTALL_FAILED, "error", e.to_string())
+                  .into_owned(),
+            );
             clear_after(Message::ClearBrowseStatus)
          }
          Message::AddModToActiveInstanceDone(mod_id, Ok(name)) => {
             self.browse.installing.remove(&mod_id);
-            self.browse.status = Some(format!("Added {name} to active instance"));
+            self.browse.status = Some(
+               self
+                  .loc
+                  .get_with("status-added-to-instance", "name", name)
+                  .into_owned(),
+            );
             let mod_dir = self.mod_dir.clone();
             Task::batch([
                Task::perform(crate::ops::load_installed_from(mod_dir), Message::InstalledLoaded),
@@ -546,7 +626,12 @@ impl App {
          }
          Message::AddModToActiveInstanceDone(mod_id, Err(e)) => {
             self.browse.installing.remove(&mod_id);
-            self.browse.status = Some(format!("Add to instance failed: {e}"));
+            self.browse.status = Some(
+               self
+                  .loc
+                  .get_with("status-add-to-instance-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             clear_after(Message::ClearBrowseStatus)
          }
          Message::ToggleFavorite(key) => {
@@ -572,13 +657,23 @@ impl App {
          }
          Message::ExportDone(Ok(path)) => {
             if !path.is_empty() {
-               self.browse.status = Some(format!("Exported favorites to {path}"));
+               self.browse.status = Some(
+                  self
+                     .loc
+                     .get_with("status-exported-favorites", "path", path)
+                     .into_owned(),
+               );
                return clear_after(Message::ClearBrowseStatus);
             }
             Task::none()
          }
          Message::ExportDone(Err(e)) => {
-            self.browse.status = Some(format!("Export failed: {e}"));
+            self.browse.status = Some(
+               self
+                  .loc
+                  .get_with("status-export-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             clear_after(Message::ClearBrowseStatus)
          }
          Message::FavoritesLoaded(Ok(favs)) => {
@@ -742,7 +837,7 @@ impl App {
          }
          Message::SettingsSaved(Ok(())) => {
             self.settings.dirty = false;
-            self.settings.status = Some("Settings saved.".to_string());
+            self.settings.status = Some(self.loc.get("status-settings-saved").into_owned());
             self.mod_dir = PathBuf::from(&self.settings.mod_dir);
             self.theme = theme_from_mode(self.settings.theme_mode, self.settings.theme_preset.as_str());
             let new_filter = minor_version(&self.settings.pinned_game_version)
@@ -772,7 +867,12 @@ impl App {
             clear_after(Message::ClearSettingsStatus)
          }
          Message::SettingsSaved(Err(e)) => {
-            self.settings.status = Some(format!("Save failed: {e}"));
+            self.settings.status = Some(
+               self
+                  .loc
+                  .get_with(ids::STATUS_SAVE_FAILED, "error", e.to_string())
+                  .into_owned(),
+            );
             clear_after(Message::ClearSettingsStatus)
          }
 
@@ -818,7 +918,12 @@ impl App {
          }
          Message::BrowseVersionFilterLoaded(Err(e)) => {
             self.browse.loading = false;
-            self.browse.status = Some(format!("Version filter failed: {e}"));
+            self.browse.status = Some(
+               self
+                  .loc
+                  .get_with("status-version-filter-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             clear_after(Message::ClearBrowseStatus)
          }
 
@@ -836,7 +941,12 @@ impl App {
             Task::none()
          }
          Message::InstancesLoaded(Err(e)) => {
-            self.instances.status = Some(format!("Instances load failed: {e}"));
+            self.instances.status = Some(
+               self
+                  .loc
+                  .get_with("status-instances-load-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             self.instances.loading = false;
             Task::none()
          }
@@ -850,7 +960,12 @@ impl App {
             Task::none()
          }
          Message::ActiveInstanceLoaded(Err(e)) => {
-            self.instances.status = Some(format!("Active instance load failed: {e}"));
+            self.instances.status = Some(
+               self
+                  .loc
+                  .get_with("status-active-instance-load-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             Task::none()
          }
          Message::InstanceFormId(v) => {
@@ -951,7 +1066,12 @@ impl App {
             Task::none()
          }
          Message::PickInstanceDataDirDone(Err(e)) => {
-            self.instances.status = Some(format!("Folder picker failed: {e}"));
+            self.instances.status = Some(
+               self
+                  .loc
+                  .get_with("status-folder-picker-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             Task::none()
          }
          Message::PickInstanceModsDir => {
@@ -962,7 +1082,12 @@ impl App {
             Task::none()
          }
          Message::PickInstanceModsDirDone(Err(e)) => {
-            self.instances.status = Some(format!("Folder picker failed: {e}"));
+            self.instances.status = Some(
+               self
+                  .loc
+                  .get_with("status-folder-picker-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             Task::none()
          }
          Message::EditInstance(id) => {
@@ -1009,7 +1134,7 @@ impl App {
             Task::perform(crate::ops::delete_instance(id), Message::InstanceOpDone)
          }
          Message::InstanceOpDone(Ok(())) => {
-            self.instances.status = Some("Instance operation completed.".to_string());
+            self.instances.status = Some(self.loc.get("status-instance-op-complete").into_owned());
             Task::batch([
                Task::perform(crate::ops::load_instances(), Message::InstancesLoaded),
                Task::perform(crate::ops::load_active_instance(), Message::ActiveInstanceLoaded),
@@ -1017,19 +1142,29 @@ impl App {
             ])
          }
          Message::InstanceOpDone(Err(e)) => {
-            self.instances.status = Some(format!("Instance operation failed: {e}"));
+            self.instances.status = Some(
+               self
+                  .loc
+                  .get_with("status-instance-op-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             Task::none()
          }
          Message::LaunchActiveInstance => {
-            self.instances.status = Some("Launching instance...".to_string());
+            self.instances.status = Some(self.loc.get(ids::STATUS_LAUNCHING).into_owned());
             Task::perform(crate::ops::launch_active_instance(), Message::LaunchDone)
          }
          Message::LaunchDone(Ok(())) => {
-            self.instances.status = Some("Game exited successfully.".to_string());
+            self.instances.status = Some(self.loc.get("status-game-exit-success").into_owned());
             Task::none()
          }
          Message::LaunchDone(Err(e)) => {
-            self.instances.status = Some(format!("Launch failed: {e}"));
+            self.instances.status = Some(
+               self
+                  .loc
+                  .get_with(ids::STATUS_LAUNCH_FAILED, "error", e.to_string())
+                  .into_owned(),
+            );
             Task::none()
          }
 
@@ -1048,7 +1183,12 @@ impl App {
             Task::none()
          }
          Message::InstalledGameVersionsLoaded(Err(e)) => {
-            self.game_versions.status = Some(format!("Game versions load failed: {e}"));
+            self.game_versions.status = Some(
+               self
+                  .loc
+                  .get_with("status-game-versions-load-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             self.game_versions.loading = false;
             Task::none()
          }
@@ -1084,7 +1224,12 @@ impl App {
             Task::none()
          }
          Message::PickGameVersionPathDone(Err(e)) => {
-            self.game_versions.status = Some(format!("Folder picker failed: {e}"));
+            self.game_versions.status = Some(
+               self
+                  .loc
+                  .get_with("status-folder-picker-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             Task::none()
          }
          Message::PickGameVersionInstallDir => {
@@ -1095,7 +1240,12 @@ impl App {
             Task::none()
          }
          Message::PickGameVersionInstallDirDone(Err(e)) => {
-            self.game_versions.status = Some(format!("Folder picker failed: {e}"));
+            self.game_versions.status = Some(
+               self
+                  .loc
+                  .get_with("status-folder-picker-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             Task::none()
          }
          Message::SaveGameVersion => Task::perform(
@@ -1108,7 +1258,7 @@ impl App {
          ),
          Message::InstallGameVersion => {
             self.game_versions.installing = true;
-            self.game_versions.status = Some("Installing Vintage Story...".to_string());
+            self.game_versions.status = Some(self.loc.get("status-installing-vs").into_owned());
             let id = if self.game_versions.install_id.trim().is_empty() {
                self.game_versions.install_version.clone()
             } else {
@@ -1150,12 +1300,22 @@ impl App {
          }
          Message::InstallGameVersionDone(Err(e)) => {
             self.game_versions.installing = false;
-            self.game_versions.status = Some(format!("Install failed: {e}"));
+            self.game_versions.status = Some(
+               self
+                  .loc
+                  .get_with(ids::STATUS_INSTALL_FAILED, "error", e.to_string())
+                  .into_owned(),
+            );
             if let Ok(mut progress) = self.game_install_progress.lock() {
                progress.active = false;
                progress.done = true;
                progress.error = Some(e.clone());
-               progress.logs.push(format!("Install failed: {e}"));
+               progress.logs.push(
+                  self
+                     .loc
+                     .get_with(ids::STATUS_INSTALL_FAILED, "error", e.to_string())
+                     .into_owned(),
+               );
             }
             Task::none()
          }
@@ -1164,26 +1324,32 @@ impl App {
             Message::GameVersionOpDone,
          ),
          Message::GameVersionOpDone(Ok(())) => {
-            self.game_versions.status = Some("Game version operation completed.".to_string());
+            self.game_versions.status = Some(self.loc.get("status-game-version-op-complete").into_owned());
             Task::perform(
                crate::ops::load_game_version_installs(),
                Message::InstalledGameVersionsLoaded,
             )
          }
          Message::GameVersionOpDone(Err(e)) => {
-            self.game_versions.status = Some(format!("Game version operation failed: {e}"));
+            self.game_versions.status = Some(
+               self
+                  .loc
+                  .get_with("status-game-version-op-failed", "error", e.to_string())
+                  .into_owned(),
+            );
             Task::none()
          }
       }
    }
 
    pub fn view(&self) -> Element<'_, Message> {
+      let loc = &self.loc;
       let nav_items: &[(&str, View)] = &[
-         ("Browse", View::Browse),
-         ("Installed", View::Installed),
-         ("Instances", View::Instances),
-         ("Game Versions", View::GameVersions),
-         ("Settings", View::Settings),
+         (&self.nav_labels[0], View::Browse),
+         (&self.nav_labels[1], View::Installed),
+         (&self.nav_labels[2], View::Instances),
+         (&self.nav_labels[3], View::GameVersions),
+         (&self.nav_labels[4], View::Settings),
       ];
 
       let nav_buttons: Vec<Element<'_, Message>> = nav_items
@@ -1194,7 +1360,7 @@ impl App {
          .collect();
 
       let sidebar = container(column![
-         container(text("Lithic").size(17)).padding(iced::Padding {
+         container(text(loc.get("app-brand")).size(17)).padding(iced::Padding {
             top: 16.0,
             right: 16.0,
             bottom: 12.0,
@@ -1204,7 +1370,7 @@ impl App {
          column(nav_buttons).spacing(2).padding([4, 0]),
          iced::widget::space::vertical(),
          rule::horizontal(1),
-         container(text("v0.5.16 α").size(11).color(iced::Color {
+         container(text(loc.get("app-version")).size(11).color(iced::Color {
             r: 0.40,
             g: 0.40,
             b: 0.40,
@@ -1228,11 +1394,11 @@ impl App {
       .height(Fill);
 
       let content: Element<'_, Message> = match &self.current_view {
-         View::Browse => browse::view(&self.browse),
-         View::Installed => installed::view(&self.installed, &self.settings.pinned_game_version),
-         View::Instances => instances::view(&self.instances),
-         View::GameVersions => game_versions::view(&self.game_versions),
-         View::Settings => settings::view(&self.settings),
+         View::Browse => browse::view(&self.browse, loc),
+         View::Installed => installed::view(&self.installed, &self.settings.pinned_game_version, loc),
+         View::Instances => instances::view(&self.instances, loc),
+         View::GameVersions => game_versions::view(&self.game_versions, loc),
+         View::Settings => settings::view(&self.settings, loc),
       };
 
       container(row![sidebar, rule::vertical(1), content].spacing(0))
