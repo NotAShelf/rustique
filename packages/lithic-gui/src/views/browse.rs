@@ -5,6 +5,7 @@ use iced::widget::{Column, button, column, container, pick_list, row, scrollable
 use iced::{Alignment, Color, Element, Fill};
 use lithic_core::api::structs::ModApi;
 use lithic_core::version::filter::VersionFilter;
+use lithic_locale::{Localizer, ids};
 
 use crate::app::Message;
 use crate::widgets::{
@@ -21,12 +22,12 @@ pub enum SortBy {
 }
 
 impl SortBy {
-   pub fn label(&self) -> &'static str {
+   pub fn loc_label<'a>(&self, loc: &'a Localizer) -> std::borrow::Cow<'a, str> {
       match self {
-         Self::Downloads => "Downloads",
-         Self::Follows => "Follows",
-         Self::Trending => "Trending",
-         Self::Name => "Name",
+         Self::Downloads => loc.get(ids::BROWSE_SORT_DOWNLOADS),
+         Self::Follows => loc.get(ids::BROWSE_SORT_FOLLOWS),
+         Self::Trending => loc.get(ids::BROWSE_SORT_TRENDING),
+         Self::Name => loc.get(ids::BROWSE_SORT_NAME),
       }
    }
 }
@@ -90,9 +91,9 @@ impl BrowseView {
    }
 }
 
-pub fn view(state: &BrowseView) -> Element<'_, Message> {
+pub fn view<'a>(state: &'a BrowseView, loc: &'a Localizer) -> Element<'a, Message> {
    let export_btn: Element<'_, Message> = if !state.favorites.is_empty() {
-      button(text("Export Favorites").size(13))
+      button(text(loc.get(ids::BROWSE_EXPORT_FAVORITES)).size(13))
          .on_press(Message::ExportFavorites)
          .style(ghost_btn_style)
          .into()
@@ -100,37 +101,42 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
       iced::widget::Space::new().into()
    };
 
-   let refresh_btn = button(text("↺ Refresh").size(13))
+   let refresh_btn = button(text(format!("↺ {}", loc.get(ids::BROWSE_REFRESH))).size(13))
       .on_press(Message::BrowseRefresh)
       .style(ghost_btn_style);
 
-   let header = row![text("Browse Mods").size(22).width(Fill), export_btn, refresh_btn,]
-      .spacing(8)
-      .align_y(Alignment::Center);
+   let header = row![
+      text(loc.get("browse-title")).size(22).width(Fill),
+      export_btn,
+      refresh_btn,
+   ]
+   .spacing(8)
+   .align_y(Alignment::Center);
 
    let search_bar = row![
-      text_input("Search mods...", &state.query)
+      text_input(loc.get(ids::BROWSE_SEARCH_PLACEHOLDER).as_ref(), &state.query)
          .on_input(Message::BrowseQueryChanged)
          .on_submit(Message::BrowseSearch)
          .width(Fill),
-      button("Search").on_press(Message::BrowseSearch),
+      button(text(loc.get("browse-search"))).on_press(Message::BrowseSearch),
    ]
    .spacing(8)
    .align_y(Alignment::Center);
 
    let version_controls = {
-      let version_options: Vec<String> = std::iter::once("All versions".to_string())
+      let all_versions = loc.get("browse-all-versions").into_owned();
+      let version_options: Vec<String> = std::iter::once(all_versions.clone())
          .chain(state.available_minor_versions.iter().cloned())
          .collect();
 
       let selected_label = match &state.version_filter {
-         VersionFilter::Any => "All versions".to_string(),
+         VersionFilter::Any => all_versions.clone(),
          VersionFilter::Exact(v) | VersionFilter::AtLeast(v) => v.clone(),
       };
 
       let current_is_at_least = matches!(state.version_filter, VersionFilter::AtLeast(_));
       let vlist = pick_list(version_options, Some(selected_label), move |s: String| {
-         if s == "All versions" {
+         if s == all_versions {
             Message::BrowseVersionFilterChanged(VersionFilter::Any)
          } else if current_is_at_least {
             Message::BrowseVersionFilterChanged(VersionFilter::AtLeast(s))
@@ -159,7 +165,7 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
       };
 
       row![
-         text("Version:").size(12).color(Color {
+         text(loc.get("browse-version-label")).size(12).color(Color {
             r: 0.55,
             g: 0.55,
             b: 0.55,
@@ -176,21 +182,18 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
       let sorts = [SortBy::Downloads, SortBy::Follows, SortBy::Trending, SortBy::Name];
       let sort_btns = sorts
          .into_iter()
-         .map(|s| sort_btn(s, &state.sort_by, state.sort_desc));
+         .map(|s| sort_btn(s, &state.sort_by, state.sort_desc, loc));
 
       let fav_btn: Element<'_, Message> = {
-         let label = if state.show_favorites_only {
-            "★ Favorites"
-         } else {
-            "☆ Favorites"
-         };
          if state.show_favorites_only {
+            let label = format!("★ {}", loc.get("browse-favorites-enabled"));
             button(text(label).size(12))
                .on_press(Message::ToggleFavoritesFilter)
                .padding([5, 10])
                .style(active_tab_style)
                .into()
          } else {
+            let label = format!("☆ {}", loc.get("browse-favorites-disabled"));
             button(text(label).size(12))
                .on_press(Message::ToggleFavoritesFilter)
                .padding([5, 10])
@@ -203,9 +206,27 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
          String::new()
       } else {
          match &state.version_filter {
-            VersionFilter::Any => format!("{} mods", state.filtered.len()),
-            VersionFilter::Exact(v) => format!("{} mods · v{v}", state.filtered.len()),
-            VersionFilter::AtLeast(v) => format!("{} mods · v{v}+", state.filtered.len()),
+            VersionFilter::Any => loc
+               .get_with("browse-mod-count", "count", state.filtered.len().to_string())
+               .into_owned(),
+            VersionFilter::Exact(v) => loc
+               .get_with2(
+                  "browse-mod-count-version",
+                  "count",
+                  state.filtered.len().to_string(),
+                  "version",
+                  v.clone(),
+               )
+               .into_owned(),
+            VersionFilter::AtLeast(v) => loc
+               .get_with2(
+                  "browse-mod-count-version-ge",
+                  "count",
+                  state.filtered.len().to_string(),
+                  "version",
+                  v.clone(),
+               )
+               .into_owned(),
          }
       };
 
@@ -223,19 +244,24 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
    };
 
    let body: Element<'_, Message> = if state.loading {
-      container(text("Fetching mod database...").size(15))
+      container(text(loc.get("browse-fetching")).size(15))
          .center(Fill)
          .height(Fill)
          .into()
    } else if state.filtered.is_empty() {
       let msg = if state.show_favorites_only && state.favorites.is_empty() {
-         "No favorites yet. Click ☆ on any mod to add it.".to_string()
+         loc.get("browse-no-favorites").into_owned()
       } else if !matches!(state.version_filter, VersionFilter::Any) && state.query.is_empty() {
-         format!("No mods found for {}.", state.version_filter.label())
+         loc.get_with(
+            "browse-no-results-version",
+            "version",
+            state.version_filter.label().to_string(),
+         )
+         .into_owned()
       } else if !state.query.is_empty() {
-         "No results found.".to_string()
+         loc.get("browse-no-query-results").into_owned()
       } else {
-         "No mods found.".to_string()
+         loc.get(ids::BROWSE_NO_RESULTS).into_owned()
       };
       container(text(msg).size(14)).center(Fill).height(Fill).into()
    } else {
@@ -250,21 +276,36 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
             let pending_delete =
                state.confirm_delete.is_some() && state.confirm_delete.as_deref() == installed_file.as_deref();
             let expanded = state.expanded_mod.as_deref() == Some(key.as_str());
-            browse_row(m, favorited, installing, installed_file, pending_delete, expanded)
+            browse_row(
+               m,
+               favorited,
+               installing,
+               installed_file,
+               pending_delete,
+               expanded,
+               loc,
+            )
          })
          .collect();
 
       let total = state.total_pages();
       let page_bar = row![
-         button(text("← Prev").size(12))
+         button(text(format!("← {}", loc.get("browse-prev"))).size(12))
             .on_press_maybe(if state.page > 0 {
                Some(Message::BrowsePrevPage)
             } else {
                None
             })
             .style(ghost_btn_style),
-         text(format!("Page {} of {}", state.page + 1, total.max(1))).size(13),
-         button(text("Next →").size(12))
+         text(loc.get_with2(
+            "browse-page",
+            "current",
+            (state.page + 1).to_string(),
+            "total",
+            total.max(1).to_string()
+         ))
+         .size(13),
+         button(text(format!("{} →", loc.get("browse-next"))).size(12))
             .on_press_maybe(if state.page + 1 < total {
                Some(Message::BrowseNextPage)
             } else {
@@ -299,14 +340,14 @@ pub fn view(state: &BrowseView) -> Element<'_, Message> {
    .into()
 }
 
-fn sort_btn<'a>(sort: SortBy, current: &'a SortBy, desc: bool) -> Element<'a, Message> {
+fn sort_btn<'a>(sort: SortBy, current: &'a SortBy, desc: bool, loc: &'a Localizer) -> Element<'a, Message> {
    let active = &sort == current;
    let dir = if active {
       if desc { " ↓" } else { " ↑" }
    } else {
       ""
    };
-   let label = format!("{}{}", sort.label(), dir);
+   let label = format!("{}{}", sort.loc_label(loc), dir);
    let msg = if active {
       Message::BrowseSortToggle
    } else {
@@ -341,6 +382,7 @@ fn browse_row(
    installed_file: Option<String>,
    pending_delete: bool,
    expanded: bool,
+   loc: &Localizer,
 ) -> Element<'static, Message> {
    let name = m.name.clone().unwrap_or_else(|| m.mod_id.to_string());
    let author = m.author.clone().unwrap_or_default();
@@ -373,16 +415,16 @@ fn browse_row(
       if let Some(file_name) = installed_file.clone() {
          let fname2 = file_name.clone();
          row![
-            text("Delete?").size(12).color(Color {
+            text(loc.get("browse-delete-confirm")).size(12).color(Color {
                r: 0.85,
                g: 0.35,
                b: 0.35,
                a: 1.0
             }),
-            button(text("Yes").size(12))
+            button(text(loc.get("browse-yes")).size(12))
                .on_press(Message::DeleteMod(fname2))
                .style(danger_btn_style),
-            button(text("No").size(12))
+            button(text(loc.get("browse-no")).size(12))
                .on_press(Message::CancelDelete)
                .style(ghost_btn_style),
          ]
@@ -393,20 +435,20 @@ fn browse_row(
          iced::widget::Space::new().into()
       }
    } else if installing {
-      button(text("Installing...").size(13))
+      button(text(loc.get("browse-installing")).size(13))
          .style(ghost_btn_style)
          .into()
    } else if let Some(file_name) = installed_file {
-      button(text("Uninstall").size(13))
+      button(text(loc.get("browse-uninstall")).size(13))
          .on_press(Message::RequestDelete(file_name))
          .style(danger_btn_style)
          .into()
    } else {
       row![
-         button(text("Install").size(13))
+         button(text(loc.get(ids::BROWSE_INSTALL)).size(13))
             .on_press(Message::InstallMod(mod_id_str.clone()))
             .style(primary_btn_style),
-         button(text("Add to Instance").size(13))
+         button(text(loc.get(ids::BROWSE_ADD_TO_INSTANCE)).size(13))
             .on_press(Message::AddModToActiveInstance(mod_id_str.clone()))
             .style(ghost_btn_style),
       ]
@@ -430,36 +472,42 @@ fn browse_row(
    .padding([2, 4]);
 
    let meta_row = row![
-      text(format!("by {author}")).size(12).color(Color {
-         r: 0.55,
-         g: 0.55,
-         b: 0.55,
-         a: 1.0
-      }),
+      text(loc.get_with("browse-by-author", "author", author.clone()))
+         .size(12)
+         .color(Color {
+            r: 0.55,
+            g: 0.55,
+            b: 0.55,
+            a: 1.0
+         }),
       text("·").size(12).color(Color {
          r: 0.35,
          g: 0.35,
          b: 0.35,
          a: 1.0
       }),
-      text(format!("{dl_label} ↓")).size(12).color(Color {
-         r: 0.55,
-         g: 0.55,
-         b: 0.55,
-         a: 1.0
-      }),
+      text(loc.get_with("browse-downloads", "count", dl_label.clone()))
+         .size(12)
+         .color(Color {
+            r: 0.55,
+            g: 0.55,
+            b: 0.55,
+            a: 1.0
+         }),
       text("·").size(12).color(Color {
          r: 0.35,
          g: 0.35,
          b: 0.35,
          a: 1.0
       }),
-      text(format!("{fol_label} ♥")).size(12).color(Color {
-         r: 0.55,
-         g: 0.55,
-         b: 0.55,
-         a: 1.0
-      }),
+      text(loc.get_with("browse-follows", "count", fol_label.clone()))
+         .size(12)
+         .color(Color {
+            r: 0.55,
+            g: 0.55,
+            b: 0.55,
+            a: 1.0
+         }),
    ]
    .spacing(6)
    .align_y(Alignment::Center);
@@ -495,10 +543,13 @@ fn browse_row(
       let tags_str = if tags.is_empty() {
          String::new()
       } else {
-         format!("Tags: {}", tags.join(", "))
+         loc.get_with("browse-tags", "tags", tags.join(", ")).into_owned()
       };
       let released_str = last_released
-         .map(|d| format!("Released: {d}"))
+         .map(|d| {
+            loc.get_with("browse-released", "date", d.to_string())
+               .into_owned()
+         })
          .unwrap_or_default();
 
       let detail_parts: Vec<String> = [tags_str, released_str]

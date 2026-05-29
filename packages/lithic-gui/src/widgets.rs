@@ -209,8 +209,8 @@ pub fn nav_button(label: &str, active: bool, msg: Message) -> Element<'_, Messag
 }
 
 /// Section label, all-caps small text used as form field labels.
-pub fn section_label<'a>(s: &'a str) -> Element<'a, Message> {
-   text(s)
+pub fn section_label(s: impl Into<String>) -> Element<'static, Message> {
+   text(s.into())
       .size(11)
       .color(Color {
          r: 0.55,

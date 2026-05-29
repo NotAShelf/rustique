@@ -2,6 +2,7 @@ use iced::widget::{Column, button, column, container, row, scrollable, text, tex
 use iced::{Alignment, Color, Element, Fill, Length};
 use lithic_core::api::structs::ModApi;
 use lithic_core::instance::{GameVersionInstall, InstanceConfig};
+use lithic_locale::{Localizer, ids};
 
 use crate::app::Message;
 use crate::views::browse::SortBy;
@@ -34,10 +35,10 @@ pub struct InstancesView {
    pub form_env_vars: String,
 }
 
-pub fn view(state: &InstancesView) -> Element<'_, Message> {
+pub fn view<'a>(state: &'a InstancesView, loc: &'a Localizer) -> Element<'a, Message> {
    let header = row![
-      text("Instances").size(22).width(Fill),
-      button("Launch Active")
+      text(loc.get("instances-title")).size(22).width(Fill),
+      button(text(loc.get("instances-launch-active")))
          .on_press(Message::LaunchActiveInstance)
          .style(primary_btn_style),
    ]
@@ -48,8 +49,19 @@ pub fn view(state: &InstancesView) -> Element<'_, Message> {
       .instances
       .iter()
       .find(|i| i.id == state.active_instance_id)
-      .map(|i| format!("Active: {} - {} - {}", i.name, i.game_version_id, i.mods_dir))
-      .unwrap_or_else(|| "No active instance selected".to_string());
+      .map(|i| {
+         loc.get_with3(
+            "instances-active-summary",
+            "name",
+            i.name.as_str(),
+            "version",
+            i.game_version_id.as_str(),
+            "mods_dir",
+            i.mods_dir.as_str(),
+         )
+         .into_owned()
+      })
+      .unwrap_or_else(|| loc.get("instances-no-active").into_owned());
 
    let version_buttons: Vec<Element<'_, Message>> = state
       .game_versions
@@ -67,9 +79,18 @@ pub fn view(state: &InstancesView) -> Element<'_, Message> {
       .collect();
 
    let basics = column![
-      text_input("id", &state.form_id).on_input(Message::InstanceFormId),
-      text_input("name", &state.form_name).on_input(Message::InstanceFormName),
-      text_input("game version id", &state.form_game_version_id).on_input(Message::InstanceFormGameVersionId),
+      text_input(loc.get("instances-form-id-placeholder").as_ref(), &state.form_id)
+         .on_input(Message::InstanceFormId),
+      text_input(
+         loc.get("instances-form-name-placeholder").as_ref(),
+         &state.form_name
+      )
+      .on_input(Message::InstanceFormName),
+      text_input(
+         loc.get("instances-form-version-placeholder").as_ref(),
+         &state.form_game_version_id
+      )
+      .on_input(Message::InstanceFormGameVersionId),
       row(version_buttons).spacing(4),
    ]
    .spacing(6)
@@ -77,41 +98,55 @@ pub fn view(state: &InstancesView) -> Element<'_, Message> {
 
    let paths = column![
       row![
-         text_input("data dir", &state.form_data_dir)
-            .on_input(Message::InstanceFormDataDir)
-            .width(Fill),
-         button("Browse")
+         text_input(
+            loc.get("instances-form-data-dir-placeholder").as_ref(),
+            &state.form_data_dir
+         )
+         .on_input(Message::InstanceFormDataDir)
+         .width(Fill),
+         button(text(loc.get("instances-browse")))
             .on_press(Message::PickInstanceDataDir)
             .style(ghost_btn_style),
       ]
       .spacing(6),
       row![
-         text_input("mods dir", &state.form_mods_dir)
-            .on_input(Message::InstanceFormModsDir)
-            .width(Fill),
-         button("Browse")
+         text_input(
+            loc.get("instances-form-mods-dir-placeholder").as_ref(),
+            &state.form_mods_dir
+         )
+         .on_input(Message::InstanceFormModsDir)
+         .width(Fill),
+         button(text(loc.get("instances-browse")))
             .on_press(Message::PickInstanceModsDir)
             .style(ghost_btn_style),
       ]
       .spacing(6),
-      text_input("start params", &state.form_start_params).on_input(Message::InstanceFormStartParams),
-      text_input("env vars (K=V,K2=V2)", &state.form_env_vars).on_input(Message::InstanceFormEnvVars),
+      text_input(
+         loc.get("instances-form-start-params-placeholder").as_ref(),
+         &state.form_start_params
+      )
+      .on_input(Message::InstanceFormStartParams),
+      text_input(
+         loc.get("instances-form-env-vars-placeholder").as_ref(),
+         &state.form_env_vars
+      )
+      .on_input(Message::InstanceFormEnvVars),
    ]
    .spacing(6)
    .width(Fill);
 
    let form = container(
       column![
-         text("Create / Update Instance").size(14),
+         text(loc.get("instances-form-title")).size(14),
          row![basics, paths].spacing(12),
          row![
-            button("Save Instance")
+            button(text(loc.get(ids::INSTANCES_SAVE)))
                .on_press(Message::SaveInstance)
                .style(primary_btn_style),
-            button("Reload")
+            button(text(loc.get("instances-reload")))
                .on_press(Message::ReloadInstances)
                .style(ghost_btn_style),
-            button("Clear")
+            button(text(loc.get("instances-clear")))
                .on_press(Message::ClearInstanceForm)
                .style(ghost_btn_style),
          ]
@@ -122,17 +157,22 @@ pub fn view(state: &InstancesView) -> Element<'_, Message> {
    .padding(12)
    .style(card_style);
 
-   let selected_mod_rows = selected_mod_rows(state);
+   let selected_mod_rows = selected_mod_rows(state, loc);
 
    let mod_picker = container(
       column![
          row![
-            text("Instance Mods").size(14).width(Fill),
-            text(format!("{} selected", state.selected_mod_ids.len())).size(12),
+            text(loc.get("instances-mods-title")).size(14).width(Fill),
+            text(loc.get_with(
+               "instances-selected-count",
+               "count",
+               state.selected_mod_ids.len().to_string()
+            ))
+            .size(12),
          ]
          .align_y(Alignment::Center),
          row![
-            button("Browse Mods")
+            button(text(loc.get("instances-browse-mods")))
                .on_press(Message::OpenInstanceModPicker)
                .style(primary_btn_style),
          ],
@@ -149,23 +189,35 @@ pub fn view(state: &InstancesView) -> Element<'_, Message> {
          container(
             row![
                column![
-                  text(format!("{} ({})", inst.name, inst.id)).size(14),
-                  text(format!("mods: {}", inst.mods_dir)).size(12),
-                  text(format!("version: {}", inst.game_version_id)).size(12),
+                  text(loc.get_with2(
+                     "instances-card-name",
+                     "name",
+                     inst.name.as_str(),
+                     "id",
+                     inst.id.as_str()
+                  ))
+                  .size(14),
+                  text(loc.get_with("instances-card-mods-dir", "dir", inst.mods_dir.as_str())).size(12),
+                  text(loc.get_with(
+                     "instances-card-game-version",
+                     "version",
+                     inst.game_version_id.as_str()
+                  ))
+                  .size(12),
                ]
                .spacing(4)
                .width(Fill),
                button(if state.active_instance_id == inst.id {
-                  "Active"
+                  text(loc.get("instances-active"))
                } else {
-                  "Activate"
+                  text(loc.get("instances-activate"))
                })
                .on_press(Message::SelectInstance(inst.id.clone()))
                .style(ghost_btn_style),
-               button("Edit")
+               button(text(loc.get("instances-edit")))
                   .on_press(Message::EditInstance(inst.id.clone()))
                   .style(ghost_btn_style),
-               button("Delete")
+               button(text(loc.get(ids::INSTANCES_DELETE)))
                   .on_press(Message::DeleteInstance(inst.id.clone()))
                   .style(danger_btn_style),
             ]
@@ -179,7 +231,9 @@ pub fn view(state: &InstancesView) -> Element<'_, Message> {
    }
 
    let body: Element<'_, Message> = if state.loading {
-      container(text("Loading...")).center(Fill).into()
+      container(text(loc.get(ids::INSTANCES_LOADING)))
+         .center(Fill)
+         .into()
    } else {
       scrollable(column(rows).spacing(6)).height(Fill).into()
    };
@@ -197,16 +251,16 @@ pub fn view(state: &InstancesView) -> Element<'_, Message> {
    .height(Fill);
 
    if state.show_mod_picker {
-      column![base, mod_picker_modal(state)].spacing(0).into()
+      column![base, mod_picker_modal(state, loc)].spacing(0).into()
    } else {
       base.into()
    }
 }
 
-fn selected_mod_rows(state: &InstancesView) -> Vec<Element<'_, Message>> {
+fn selected_mod_rows<'a>(state: &'a InstancesView, loc: &'a Localizer) -> Vec<Element<'a, Message>> {
    if state.selected_mod_ids.is_empty() {
       return vec![
-         container(text("No mods selected for this instance.").size(12))
+         container(text(loc.get("instances-no-mods-selected")).size(12))
             .padding(8)
             .style(card_style)
             .into(),
@@ -228,7 +282,7 @@ fn selected_mod_rows(state: &InstancesView) -> Vec<Element<'_, Message>> {
                column![text(name).size(13), text(id.as_str()).size(11)]
                   .spacing(2)
                   .width(Fill),
-               button("Remove")
+               button(text(loc.get("instances-remove")))
                   .on_press(Message::ToggleInstanceSelectedMod(id.clone()))
                   .style(danger_btn_style),
             ]
@@ -242,7 +296,7 @@ fn selected_mod_rows(state: &InstancesView) -> Vec<Element<'_, Message>> {
       .collect()
 }
 
-fn mod_picker_modal(state: &InstancesView) -> Element<'_, Message> {
+fn mod_picker_modal<'a>(state: &'a InstancesView, loc: &'a Localizer) -> Element<'a, Message> {
    let mut mods = filtered_mods(state);
    sort_mods(&mut mods, &state.mod_sort_by, state.mod_sort_desc);
    let total_pages = mods.len().div_ceil(MOD_PICKER_PAGE_SIZE).max(1);
@@ -267,17 +321,21 @@ fn mod_picker_modal(state: &InstancesView) -> Element<'_, Message> {
                      b: 0.65,
                      a: 1.0
                   }),
-                  text(format!("{} downloads", m.downloads)).size(11),
+                  text(loc.get_with("instances-downloads", "count", m.downloads.to_string())).size(11),
                ]
                .spacing(3)
                .width(Fill),
-               button(if selected { "Remove" } else { "Add to Instance" })
-                  .on_press(Message::ToggleInstanceSelectedMod(id))
-                  .style(if selected {
-                     danger_btn_style
-                  } else {
-                     primary_btn_style
-                  }),
+               button(if selected {
+                  text(loc.get("instances-remove"))
+               } else {
+                  text(loc.get(ids::BROWSE_ADD_TO_INSTANCE))
+               })
+               .on_press(Message::ToggleInstanceSelectedMod(id))
+               .style(if selected {
+                  danger_btn_style
+               } else {
+                  primary_btn_style
+               }),
             ]
             .spacing(8)
             .align_y(Alignment::Center),
@@ -292,7 +350,7 @@ fn mod_picker_modal(state: &InstancesView) -> Element<'_, Message> {
    let sort_controls = row(
       sorts
          .into_iter()
-         .map(|s| picker_sort_btn(s, state))
+         .map(|s| picker_sort_btn(s, state, loc))
          .collect::<Vec<_>>(),
    )
    .spacing(4)
@@ -301,33 +359,49 @@ fn mod_picker_modal(state: &InstancesView) -> Element<'_, Message> {
    container(
       column![
          row![
-            text("Browse Mods for Instance").size(18).width(Fill),
-            button("Done")
+            text(loc.get("instances-picker-title")).size(18).width(Fill),
+            button(text(loc.get("instances-done")))
                .on_press(Message::CloseInstanceModPicker)
                .style(primary_btn_style),
          ]
          .spacing(8)
          .align_y(Alignment::Center),
-         text_input("Search mods...", &state.mod_search).on_input(Message::InstanceModSearchChanged),
+         text_input(
+            loc.get("instances-search-placeholder").as_ref(),
+            &state.mod_search
+         )
+         .on_input(Message::InstanceModSearchChanged),
          sort_controls,
          scrollable(Column::with_children(rows).spacing(6)).height(Length::Fixed(360.0)),
          row![
-            button("Prev")
+            button(text(loc.get("instances-prev")))
                .on_press_maybe(if page > 0 {
                   Some(Message::InstanceModPrevPage)
                } else {
                   None
                })
                .style(ghost_btn_style),
-            text(format!("Page {} of {}", page + 1, total_pages)).size(12),
-            button("Next")
+            text(loc.get_with2(
+               "browse-page",
+               "current",
+               (page + 1).to_string(),
+               "total",
+               total_pages.to_string()
+            ))
+            .size(12),
+            button(text(loc.get("instances-next")))
                .on_press_maybe(if page + 1 < total_pages {
                   Some(Message::InstanceModNextPage)
                } else {
                   None
                })
                .style(ghost_btn_style),
-            text(format!("{} selected", state.selected_mod_ids.len())).size(12),
+            text(loc.get_with(
+               "instances-selected-count",
+               "count",
+               state.selected_mod_ids.len().to_string()
+            ))
+            .size(12),
          ]
          .spacing(8)
          .align_y(Alignment::Center),
@@ -339,16 +413,16 @@ fn mod_picker_modal(state: &InstancesView) -> Element<'_, Message> {
    .into()
 }
 
-fn picker_sort_btn(sort: SortBy, state: &InstancesView) -> Element<'_, Message> {
+fn picker_sort_btn<'a>(sort: SortBy, state: &'a InstancesView, loc: &'a Localizer) -> Element<'a, Message> {
    let active = sort == state.mod_sort_by;
    let label = if active {
       format!(
          "{}{}",
-         sort.label(),
+         sort.loc_label(loc),
          if state.mod_sort_desc { " ↓" } else { " ↑" }
       )
    } else {
-      sort.label().to_string()
+      sort.loc_label(loc).into_owned()
    };
    button(text(label).size(12))
       .on_press(if active {

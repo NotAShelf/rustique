@@ -1,6 +1,7 @@
 use iced::widget::{button, column, container, progress_bar, row, scrollable, text, text_input};
 use iced::{Alignment, Color, Element, Fill};
 use lithic_core::instance::GameVersionInstall;
+use lithic_locale::{Localizer, ids};
 
 use crate::app::Message;
 use crate::ops::GameInstallProgress;
@@ -22,10 +23,10 @@ pub struct GameVersionsView {
    pub show_install_logs: bool,
 }
 
-pub fn view(state: &GameVersionsView) -> Element<'_, Message> {
+pub fn view<'a>(state: &'a GameVersionsView, loc: &'a Localizer) -> Element<'a, Message> {
    let header = row![
-      text("Game Versions").size(22).width(Fill),
-      button("Reload")
+      text(loc.get("game-versions-title")).size(22).width(Fill),
+      button(text(loc.get("game-versions-reload")))
          .on_press(Message::ReloadGameVersions)
          .style(ghost_btn_style),
    ]
@@ -37,16 +38,21 @@ pub fn view(state: &GameVersionsView) -> Element<'_, Message> {
          .install_banner
          .percent
          .map(|p| format!("{p}%"))
-         .unwrap_or_else(|| "Working".to_string());
+         .unwrap_or_else(|| loc.get("game-versions-banner-working").into_owned());
       let title = if let Some(error) = &state.install_banner.error {
-         format!("Installing Vintage Story - Error: {error}")
+         loc.get_with("game-versions-banner-title-error", "error", error.to_string())
+            .into_owned()
       } else if state.install_banner.done {
-         "Installing Vintage Story - Complete".to_string()
+         loc.get("game-versions-banner-title-complete").into_owned()
       } else {
-         format!(
-            "Installing Vintage Story - {} {percent_text}",
-            state.install_banner.stage
-         )
+         let msg = loc
+            .get_with(
+               "game-versions-banner-title-progress",
+               "stage",
+               state.install_banner.stage.to_string(),
+            )
+            .into_owned();
+         msg.replace("{ $percent }", &percent_text)
       };
 
       let bar_value = state.install_banner.percent.unwrap_or(0) as f32 / 100.0;
@@ -80,9 +86,9 @@ pub fn view(state: &GameVersionsView) -> Element<'_, Message> {
             row![
                text(title).size(14).width(Fill),
                button(if state.show_install_logs {
-                  "Hide Logs"
+                  text(loc.get("game-versions-hide-logs"))
                } else {
-                  "View Logs"
+                  text(loc.get("game-versions-view-logs"))
                })
                .on_press(Message::ToggleGameInstallLogs)
                .style(ghost_btn_style),
@@ -103,19 +109,30 @@ pub fn view(state: &GameVersionsView) -> Element<'_, Message> {
 
    let form = container(
       column![
-         text("Attach Existing Version").size(14),
-         text_input("id", &state.form_id).on_input(Message::GameVersionFormId),
-         text_input("version", &state.form_version).on_input(Message::GameVersionFormVersion),
+         text(loc.get("game-versions-attach-title")).size(14),
+         text_input(
+            loc.get("game-versions-form-id-placeholder").as_ref(),
+            &state.form_id
+         )
+         .on_input(Message::GameVersionFormId),
+         text_input(
+            loc.get("game-versions-form-version-placeholder").as_ref(),
+            &state.form_version
+         )
+         .on_input(Message::GameVersionFormVersion),
          row![
-            text_input("path", &state.form_path)
-               .on_input(Message::GameVersionFormPath)
-               .width(Fill),
-            button("Browse")
+            text_input(
+               loc.get("game-versions-form-path-placeholder").as_ref(),
+               &state.form_path
+            )
+            .on_input(Message::GameVersionFormPath)
+            .width(Fill),
+            button(text(loc.get("game-versions-browse")))
                .on_press(Message::PickGameVersionPath)
                .style(ghost_btn_style),
          ]
          .spacing(6),
-         button("Save")
+         button(text(loc.get(ids::GAME_VERSIONS_SAVE)))
             .on_press(Message::SaveGameVersion)
             .style(primary_btn_style),
       ]
@@ -125,9 +142,11 @@ pub fn view(state: &GameVersionsView) -> Element<'_, Message> {
    .style(card_style);
 
    let install_button: Element<'_, Message> = if state.installing {
-      button("Installing...").style(ghost_btn_style).into()
+      button(text(loc.get("game-versions-installing-label")))
+         .style(ghost_btn_style)
+         .into()
    } else {
-      button("Download and Install")
+      button(text(loc.get("game-versions-download-install")))
          .on_press(Message::InstallGameVersion)
          .style(primary_btn_style)
          .into()
@@ -135,14 +154,25 @@ pub fn view(state: &GameVersionsView) -> Element<'_, Message> {
 
    let install_form = container(
       column![
-         text("Install Version").size(14),
-         text_input("id (defaults to version)", &state.install_id).on_input(Message::GameVersionInstallId),
-         text_input("version", &state.install_version).on_input(Message::GameVersionInstallVersion),
+         text(loc.get("game-versions-install-title")).size(14),
+         text_input(
+            loc.get("game-versions-install-id-placeholder").as_ref(),
+            &state.install_id
+         )
+         .on_input(Message::GameVersionInstallId),
+         text_input(
+            loc.get("game-versions-install-version-placeholder").as_ref(),
+            &state.install_version
+         )
+         .on_input(Message::GameVersionInstallVersion),
          row![
-            text_input("install dir (optional)", &state.install_dir)
-               .on_input(Message::GameVersionInstallDir)
-               .width(Fill),
-            button("Browse")
+            text_input(
+               loc.get("game-versions-install-dir-placeholder").as_ref(),
+               &state.install_dir
+            )
+            .on_input(Message::GameVersionInstallDir)
+            .width(Fill),
+            button(text(loc.get("game-versions-browse")))
                .on_press(Message::PickGameVersionInstallDir)
                .style(ghost_btn_style),
          ]
@@ -165,7 +195,7 @@ pub fn view(state: &GameVersionsView) -> Element<'_, Message> {
                ]
                .spacing(4)
                .width(Fill),
-               button("Delete")
+               button(text(loc.get(ids::GAME_VERSIONS_DELETE)))
                   .on_press(Message::DeleteGameVersion(gv.id.clone()))
                   .style(danger_btn_style),
             ]
@@ -179,7 +209,9 @@ pub fn view(state: &GameVersionsView) -> Element<'_, Message> {
    }
 
    let body: Element<'_, Message> = if state.loading {
-      container(text("Loading...")).center(Fill).into()
+      container(text(loc.get(ids::GAME_VERSIONS_LOADING)))
+         .center(Fill)
+         .into()
    } else {
       scrollable(column(rows).spacing(6)).height(Fill).into()
    };

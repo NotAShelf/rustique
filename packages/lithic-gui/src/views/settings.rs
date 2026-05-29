@@ -3,6 +3,7 @@ use std::fmt::{Display, Formatter};
 use iced::widget::{button, checkbox, column, pick_list, row, scrollable, text, text_input};
 use iced::{Alignment, Color, Element, Fill};
 use lithic_core::version::filter::minor_version;
+use lithic_locale::{Localizer, ids};
 
 use crate::app::Message;
 use crate::widgets::{section_card, section_label, status_element};
@@ -121,25 +122,33 @@ impl Display for InitialPageOption {
    }
 }
 
-pub fn view(state: &SettingsView) -> Element<'_, Message> {
-   let header = row![text("Settings").size(22).width(Fill)].align_y(Alignment::Center);
+pub fn view<'a>(state: &'a SettingsView, loc: &'a Localizer) -> Element<'a, Message> {
+   let header = row![text(loc.get("settings-title")).size(22).width(Fill)].align_y(Alignment::Center);
 
    let paths_card = section_card(
       column![
          column![
-            section_label("MODS DIRECTORY"),
-            text_input("/path/to/mods", &state.mod_dir).on_input(Message::SettingModDir),
+            section_label(loc.get("settings-section-mods-dir")),
+            text_input(loc.get("settings-mod-dir-placeholder").as_ref(), &state.mod_dir)
+               .on_input(Message::SettingModDir),
          ]
          .spacing(6),
          column![
-            section_label("GAME DOWNLOAD DIRECTORY"),
-            text_input("/path/to/vintage-story", &state.game_download_dir)
-               .on_input(Message::SettingGameDownloadDir),
+            section_label(loc.get("settings-section-game-download-dir")),
+            text_input(
+               loc.get("settings-game-dir-placeholder").as_ref(),
+               &state.game_download_dir
+            )
+            .on_input(Message::SettingGameDownloadDir),
          ]
          .spacing(6),
          column![
-            section_label("MODPACK DIRECTORY"),
-            text_input("/path/to/modpacks", &state.modpack_dir).on_input(Message::SettingModpackDir),
+            section_label(loc.get("settings-section-modpack-dir")),
+            text_input(
+               loc.get("settings-modpack-dir-placeholder").as_ref(),
+               &state.modpack_dir
+            )
+            .on_input(Message::SettingModpackDir),
          ]
          .spacing(6),
       ]
@@ -149,7 +158,7 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
    let browse_gate_note: Element<'_, Message> = if state.pinned_game_version.is_empty() {
       iced::widget::Space::new().into()
    } else if let Some(minor) = minor_version(&state.pinned_game_version) {
-      text(format!("Browse will filter to v{minor}"))
+      text(loc.get_with("settings-browse-filter-note", "minor", minor.to_string()))
          .size(11)
          .color(Color {
             r: 0.45,
@@ -159,7 +168,7 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
          })
          .into()
    } else {
-      text("Invalid version format. Try a valid format, e.g., 1.20.0")
+      text(loc.get("settings-invalid-version"))
          .size(11)
          .color(Color {
             r: 0.75,
@@ -172,10 +181,14 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
 
    let game_card = section_card(
       column![
-         section_label("GAME VERSION"),
+         section_label(loc.get("settings-game-version-section")),
          column![
-            section_label("PINNED GAME VERSION  (leave empty for latest)"),
-            text_input("e.g. 1.20.0", &state.pinned_game_version).on_input(Message::SettingGameVersion),
+            section_label(loc.get("settings-pinned-version-label")),
+            text_input(
+               loc.get("settings-pinned-version-placeholder").as_ref(),
+               &state.pinned_game_version
+            )
+            .on_input(Message::SettingGameVersion),
             browse_gate_note,
          ]
          .spacing(6),
@@ -185,9 +198,9 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
 
    let updates_card = section_card(
       column![
-         section_label("UPDATES"),
+         section_label(loc.get("settings-updates")),
          checkbox(state.check_for_updates)
-            .label("Check for Lithic updates on launch")
+            .label(loc.get("settings-check-updates"))
             .on_toggle(Message::SettingCheckUpdates),
       ]
       .spacing(12),
@@ -195,9 +208,9 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
 
    let app_card = section_card(
       column![
-         section_label("APPEARANCE"),
+         section_label(loc.get("settings-appearance")),
          row![
-            text("Theme").size(12).width(100),
+            text(loc.get("settings-theme")).size(12).width(100),
             pick_list(
                ThemeModeOption::ALL,
                Some(state.theme_mode),
@@ -208,7 +221,7 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
          .spacing(8)
          .align_y(Alignment::Center),
          row![
-            text("Preset").size(12).width(100),
+            text(loc.get("settings-preset")).size(12).width(100),
             pick_list(
                state.available_theme_presets.as_slice(),
                if state.theme_preset.is_empty() {
@@ -218,13 +231,13 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
                },
                Message::SettingThemePreset
             )
-            .placeholder("Select a built-in preset")
+            .placeholder(loc.get("settings-preset-placeholder"))
             .width(260),
          ]
          .spacing(8)
          .align_y(Alignment::Center),
          row![
-            text("Startup Page").size(12).width(100),
+            text(loc.get("settings-startup-page")).size(12).width(100),
             pick_list(
                InitialPageOption::ALL,
                Some(state.initial_page),
@@ -240,15 +253,15 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
 
    let files_card = section_card(
       column![
-         section_label("MOD FILES"),
+         section_label(loc.get("settings-mod-files")),
          checkbox(state.zip_mod_files)
-            .label("Store mods as zip files")
+            .label(loc.get("settings-zip-mods"))
             .on_toggle(Message::SettingZipMods),
          checkbox(state.notify_of_unzipped_mods)
-            .label("Notify when mods are stored unzipped")
+            .label(loc.get("settings-notify-unzipped"))
             .on_toggle(Message::SettingNotifyUnzipped),
          checkbox(state.show_execution_time)
-            .label("Show execution time (CLI)")
+            .label(loc.get("settings-show-exec-time"))
             .on_toggle(Message::SettingShowExecTime),
       ]
       .spacing(12),
@@ -256,16 +269,19 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
 
    let backup_card = section_card(
       column![
-         section_label("BACKUP"),
+         section_label(loc.get("settings-backup")),
          checkbox(state.backup_mods)
-            .label("Back up mods before updating")
+            .label(loc.get("settings-backup-mods"))
             .on_toggle(Message::SettingBackupMods),
          {
             let backup_dir: Element<'_, Message> = if state.backup_mods {
                column![
-                  section_label("BACKUP DIRECTORY"),
-                  text_input("/path/to/backups", &state.backup_mods_dir)
-                     .on_input(Message::SettingBackupModsDir),
+                  section_label(loc.get("settings-backup-dir")),
+                  text_input(
+                     loc.get("settings-backup-dir-placeholder").as_ref(),
+                     &state.backup_mods_dir
+                  )
+                  .on_input(Message::SettingBackupModsDir),
                ]
                .spacing(6)
                .into()
@@ -278,11 +294,15 @@ pub fn view(state: &SettingsView) -> Element<'_, Message> {
       .spacing(12),
    );
 
-   let save_label = if state.dirty { "Save *" } else { "Save" };
-   let save_btn: Element<'_, Message> = if state.dirty {
-      button(save_label).on_press(Message::SaveSettings).into()
+   let save_label = if state.dirty {
+      loc.get("settings-save-dirty")
    } else {
-      button(save_label).into()
+      loc.get(ids::SETTINGS_SAVE)
+   };
+   let save_btn: Element<'_, Message> = if state.dirty {
+      button(text(save_label)).on_press(Message::SaveSettings).into()
+   } else {
+      button(text(save_label)).into()
    };
 
    let footer = row![iced::widget::Space::new().width(Fill), save_btn].align_y(Alignment::Center);

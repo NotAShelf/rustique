@@ -2,6 +2,7 @@ use iced::widget::{Column, button, column, container, row, scrollable, text, tex
 use iced::{Alignment, Color, Element, Fill, Length};
 use lithic_core::sync::structs::ModSyncInfo;
 use lithic_core::version::filter::minor_version;
+use lithic_locale::{Localizer, ids};
 
 use crate::app::Message;
 use crate::widgets::{active_tab_style, card_style, danger_btn_style, ghost_btn_style, status_element};
@@ -30,23 +31,27 @@ pub struct InstalledView {
    pub search: String,
 }
 
-pub fn view<'a>(state: &'a InstalledView, pinned_game_version: &str) -> Element<'a, Message> {
+pub fn view<'a>(
+   state: &'a InstalledView,
+   pinned_game_version: &str,
+   loc: &'a Localizer,
+) -> Element<'a, Message> {
    let header = row![
-      text("Installed").size(22).width(Fill),
-      button("Sync").on_press(Message::SyncMods),
-      button("Update All").on_press(Message::UpdateAll),
+      text(loc.get("installed-title")).size(22).width(Fill),
+      button(text(loc.get(ids::INSTALLED_SYNC))).on_press(Message::SyncMods),
+      button(text(loc.get(ids::INSTALLED_UPDATE_ALL))).on_press(Message::UpdateAll),
    ]
    .spacing(8)
    .align_y(Alignment::Center);
 
    let tab_bar = row![
       tab_btn(
-         "Mods",
+         loc.get("installed-tab-mods").into_owned(),
          state.tab == InstalledTab::Mods,
          Message::InstalledTabChanged(InstalledTab::Mods)
       ),
       tab_btn(
-         "Modpacks",
+         loc.get("installed-tab-modpacks").into_owned(),
          state.tab == InstalledTab::Modpacks,
          Message::InstalledTabChanged(InstalledTab::Modpacks)
       ),
@@ -54,14 +59,14 @@ pub fn view<'a>(state: &'a InstalledView, pinned_game_version: &str) -> Element<
    .spacing(4);
 
    let body: Element<'_, Message> = if state.loading {
-      container(text("Loading...").size(15))
+      container(text(loc.get(ids::INSTALLED_LOADING)).size(15))
          .center(Fill)
          .height(Fill)
          .into()
    } else {
       match state.tab {
-         InstalledTab::Mods => mods_body(state, pinned_game_version),
-         InstalledTab::Modpacks => packs_body(state),
+         InstalledTab::Mods => mods_body(state, pinned_game_version, loc),
+         InstalledTab::Modpacks => packs_body(state, loc),
       }
    };
 
@@ -73,7 +78,7 @@ pub fn view<'a>(state: &'a InstalledView, pinned_game_version: &str) -> Element<
       .into()
 }
 
-fn tab_btn(label: &str, active: bool, msg: Message) -> Element<'_, Message> {
+fn tab_btn(label: String, active: bool, msg: Message) -> Element<'static, Message> {
    if active {
       button(text(label).size(13))
          .padding([6, 14])
@@ -89,19 +94,21 @@ fn tab_btn(label: &str, active: bool, msg: Message) -> Element<'_, Message> {
    }
 }
 
-fn mods_body<'a>(state: &'a InstalledView, pinned_game_version: &str) -> Element<'a, Message> {
+fn mods_body<'a>(
+   state: &'a InstalledView,
+   pinned_game_version: &str,
+   loc: &Localizer,
+) -> Element<'a, Message> {
    if state.mods.is_empty() {
       return container(
          column![
-            text("No mods installed").size(16),
-            text("Configure your mods directory in Settings, then click Sync.")
-               .size(13)
-               .color(Color {
-                  r: 0.55,
-                  g: 0.55,
-                  b: 0.55,
-                  a: 1.0
-               }),
+            text(loc.get("installed-no-mods")).size(16),
+            text(loc.get("installed-no-mods-hint")).size(13).color(Color {
+               r: 0.55,
+               g: 0.55,
+               b: 0.55,
+               a: 1.0
+            }),
          ]
          .spacing(6)
          .align_x(Alignment::Center),
@@ -111,7 +118,7 @@ fn mods_body<'a>(state: &'a InstalledView, pinned_game_version: &str) -> Element
       .into();
    }
 
-   let search_bar = text_input("Filter installed mods...", &state.search)
+   let search_bar = text_input(loc.get("installed-search").as_ref(), &state.search)
       .on_input(Message::InstalledSearchChanged)
       .width(Fill);
 
@@ -128,12 +135,12 @@ fn mods_body<'a>(state: &'a InstalledView, pinned_game_version: &str) -> Element
       .map(|m| {
          let pending = state.confirm_delete.as_deref() == Some(m.file_name.as_ref());
          let expanded = state.expanded_mod.as_deref() == Some(m.file_name.as_ref());
-         mod_row(m, pending, expanded, pinned_minor.as_deref())
+         mod_row(m, pending, expanded, pinned_minor.as_deref(), loc)
       })
       .collect();
 
    let list: Element<'_, Message> = if rows.is_empty() {
-      container(text("No mods match the filter.").size(13))
+      container(text(loc.get("installed-no-filter-results")).size(13))
          .center(Fill)
          .height(Fill)
          .into()
@@ -146,14 +153,14 @@ fn mods_body<'a>(state: &'a InstalledView, pinned_game_version: &str) -> Element
    column![search_bar, list].spacing(8).height(Fill).into()
 }
 
-fn packs_body<'a>(state: &'a InstalledView) -> Element<'a, Message> {
+fn packs_body<'a>(state: &'a InstalledView, loc: &'a Localizer) -> Element<'a, Message> {
    let create_section: Element<'a, Message> = if state.show_create_form {
       let can_submit = !state.create_name.is_empty() && !state.create_id.is_empty();
       container(
          column![
-            text("Create Modpack from Installed Mods").size(14),
+            text(loc.get("installed-create-modpack-title")).size(14),
             row![
-               text("Name").size(12).width(70),
+               text(loc.get("installed-name")).size(12).width(70),
                text_input("e.g. My Pack", &state.create_name)
                   .on_input(Message::CreatePackName)
                   .width(Fill),
@@ -161,7 +168,7 @@ fn packs_body<'a>(state: &'a InstalledView) -> Element<'a, Message> {
             .spacing(8)
             .align_y(Alignment::Center),
             row![
-               text("ID").size(12).width(70),
+               text(loc.get("installed-id")).size(12).width(70),
                text_input("e.g. mypack", &state.create_id)
                   .on_input(Message::CreatePackId)
                   .width(Fill),
@@ -169,7 +176,7 @@ fn packs_body<'a>(state: &'a InstalledView) -> Element<'a, Message> {
             .spacing(8)
             .align_y(Alignment::Center),
             row![
-               text("Version").size(12).width(70),
+               text(loc.get("installed-version")).size(12).width(70),
                text_input("e.g. 1.0.0", &state.create_version)
                   .on_input(Message::CreatePackVersion)
                   .width(Fill),
@@ -177,12 +184,12 @@ fn packs_body<'a>(state: &'a InstalledView) -> Element<'a, Message> {
             .spacing(8)
             .align_y(Alignment::Center),
             row![
-               button(text("Create").size(13)).on_press_maybe(if can_submit {
+               button(text(loc.get("installed-create")).size(13)).on_press_maybe(if can_submit {
                   Some(Message::CreatePackSubmit)
                } else {
                   None
                }),
-               button(text("Cancel").size(13))
+               button(text(loc.get("installed-cancel")).size(13))
                   .on_press(Message::ShowCreatePackForm(false))
                   .style(ghost_btn_style),
             ]
@@ -194,7 +201,7 @@ fn packs_body<'a>(state: &'a InstalledView) -> Element<'a, Message> {
       .style(card_style)
       .into()
    } else {
-      button(text("+ Create Modpack").size(13))
+      button(text(loc.get("installed-create-button")).size(13))
          .on_press(Message::ShowCreatePackForm(true))
          .style(ghost_btn_style)
          .into()
@@ -205,15 +212,13 @@ fn packs_body<'a>(state: &'a InstalledView) -> Element<'a, Message> {
          create_section,
          container(
             column![
-               text("No modpacks installed").size(16),
-               text("Create one above from your installed mods, or install via the CLI.")
-                  .size(13)
-                  .color(Color {
-                     r: 0.55,
-                     g: 0.55,
-                     b: 0.55,
-                     a: 1.0
-                  }),
+               text(loc.get("installed-no-modpacks")).size(16),
+               text(loc.get("installed-no-modpacks-hint")).size(13).color(Color {
+                  r: 0.55,
+                  g: 0.55,
+                  b: 0.55,
+                  a: 1.0
+               }),
             ]
             .spacing(6)
             .align_x(Alignment::Center),
@@ -227,11 +232,11 @@ fn packs_body<'a>(state: &'a InstalledView) -> Element<'a, Message> {
    } else {
       let mut rows: Vec<Element<'a, Message>> = vec![create_section];
       for id in &state.enabled_packs {
-         rows.push(pack_row(id, true));
+         rows.push(pack_row(id, true, loc));
       }
       for id in &state.packs {
          if !state.enabled_packs.contains(id) {
-            rows.push(pack_row(id, false));
+            rows.push(pack_row(id, false, loc));
          }
       }
       scrollable(Column::with_children(rows).spacing(6))
@@ -245,14 +250,19 @@ fn mod_row<'a>(
    pending_delete: bool,
    expanded: bool,
    pinned_minor: Option<&str>,
+   loc: &Localizer,
 ) -> Element<'a, Message> {
    let needs_update = !m.latest_known_version.is_empty() && m.installed_version != m.latest_known_version;
 
    let update_badge: Element<'_, Message> = if needs_update {
       container(
-         text(format!("↑ {}", m.latest_known_version))
-            .size(11)
-            .color(Color::WHITE),
+         text(loc.get_with(
+            "installed-update-badge",
+            "version",
+            m.latest_known_version.to_string(),
+         ))
+         .size(11)
+         .color(Color::WHITE),
       )
       .padding([3, 8])
       .style(|_: &iced::Theme| iced::widget::container::Style {
@@ -278,16 +288,16 @@ fn mod_row<'a>(
 
    let delete_area: Element<'_, Message> = if pending_delete {
       row![
-         text("Delete?").size(12).color(Color {
+         text(loc.get("installed-delete-confirm")).size(12).color(Color {
             r: 0.85,
             g: 0.35,
             b: 0.35,
             a: 1.0
          }),
-         button(text("Yes").size(12))
+         button(text(loc.get("installed-yes")).size(12))
             .on_press(Message::DeleteMod(m.file_name.to_string()))
             .style(danger_btn_style),
-         button(text("No").size(12))
+         button(text(loc.get("installed-no")).size(12))
             .on_press(Message::CancelDelete)
             .style(ghost_btn_style),
       ]
@@ -295,7 +305,7 @@ fn mod_row<'a>(
       .align_y(Alignment::Center)
       .into()
    } else {
-      button(text("Delete").size(13))
+      button(text(loc.get(ids::INSTALLED_DELETE)).size(13))
          .on_press(Message::RequestDelete(m.file_name.to_string()))
          .style(danger_btn_style)
          .into()
@@ -395,7 +405,8 @@ fn mod_row<'a>(
       let versions_str = if m.game_versions.is_empty() {
          String::new()
       } else {
-         format!("Game versions: {}", m.game_versions.join(", "))
+         loc.get_with("installed-game-versions", "versions", m.game_versions.join(", "))
+            .into_owned()
       };
       let changelog_preview = if m.latest_changelog.is_empty() {
          String::new()
@@ -445,9 +456,9 @@ fn mod_row<'a>(
       .into()
 }
 
-fn pack_row(id: &str, enabled: bool) -> Element<'_, Message> {
+fn pack_row<'a>(id: &'a str, enabled: bool, loc: &'a Localizer) -> Element<'a, Message> {
    let badge: Element<'_, Message> = if enabled {
-      container(text("ACTIVE").size(11).color(Color::WHITE))
+      container(text(loc.get("installed-active")).size(11).color(Color::WHITE))
          .padding([3, 8])
          .style(|_: &iced::Theme| iced::widget::container::Style {
             background: Some(
@@ -467,7 +478,7 @@ fn pack_row(id: &str, enabled: bool) -> Element<'_, Message> {
          })
          .into()
    } else {
-      container(text("inactive").size(11).color(Color {
+      container(text(loc.get("installed-inactive")).size(11).color(Color {
          r: 0.50,
          g: 0.50,
          b: 0.50,
@@ -494,12 +505,12 @@ fn pack_row(id: &str, enabled: bool) -> Element<'_, Message> {
    };
 
    let toggle: Element<'_, Message> = if enabled {
-      button(text("Disable").size(13))
+      button(text(loc.get("installed-disable")).size(13))
          .on_press(Message::DisablePack(id.to_string()))
          .style(ghost_btn_style)
          .into()
    } else {
-      button(text("Enable").size(13))
+      button(text(loc.get("installed-enable")).size(13))
          .on_press(Message::EnablePack(id.to_string()))
          .into()
    };
